@@ -125,6 +125,42 @@ export default function MeProfilePage() {
           </Link>
         </motion.div>
 
+        <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
+          <Link
+            href="/me/history"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-300">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#F8F5F0]">Nhật Ký Trải Bài (Journal)</p>
+                <p className="text-xs text-[#9E96B0]">Xem lại các lần bốc bài và lời giải cũ</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#9E96B0]" />
+          </Link>
+        </motion.div>
+
+        <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
+          <Link
+            href="/cards"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300">
+                <Star className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#F8F5F0]">Từ Điển 78 Lá Bài (Codex)</p>
+                <p className="text-xs text-[#9E96B0]">Tra cứu ý nghĩa toàn bộ 78 lá RWS 1909</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#9E96B0]" />
+          </Link>
+        </motion.div>
+
         <motion.button
           whileHover={shouldReduceMotion ? {} : { x: 4 }}
           type="button"

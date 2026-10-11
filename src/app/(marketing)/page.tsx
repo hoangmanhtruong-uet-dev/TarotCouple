@@ -6,13 +6,48 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, Heart, ArrowRight, Shield, Zap, Star } from 'lucide-react';
 import { READERS } from '@/data/tarot-cards';
 
-// 5 Fan Cards with preview art
+// 5 Fan Cards with real RWS 1909 artwork
 const FAN_CARDS = [
-  { roman: '0', title: 'Kẻ Khờ', angle: -24, x: -90, y: 15 },
-  { roman: 'I', title: 'Pháp Sư', angle: -12, x: -45, y: 5 },
-  { roman: 'XIX', title: 'Mặt Trời', angle: 0, x: 0, y: 0 },
-  { roman: 'VI', title: 'Người Tình', angle: 12, x: 45, y: 5 },
-  { roman: 'XXI', title: 'Thế Giới', angle: 24, x: 90, y: 15 },
+  {
+    roman: '0',
+    title: 'Kẻ Khờ',
+    angle: -24,
+    x: -90,
+    y: 15,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/9/90/RWS_Tarot_00_Fool.jpg',
+  },
+  {
+    roman: 'I',
+    title: 'Pháp Sư',
+    angle: -12,
+    x: -45,
+    y: 5,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg',
+  },
+  {
+    roman: 'XIX',
+    title: 'Mặt Trời',
+    angle: 0,
+    x: 0,
+    y: 0,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/1/17/RWS_Tarot_19_Sun.jpg',
+  },
+  {
+    roman: 'VI',
+    title: 'Người Tình',
+    angle: 12,
+    x: 45,
+    y: 5,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/TheLovers.jpg',
+  },
+  {
+    roman: 'XXI',
+    title: 'Thế Giới',
+    angle: 24,
+    x: 90,
+    y: 15,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/RWS_Tarot_21_World.jpg',
+  },
 ];
 
 export default function MarketingLandingPage() {
@@ -111,20 +146,23 @@ export default function MarketingLandingPage() {
               className="absolute w-24 h-36 sm:w-28 sm:h-44 rounded-2xl p-2 bg-gradient-to-b from-[#221B33] via-[#141121] to-[#0B0A12] border border-[#D9B36A]/50 shadow-[0_8px_30px_rgba(0,0,0,0.8)] cursor-pointer flex flex-col justify-between"
               style={{ zIndex: idx + 10 }}
             >
-              <div className="flex justify-between items-center text-[10px] text-[#D9B36A] font-bold">
-                <span>{card.roman}</span>
-                <Sparkles className="w-2.5 h-2.5 opacity-70" />
-              </div>
-              <div className="my-auto text-center">
-                <div className="w-8 h-8 mx-auto rounded-full bg-[#D9B36A]/10 border border-[#D9B36A]/30 flex items-center justify-center text-xs text-[#E5C687] mb-1">
-                  🔮
+              <div className="relative w-full h-full rounded-xl overflow-hidden bg-[#0B0A12] border border-[#D9B36A]/40 flex flex-col justify-between p-1.5">
+                <div className="flex justify-between items-center text-[9px] text-[#D9B36A] font-bold z-10 bg-black/60 px-1 rounded">
+                  <span>{card.roman}</span>
+                  <span className="text-[8px] text-[#E5C687]">{card.title}</span>
                 </div>
-                <span className="text-[10px] font-semibold text-[#F8F5F0] block leading-tight">
-                  {card.title}
-                </span>
-              </div>
-              <div className="text-[8px] text-center tracking-widest text-[#9E96B0] uppercase">
-                RWS
+                {/* RWS Illustration Artwork */}
+                <div className="absolute inset-0 opacity-85">
+                  <img
+                    src={card.image}
+                    alt={card.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                </div>
+                <div className="text-[8px] text-center tracking-widest text-[#D9B36A] font-bold uppercase z-10 mt-auto">
+                  RWS 1909
+                </div>
               </div>
             </motion.div>
           ))}

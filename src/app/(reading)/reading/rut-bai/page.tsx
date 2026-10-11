@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReadingStore } from '@/lib/reading-store';
 import { getSpreadPositionsForTopic } from '@/lib/safety';
 import { Sparkles, Wand2 } from 'lucide-react';
+import { TactileArcFan } from '@/components/TactileArcFan';
 import type { ReadingApiResponse } from '@/lib/api-types';
 
 export default function RutBaiPage() {
@@ -162,7 +163,7 @@ export default function RutBaiPage() {
         <p className="text-xs sm:text-sm text-[#9E96B0] mt-1 max-w-md mx-auto">
           {shuffleStage === 'charge'
             ? 'Tĩnh tâm, nghĩ về điều bạn vừa tâm sự và chạm giữ để kích hoạt từ trường bộ bài.'
-            : 'Chạm chọn lần lượt 3 lá bài theo trực giác mách bảo.'}
+            : 'Vuốt qua bộ bài xòe quạt và chạm chọn lần lượt 3 lá bài theo trực giác mách bảo.'}
         </p>
       </motion.div>
 
@@ -210,7 +211,7 @@ export default function RutBaiPage() {
           <button
             type="button"
             onClick={() => setShuffleStage('fan')}
-            className="mt-6 text-xs text-[#9E96B0] hover:text-[#E5C687] underline"
+            className="mt-6 text-xs text-[#9E96B0] hover:text-[#E5C687] underline cursor-pointer"
           >
             Bỏ qua nghi thức &rarr;
           </button>
@@ -271,37 +272,21 @@ export default function RutBaiPage() {
               type="button"
               onClick={handleQuickPickThree}
               disabled={isSubmitting || selectedFanIndices.length === 3}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14121F] hover:bg-[#1D192C] border border-[#D9B36A]/40 text-xs font-semibold text-[#E5C687] transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14121F] hover:bg-[#1D192C] border border-[#D9B36A]/40 text-xs font-semibold text-[#E5C687] transition-colors cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Vũ Trụ Chọn Hộ 3 Lá</span>
             </button>
           </div>
 
-          {/* 22 or 78 Cards Fan Grid */}
-          <div className="bg-[#14121F]/60 border border-[#262235] rounded-3xl p-4 sm:p-6">
-            <div className="grid grid-cols-6 sm:grid-cols-11 gap-2 max-h-72 overflow-y-auto p-1">
-              {Array.from({ length: totalDeckCards }, (_, idx) => {
-                const isSelected = selectedFanIndices.includes(idx);
-                return (
-                  <motion.button
-                    key={idx}
-                    type="button"
-                    onClick={() => handlePickCard(idx)}
-                    disabled={isSelected || isSubmitting || selectedFanIndices.length >= 3}
-                    whileHover={shouldReduceMotion || isSelected ? {} : { scale: 1.1, y: -4 }}
-                    whileTap={shouldReduceMotion ? {} : { scale: 0.95 }}
-                    className={`h-16 rounded-lg border transition-all flex flex-col items-center justify-center ${
-                      isSelected
-                        ? 'bg-[#D9B36A] border-[#F3E5AB] text-[#0B0A12] scale-95 opacity-50'
-                        : 'bg-gradient-to-b from-[#1C172B] to-[#0E0D17] border-[#D9B36A]/30 hover:border-[#D9B36A] text-[#9E96B0]'
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold">#{idx + 1}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
+          {/* New Tactile Arc Fan (Swipable curved cards) */}
+          <div className="bg-[#14121F]/80 border border-[#262235] rounded-3xl p-3 sm:p-5">
+            <TactileArcFan
+              totalCards={totalDeckCards}
+              selectedIndices={selectedFanIndices}
+              onPickCard={handlePickCard}
+              disabled={isSubmitting}
+            />
           </div>
 
           {/* Error Message */}
@@ -314,7 +299,7 @@ export default function RutBaiPage() {
             <button
               type="button"
               onClick={() => router.push('/reading/tam-su')}
-              className="px-4 py-3 rounded-xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-xs font-semibold text-[#9E96B0] transition-colors"
+              className="px-4 py-3 rounded-xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-xs font-semibold text-[#9E96B0] transition-colors cursor-pointer"
             >
               &larr; Sửa Tâm Sự
             </button>
@@ -327,7 +312,7 @@ export default function RutBaiPage() {
                   void submitDraw([selectedFanIndices[0]!, selectedFanIndices[1]!, selectedFanIndices[2]!]);
                 }
               }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-xs shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-xs shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? 'Đang Giải Mã...' : 'Giải Mã 3 Lá &rarr;'}
             </button>

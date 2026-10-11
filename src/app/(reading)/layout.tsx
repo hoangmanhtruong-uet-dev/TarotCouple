@@ -9,9 +9,15 @@ import { useReadingStore } from '@/lib/reading-store';
 
 const STEPS = [
   { step: 1, label: 'Chọn Reader', path: '/reading/reader' },
-  { step: 2, label: 'Tâm sự', path: '/reading/tam-su' },
+  { step: 2, label: 'Tâm sự', path: '/reading/chu-de' },
   { step: 3, label: 'Rút 3 lá', path: '/reading/rut-bai' },
   { step: 4, label: 'Kết quả', path: '/reading/ket-qua' },
+];
+
+const SUB_STEPS = [
+  { id: 'chu-de', label: 'Chủ đề', path: '/reading/chu-de' },
+  { id: 'noi-niem', label: 'Nỗi niềm', path: '/reading/noi-niem' },
+  { id: 'bo-bai', label: 'Bộ bài', path: '/reading/bo-bai' },
 ];
 
 export default function ReadingLayout({
@@ -23,10 +29,21 @@ export default function ReadingLayout({
   const readerAccentColor = useReadingStore((state) => state.readerAccentColor);
 
   // Determine current step index
+  const isStep2 =
+    pathname.includes('/reading/ve-ban') ||
+    pathname.includes('/reading/tam-su') ||
+    pathname.includes('/reading/chu-de') ||
+    pathname.includes('/reading/noi-niem') ||
+    pathname.includes('/reading/bo-bai');
+
   let currentStepIdx = 1;
-  if (pathname.includes('/reading/ve-ban') || pathname.includes('/reading/tam-su')) currentStepIdx = 2;
+  if (isStep2) currentStepIdx = 2;
   else if (pathname.includes('/reading/rut-bai')) currentStepIdx = 3;
   else if (pathname.includes('/reading/ket-qua') || pathname.includes('/reading/story')) currentStepIdx = 4;
+
+  let currentSubStep = 1;
+  if (pathname.includes('/reading/noi-niem')) currentSubStep = 2;
+  else if (pathname.includes('/reading/bo-bai')) currentSubStep = 3;
 
   return (
     <div
@@ -83,6 +100,51 @@ export default function ReadingLayout({
             );
           })}
         </div>
+
+        {/* 3 Chấm nhỏ chỉ vị trí con của Bước 2: Chủ đề • Nỗi niềm • Bộ bài */}
+        {isStep2 && !pathname.includes('/reading/ve-ban') && (
+          <div className="border-t border-[#262235]/60 bg-[#0B0A12]/80 py-1 px-4">
+            <div className="max-w-xl mx-auto flex items-center justify-center gap-4 text-[10px]">
+              {SUB_STEPS.map((sub, idx) => {
+                const stepNum = idx + 1;
+                const isSubActive = currentSubStep === stepNum;
+                const isSubDone = currentSubStep > stepNum;
+
+                return (
+                  <div key={sub.id} className="flex items-center gap-1.5">
+                    <div
+                      className={`rounded-full transition-all duration-300 ${
+                        isSubActive
+                          ? 'w-4 h-1.5 bg-[#D9B36A] shadow-[0_0_8px_rgba(217,179,106,0.6)]'
+                          : isSubDone
+                          ? 'w-1.5 h-1.5 bg-emerald-400'
+                          : 'w-1.5 h-1.5 bg-[#3B354D]'
+                      }`}
+                      style={{
+                        backgroundColor: isSubActive ? readerAccentColor : undefined,
+                        boxShadow: isSubActive ? `0 0 8px ${readerAccentColor}` : undefined,
+                      }}
+                    />
+                    <span
+                      className={`transition-colors ${
+                        isSubActive
+                          ? 'text-[#F8F5F0] font-bold'
+                          : isSubDone
+                          ? 'text-[#9E96B0]'
+                          : 'text-[#5E5873]'
+                      }`}
+                    >
+                      {sub.label}
+                    </span>
+                    {idx < SUB_STEPS.length - 1 && (
+                      <span className="text-[#3B354D] text-[9px] ml-1.5">&bull;</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <main className="flex-1 pb-16">{children}</main>

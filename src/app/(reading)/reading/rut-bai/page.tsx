@@ -298,10 +298,10 @@ export default function RutBaiPage() {
           <div className="flex items-center justify-between max-w-md mx-auto pt-4">
             <button
               type="button"
-              onClick={() => router.push('/reading/tam-su')}
+              onClick={() => router.push('/reading/bo-bai')}
               className="px-4 py-3 rounded-xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-xs font-semibold text-[#9E96B0] transition-colors cursor-pointer"
             >
-              &larr; Sửa Tâm Sự
+              &larr; Sửa Bộ Bài
             </button>
 
             <button

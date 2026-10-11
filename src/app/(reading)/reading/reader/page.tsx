@@ -29,7 +29,7 @@ export default function ReaderSelectionPage() {
     setTimeout(() => {
       // If user has already filled their profile, jump straight to 2b (tam-su), else go to 2a (ve-ban)
       if (hasFilledProfile && nickname && nickname.trim() && birthYear) {
-        router.push('/reading/tam-su');
+        router.push('/reading/chu-de');
       } else {
         router.push('/reading/ve-ban');
       }

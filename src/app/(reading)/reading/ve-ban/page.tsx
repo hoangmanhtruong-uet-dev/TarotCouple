@@ -65,7 +65,7 @@ export default function VeBanProfilePage() {
     if (fromMe) {
       router.push('/me');
     } else {
-      router.push('/reading/tam-su');
+      router.push('/reading/chu-de');
     }
   };
 

@@ -49,6 +49,18 @@ export interface QuotaStatusPayload {
   isFirstTurnFullDeckFree?: boolean;
   fullDeckUnlockCostStars?: number;
   fullDeckUnlockedDraws?: number;
+  freeFollowupsRemaining?: number;
+  followupStarCost?: number;
+}
+
+export interface FollowupMessagePayload {
+  id: string;
+  readingId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  costType: 'free' | 'star';
+  starsDeducted: number;
+  createdAt: string;
 }
 
 export interface ReadingSuccessResponse {

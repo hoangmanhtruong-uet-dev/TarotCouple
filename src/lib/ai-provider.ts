@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
+import type { ReadingSuccessResponse } from './api-types';
 import { buildCouplePrompts, buildTarotPrompts, PERSONA_PROFILES } from './prompts';
 import {
   classifyAgeTier,
@@ -1420,6 +1421,98 @@ export async function generateDailyCardReading(
     starsRewarded,
     totalStarsBalance,
   };
+}
+
+export interface GenerateFollowupParams {
+  reading: ReadingSuccessResponse;
+  question: string;
+}
+
+/**
+ * Phase 2/3: Generate Follow-up Answer (~120 words) in Reader's authentic voice,
+ * maintaining context of original 3 cards, overall verdict, and original question.
+ */
+export async function generateFollowupReading(
+  params: GenerateFollowupParams
+): Promise<string> {
+  const { reading, question } = params;
+  const effectivePersona = reading.effectivePersona || 'ba_co_mo_hon';
+  const profile = PERSONA_PROFILES[effectivePersona] || PERSONA_PROFILES.ba_co_mo_hon;
+  const safeNick = reading.nickname?.trim() || 'bạn';
+
+  const cardsSummary = reading.drawnCards
+    .map(
+      (dc) =>
+        `- ${dc.position_label}: ${dc.card.name_vi} (${dc.reversed ? 'Ngược' : 'Xuôi'})`
+    )
+    .join('\n');
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const isKeyUsable = apiKey && !apiKey.startsWith('AIzaSy_fake') && apiKey.length > 20;
+
+  if (isKeyUsable) {
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const promptText = `
+${profile.voiceInstructions}
+
+NGỮ CẢNH TRẢI BÀI TAROT HIỆN TẠI CỦA ${safeNick}:
+- Câu hỏi ban đầu: "${reading.questionText}"
+- Chủ đề: ${reading.topicLabel}
+- 3 lá bài đã rút:
+${cardsSummary}
+- Chốt hạ tổng quan: "${reading.result.overall_verdict}"
+
+CÂU HỎI THẮC MẮC SÂU HƠN CỦA ${safeNick}:
+<followup_question>
+${question}
+</followup_question>
+
+NHIỆM VỤ CỦA BẠN:
+1. Trả lời trực tiếp câu hỏi thắc mắc trên, dựa trên ngữ cảnh 3 lá bài và chốt hạ đã có.
+2. Giữ ĐÚNG 100% tông giọng, xưng hô và phong cách đặc trưng của ${profile.displayName}.
+3. Dung lượng: Khoảng 100 đến 140 từ (cực kỳ súc tích, đi thẳng vào trọng tâm, không lan man).
+4. TUYỆT ĐỐI KHÔNG tư vấn y tế, pháp lý, tài chính hoặc khẳng định chắc chắn 100% tương lai. Giữ tính tự phản chiếu và giải trí.
+5. Chỉ trả về trực tiếp đoạn văn bản câu trả lời, KHÔNG thêm định dạng JSON hay tiêu đề thừa.
+`.trim();
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: promptText,
+      });
+
+      const text = response.text?.trim();
+      if (text && text.length > 20) {
+        return text;
+      }
+    } catch {
+      // Graceful fallback to contextual engine
+    }
+  }
+
+  // High-quality contextual fallback (~120 words) matching persona
+  const c1 = reading.drawnCards[0]?.card.name_vi || 'Lá 1';
+  const c2 = reading.drawnCards[1]?.card.name_vi || 'Lá 2';
+  const c3 = reading.drawnCards[2]?.card.name_vi || 'Lá 3';
+
+  if (effectivePersona === 'ba_co_mo_hon') {
+    return `Nhìn thẳng vào câu hỏi "${question}" của con nè ${safeNick}: 3 lá bài ${c1}, ${c2} và ${c3} đã chỉ rõ mồn một rồi! Nút thắt lớn nhất lúc này không phải là người ta nghĩ gì, mà là con có dám buông chiếc rèm tự biên tự diễn xuống hay không. Bà Cố nhắc con: Ngừng overthinking lúc nửa đêm, tập trung làm việc của mình, giữ giá trị bản thân ngời ngời. Chuyện gì xứng đáng thì ở lại, còn cờ đỏ lè thì mạnh dạn lùi bước, vũ trụ tự khắc xếp đặt kết quả tốt nhất cho con!`;
+  }
+
+  if (effectivePersona === 'ba_ngoai_vui_tinh') {
+    return `Bà Ngoại nghe con hỏi "${question}" rồi nè ${safeNick} cưng! Nhìn lại 3 lá ${c1}, ${c2} và ${c3}, Bà thấy năng lượng của con đang rất trong sáng nhưng hơi lo lắng một xíu. Đừng tạo áp lực cho mình quá nhé con. Việc học tập và tình bạn đẹp luôn cần thời gian để chín muồi. Cứ giữ nụ cười tươi tắn, học tốt mỗi ngày và chân thành với mọi người xung quanh, mọi điều may mắn sẽ đến với con thôi!`;
+  }
+
+  if (effectivePersona === 'tong_tai_ly_tri') {
+    return `Về thắc mắc "${question}" của bạn: Dữ liệu từ 3 lá ${c1}, ${c2} và ${c3} cho thấy bức tranh rất rõ ràng. Chi phí cơ hội lớn nhất lúc này là thời gian bạn dùng để suy đoán thay vì hành động. Phương án chiến lược: Thiết lập ranh giới rõ ràng trong 48 giờ tới, đánh giá tình hình bằng hành động thực tế chứ không bằng lời hứa suông. Khi bạn kiểm soát được đòn bẩy cảm xúc và mục tiêu cá nhân, kết quả tối ưu sẽ nằm trong tay bạn.`;
+  }
+
+  if (effectivePersona === 'phap_su_toi_co') {
+    return `Soi vào thắc mắc "${question}" của lữ khách ${safeNick}: Tần số từ 3 mật ngữ ${c1}, ${c2} và ${c3} đang vang lên bài học về sự chuyển hóa tâm thức. Những gì ngươi đang trăn trở chỉ là làn sương mờ trước bình minh. Khi ngươi buông bỏ sự cưỡng cầu và neo giữ tâm mình trong sự tĩnh tại, sợi dây nhân duyên sẽ tự sắp xếp theo trật tự tự nhiên nhất. Hãy tin vào sự dẫn dắt của chân ngã.`;
+  }
+
+  // tien_tu_chua_lanh
+  return `Dịu dàng lắng nghe câu hỏi "${question}" của bạn nè ${safeNick}: Qua 3 lá bài ${c1}, ${c2} và ${c3}, mình cảm nhận được trái tim bạn đã trải qua những rung động và cả chút băn khoăn. Bạn ơi, đừng quá khắt khe với chính mình nhé. Hãy hít một hơi thật sâu, ôm lấy cảm xúc của bạn lúc này. Từng bước đi chậm rãi nhưng chân thành với bản thân sẽ dẫn lối bạn đến bến đỗ bình yên và ấm áp nhất.`;
 }
 
 /**

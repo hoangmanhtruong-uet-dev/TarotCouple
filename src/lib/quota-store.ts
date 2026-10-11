@@ -3,6 +3,7 @@ import type {
   CoupleRoomPublicView,
   DailyPullPayload,
   DeckMode,
+  FollowupMessagePayload,
   PaymentOrderPayload,
   QuotaStatusPayload,
   ReadingSuccessResponse,
@@ -40,6 +41,12 @@ export const REFERRAL_BONUS_STARS = 5;
 export const REWARDED_AD_BONUS_STARS = 3;
 export const REWARDED_AD_ECPM_VND = 45;
 
+export const FREE_FOLLOWUPS_PER_ACCOUNT = 2; // 2 câu hỏi sâu miễn phí trọn đời tài khoản
+export const FOLLOWUP_STAR_COST = 5; // 5 Sao từ câu hỏi thứ 3 trở đi
+export const FOLLOWUP_MAX_PER_READING = 5; // Tối đa 5 câu hỏi sâu mỗi lượt bói
+export const FOLLOWUP_MAX_QUESTION_CHARS = 200; // Tối đa 200 ký tự mỗi câu hỏi
+export const FOLLOWUP_RATE_LIMIT_MS = 3000; // Giới hạn 1 câu hỏi mỗi 3 giây
+
 const MAX_CACHED_READINGS = 200;
 const MAX_FUNNEL_EVENTS_LOG = 1000;
 
@@ -54,6 +61,7 @@ export type FunnelEventName =
   | 'couple_room_created'
   | 'couple_room_completed'
   | 'clarifier_unlocked'
+  | 'followup_asked'
   | 'daily_pull_completed'
   | 'payment_completed';
 
@@ -107,6 +115,8 @@ interface ClientWalletRecord {
   streakDays: number;
   lastDailyPullDate: string | null;
   dailyPullMap: Map<string, DailyPullPayload>;
+  freeFollowupsRemaining: number;
+  lastFollowupTimestamp: number;
 }
 
 interface ClientGrowthRecord {
@@ -191,6 +201,7 @@ interface GlobalStoreState {
   transactionsByOrderCode: Map<string, StoredTransaction>;
   transactionsByProviderRef: Map<string, StoredTransaction>;
   readingsCache: Map<string, ReadingSuccessResponse>;
+  followupMessagesByReading: Map<string, FollowupMessagePayload[]>;
   spentVndToday: number;
   readingsCountToday: number;
   totalAdRevenueVnd: number;
@@ -212,6 +223,7 @@ function createEmptyFunnelCounts(): Record<FunnelEventName, number> {
     couple_room_created: 0,
     couple_room_completed: 0,
     clarifier_unlocked: 0,
+    followup_asked: 0,
     daily_pull_completed: 0,
     payment_completed: 0,
   };
@@ -242,6 +254,7 @@ function getStore(): GlobalStoreState {
       transactionsByOrderCode: new Map(),
       transactionsByProviderRef: new Map(),
       readingsCache: new Map(),
+      followupMessagesByReading: new Map(),
       spentVndToday: 0,
       readingsCountToday: 0,
       totalAdRevenueVnd: 0,
@@ -258,6 +271,9 @@ function getStore(): GlobalStoreState {
   }
   if (!store.referralCodeToClientKey) {
     store.referralCodeToClientKey = new Map();
+  }
+  if (!store.followupMessagesByReading) {
+    store.followupMessagesByReading = new Map();
   }
   if (typeof store.totalAdRevenueVnd !== 'number') {
     store.totalAdRevenueVnd = 0;
@@ -369,6 +385,8 @@ function getOrCreateWalletRecord(clientKey: string): ClientWalletRecord {
     streakDays: 0,
     lastDailyPullDate: null,
     dailyPullMap: new Map(),
+    freeFollowupsRemaining: FREE_FOLLOWUPS_PER_ACCOUNT,
+    lastFollowupTimestamp: 0,
   };
   store.wallets.set(clientKey, created);
   return created;
@@ -396,6 +414,8 @@ function toQuotaPayload(record: ClientQuotaRecord): QuotaStatusPayload {
     isFirstTurnFullDeckFree,
     fullDeckUnlockCostStars: FULL_DECK_UNLOCK_STAR_COST,
     fullDeckUnlockedDraws: record.fullDeckUnlockedDraws ?? 0,
+    freeFollowupsRemaining: wallet.freeFollowupsRemaining ?? FREE_FOLLOWUPS_PER_ACCOUNT,
+    followupStarCost: FOLLOWUP_STAR_COST,
   };
 }
 
@@ -1816,6 +1836,175 @@ export function buildTikTokCarouselKits(
   }
 
   return defaultKits;
+}
+
+/**
+ * Get followup messages for a reading
+ */
+export function getFollowupMessages(readingId: string): FollowupMessagePayload[] {
+  const store = getStore();
+  return store.followupMessagesByReading.get(readingId) || [];
+}
+
+/**
+ * Check if the client can ask a followup question for a given readingId
+ */
+export function canAskFollowup(
+  clientKey: string,
+  readingId: string,
+  options?: { bypassRateLimit?: boolean }
+): {
+  allowed: boolean;
+  reason?: 'READING_LIMIT_REACHED' | 'RATE_LIMITED' | 'INSUFFICIENT_STARS';
+  costType: 'free' | 'star';
+  starsCost: number;
+  freeFollowupsRemaining: number;
+  currentMessageCount: number;
+  starsBalance: number;
+  quota: QuotaStatusPayload;
+} {
+  const wallet = getOrCreateWalletRecord(clientKey);
+  const quota = getQuotaStatus(clientKey);
+  const messages = getFollowupMessages(readingId);
+  const userQuestionsCount = messages.filter((m) => m.role === 'user').length;
+
+  if (userQuestionsCount >= FOLLOWUP_MAX_PER_READING) {
+    return {
+      allowed: false,
+      reason: 'READING_LIMIT_REACHED',
+      costType: 'star',
+      starsCost: FOLLOWUP_STAR_COST,
+      freeFollowupsRemaining: wallet.freeFollowupsRemaining ?? 0,
+      currentMessageCount: userQuestionsCount,
+      starsBalance: wallet.starsBalance,
+      quota,
+    };
+  }
+
+  const now = Date.now();
+  if (
+    !options?.bypassRateLimit &&
+    now - (wallet.lastFollowupTimestamp || 0) < FOLLOWUP_RATE_LIMIT_MS
+  ) {
+    return {
+      allowed: false,
+      reason: 'RATE_LIMITED',
+      costType: (wallet.freeFollowupsRemaining ?? 0) > 0 ? 'free' : 'star',
+      starsCost: (wallet.freeFollowupsRemaining ?? 0) > 0 ? 0 : FOLLOWUP_STAR_COST,
+      freeFollowupsRemaining: wallet.freeFollowupsRemaining ?? 0,
+      currentMessageCount: userQuestionsCount,
+      starsBalance: wallet.starsBalance,
+      quota,
+    };
+  }
+
+  const hasFree = (wallet.freeFollowupsRemaining ?? 0) > 0;
+  if (hasFree) {
+    return {
+      allowed: true,
+      costType: 'free',
+      starsCost: 0,
+      freeFollowupsRemaining: wallet.freeFollowupsRemaining,
+      currentMessageCount: userQuestionsCount,
+      starsBalance: wallet.starsBalance,
+      quota,
+    };
+  }
+
+  // Need Stars
+  if (wallet.starsBalance < FOLLOWUP_STAR_COST) {
+    return {
+      allowed: false,
+      reason: 'INSUFFICIENT_STARS',
+      costType: 'star',
+      starsCost: FOLLOWUP_STAR_COST,
+      freeFollowupsRemaining: 0,
+      currentMessageCount: userQuestionsCount,
+      starsBalance: wallet.starsBalance,
+      quota,
+    };
+  }
+
+  return {
+    allowed: true,
+    costType: 'star',
+    starsCost: FOLLOWUP_STAR_COST,
+    freeFollowupsRemaining: 0,
+    currentMessageCount: userQuestionsCount,
+    starsBalance: wallet.starsBalance,
+    quota,
+  };
+}
+
+/**
+ * Record a successful followup question + answer exchange in the store (atomic transaction).
+ * Deducts free quota or Stars only on success.
+ */
+export function recordFollowupMessageExchange(params: {
+  clientKey: string;
+  readingId: string;
+  question: string;
+  answer: string;
+  costType: 'free' | 'star';
+  starsDeducted: number;
+}): {
+  userMessage: FollowupMessagePayload;
+  assistantMessage: FollowupMessagePayload;
+  allMessages: FollowupMessagePayload[];
+  quota: QuotaStatusPayload;
+} {
+  const store = getStore();
+  const wallet = getOrCreateWalletRecord(params.clientKey);
+
+  // 1. Deduct cost
+  if (params.costType === 'free') {
+    wallet.freeFollowupsRemaining = Math.max(0, (wallet.freeFollowupsRemaining ?? FREE_FOLLOWUPS_PER_ACCOUNT) - 1);
+  } else if (params.starsDeducted > 0) {
+    wallet.starsBalance = Math.max(0, wallet.starsBalance - params.starsDeducted);
+  }
+
+  wallet.lastFollowupTimestamp = Date.now();
+
+  // 2. Append messages
+  const existing = store.followupMessagesByReading.get(params.readingId) || [];
+  const nowIso = new Date().toISOString();
+
+  const userMsg: FollowupMessagePayload = {
+    id: `fmsg_${Date.now()}_u${Math.random().toString(36).slice(2, 6)}`,
+    readingId: params.readingId,
+    role: 'user',
+    content: params.question,
+    costType: params.costType,
+    starsDeducted: params.starsDeducted,
+    createdAt: nowIso,
+  };
+
+  const assistantMsg: FollowupMessagePayload = {
+    id: `fmsg_${Date.now()}_a${Math.random().toString(36).slice(2, 6)}`,
+    readingId: params.readingId,
+    role: 'assistant',
+    content: params.answer,
+    costType: params.costType,
+    starsDeducted: 0,
+    createdAt: new Date(Date.now() + 10).toISOString(),
+  };
+
+  const updatedMessages = [...existing, userMsg, assistantMsg];
+  store.followupMessagesByReading.set(params.readingId, updatedMessages);
+
+  recordFunnelEvent('followup_asked', {
+    clientKey: params.clientKey,
+    readingId: params.readingId,
+    costType: params.costType,
+    starsDeducted: params.starsDeducted,
+  });
+
+  return {
+    userMessage: userMsg,
+    assistantMessage: assistantMsg,
+    allMessages: updatedMessages,
+    quota: getQuotaStatus(params.clientKey),
+  };
 }
 
 /**

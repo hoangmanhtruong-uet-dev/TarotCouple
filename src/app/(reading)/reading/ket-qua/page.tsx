@@ -36,7 +36,9 @@ import {
   MessageSquare,
   Lock,
   Eye,
+  HelpCircle,
 } from 'lucide-react';
+import FollowupChatModal from '@/components/FollowupChatModal';
 import { ALL_TAROT_CARDS } from '@/data/tarot-cards';
 import { READERS } from '@/data/tarot-cards';
 import type { ClarifierCardPayload, DrawnCardClientPayload } from '@/lib/api-types';
@@ -342,6 +344,7 @@ function VerdictView({
   activeQuoteIdx,
   setActiveQuoteIdx,
   onContinue,
+  onOpenFollowup,
 }: {
   drawnCards: [DrawnCardClientPayload, DrawnCardClientPayload, DrawnCardClientPayload];
   result: ReadingOutput;
@@ -350,6 +353,7 @@ function VerdictView({
   activeQuoteIdx: 0 | 1 | 2;
   setActiveQuoteIdx: (i: 0 | 1 | 2) => void;
   onContinue: () => void;
+  onOpenFollowup: () => void;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const quotes = result.shareable_card.savage_quotes;
@@ -428,6 +432,46 @@ function VerdictView({
             HÀNH ĐỘNG NÊN LÀM NGAY
           </span>
           <p className="text-base text-[#9E96B0] leading-[1.6]">{result.actionable_next_step}</p>
+        </div>
+      </motion.div>
+
+      {/* THẺ THẮC MẮC SÂU HƠN (PHẦN C: NẰM GIỮA "HÀNH ĐỘNG NÊN LÀM NGAY" VÀ THẺ LÁ THỨ 4) */}
+      <motion.div
+        initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.38 }}
+        onClick={onOpenFollowup}
+        className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#D9B36A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
+      >
+        <div className="flex items-center gap-3.5 relative z-10">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border"
+            style={{
+              borderColor: accentColor + '60',
+              backgroundColor: accentColor + '18',
+              color: accentColor,
+            }}
+          >
+            <MessageSquare className="w-6 h-6" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                2 câu đầu miễn phí ✨
+              </span>
+            </div>
+            <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E5C687] transition-colors">
+              Thắc Mắc Sâu Hơn Với Reader
+            </h3>
+            <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
+              Bạn có điều gì chưa thông suốt về 3 lá? Nhắn trực tiếp để {readerDisplayName} giải đáp sâu hơn nhé.
+            </p>
+          </div>
+
+          <div className="shrink-0 text-[#D9B36A] group-hover:translate-x-1 transition-transform">
+            <ArrowRight className="w-5 h-5" />
+          </div>
         </div>
       </motion.div>
 
@@ -784,6 +828,7 @@ export default function KetQuaPage() {
   // Clarifier state
   const [isDrawingClarifier, setIsDrawingClarifier] = useState(false);
   const [followupQuestion, setFollowupQuestion] = useState('');
+  const [isFollowupOpen, setIsFollowupOpen] = useState(false);
 
   // Set default followup question from cliffhanger when result loads
   useEffect(() => {
@@ -1024,6 +1069,7 @@ export default function KetQuaPage() {
             activeQuoteIdx={activeQuoteIdx}
             setActiveQuoteIdx={setActiveQuoteIdx}
             onContinue={() => setStage('clarifier')}
+            onOpenFollowup={() => setIsFollowupOpen(true)}
           />
         )}
 
@@ -1047,6 +1093,16 @@ export default function KetQuaPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Deep-dive follow-up modal */}
+      {readingSuccess && (
+        <FollowupChatModal
+          isOpen={isFollowupOpen}
+          onClose={() => setIsFollowupOpen(false)}
+          reading={readingSuccess}
+          accentColor={accentColor}
+        />
+      )}
     </div>
   );
 }

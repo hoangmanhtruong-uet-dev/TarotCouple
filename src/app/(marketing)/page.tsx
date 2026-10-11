@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, Heart, ArrowRight, Shield, Zap, Star } from 'lucide-react';
 import CelestialSkyCanvas from '@/components/CelestialSkyCanvas';
+import ReaderIntroModal from '@/components/ReaderIntroModal';
 import { STAGGER_TIMINGS, TRANSITION_EASINGS, SPRINGS } from '@/lib/motion';
 import { MAJOR_ARCANA } from '@/data/tarot-cards';
 
@@ -124,6 +125,10 @@ export default function MarketingLandingPage() {
     setImageErrors((prev) => ({ ...prev, [roman]: true }));
   };
 
+  // Reader Intro Modal State
+  const [showReaderIntro, setShowReaderIntro] = useState(false);
+  const [introIsCoupleMode, setIntroIsCoupleMode] = useState(false);
+
   // Solo Button Click with View Transitions & Vibration
   const handleSoloClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -136,28 +141,14 @@ export default function MarketingLandingPage() {
       y: e.clientY - rect.top,
     });
 
-    setIsNavigatingSolo(true);
-
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(8);
       } catch {}
     }
 
-    // Call router.push early around 250ms without waiting for full exit animation
-    setTimeout(() => {
-      if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-        (document as any).startViewTransition(() => {
-          startTransition(() => {
-            router.push('/reading/reader');
-          });
-        });
-      } else {
-        startTransition(() => {
-          router.push('/reading/reader');
-        });
-      }
-    }, 250);
+    setIntroIsCoupleMode(false);
+    setShowReaderIntro(true);
   };
 
   // Couple Button Click with Floating Hearts & Background Hue Shift
@@ -173,27 +164,14 @@ export default function MarketingLandingPage() {
     }));
     setCoupleHearts(newHearts);
 
-    setIsNavigatingCouple(true);
-
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(8);
       } catch {}
     }
 
-    setTimeout(() => {
-      if (typeof document !== 'undefined' && 'startViewTransition' in document) {
-        (document as any).startViewTransition(() => {
-          startTransition(() => {
-            router.push('/couple');
-          });
-        });
-      } else {
-        startTransition(() => {
-          router.push('/couple');
-        });
-      }
-    }, 250);
+    setIntroIsCoupleMode(true);
+    setShowReaderIntro(true);
   };
 
   // Horizontal Drag across 22 Major Arcana cards with inertia
@@ -322,7 +300,7 @@ export default function MarketingLandingPage() {
             }}
             className="max-w-xl mx-auto text-xs sm:text-sm text-[#9E96B0] leading-relaxed font-sans"
           >
-            Bốc bài Tarot cá nhân hoặc bói đôi cùng người ấy. Chọn Reader hợp gu, nhận câu chốt hạ sắc bén và xuất ảnh Story 9:16 để khoe. Miễn phí 3 lượt mỗi ngày.
+            Lắng nghe thông điệp chân thật từ các lá bài Tarot và đối diện với nội tâm của chính bạn. Giải mã tình cảm, công việc và các mối quan hệ qua lăng kính trực giác sắc bén.
           </motion.p>
         </div>
 
@@ -534,7 +512,7 @@ export default function MarketingLandingPage() {
 
           {/* Nút phụ: Bói Đôi Cùng Người Ấy */}
           <Link
-            href="/couple"
+            href="/reading/reader?mode=couple"
             onClick={handleCoupleClick}
             aria-disabled={isNavigatingCouple}
             className="group w-full sm:flex-1 h-14 inline-flex items-center justify-center gap-2 px-6 rounded-2xl bg-[#14121F]/90 hover:bg-[#1D192C] border-2 border-[#D9B36A]/60 text-[#F8F5F0] font-bold text-sm sm:text-base shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all active:scale-[0.97] cursor-pointer relative overflow-hidden select-none"
@@ -560,27 +538,34 @@ export default function MarketingLandingPage() {
           </Link>
         </motion.div>
 
-        {/* PHẦN 0.2 & 0.5: Dải tin cậy chuẩn copy, không bị cắt chữ ở 360px */}
+        {/* Dải thông tin đặc trưng */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 * animDelayFactor }}
-          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] sm:text-xs text-[#9E96B0] border-t border-[#262235]/60 pt-3 sm:pt-4 px-2 shrink-0"
+          className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] sm:text-xs text-[#9E96B0] border-t border-[#262235]/60 pt-3 sm:pt-4 px-2 shrink-0"
         >
           <div className="flex items-center gap-1.5 shrink-0">
-            <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Ẩn danh hóa trước khi gửi AI</span>
+            <Sparkles className="w-3.5 h-3.5 text-[#D9B36A]" />
+            <span>4 Reader đa góc nhìn</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <Zap className="w-3.5 h-3.5 text-[#D9B36A]" />
-            <span>Xáo bài ngẫu nhiên thật</span>
+            <Heart className="w-3.5 h-3.5 text-rose-400" />
+            <span>Chế độ bói đôi & check hợp cạ</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <Star className="w-3.5 h-3.5 text-amber-400" />
-            <span>Trọn bộ 78 lá RWS</span>
+            <span>Trọn bộ 78 lá chuẩn RWS 1909</span>
           </div>
         </motion.div>
       </div>
+
+      {/* Reader Showcase Sequence Modal (1 -> 2 -> 3 -> 4 -> /reading/reader) */}
+      <ReaderIntroModal
+        isOpen={showReaderIntro}
+        isCoupleMode={introIsCoupleMode}
+        onClose={() => setShowReaderIntro(false)}
+      />
     </div>
   );
 }

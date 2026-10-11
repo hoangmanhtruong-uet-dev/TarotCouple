@@ -19,6 +19,7 @@ export interface ReaderPersona {
   teen_tagline: string;
   badge: string;
   avatar_symbol: string;
+  avatar_image?: string;
   accent_color: string;
   active: boolean;
   is_free: boolean;
@@ -141,6 +142,7 @@ export const READERS: ReaderPersona[] = [
     teen_tagline: 'Hội cần lời khuyên hài hước, ấm áp về chuyện học đường.',
     badge: 'ĐỘ GẮT 100%',
     avatar_symbol: 'BC',
+    avatar_image: '/readers/ba-co-mo-hon.jpg',
     accent_color: '#E5624A',
     active: true,
     is_free: true,
@@ -161,6 +163,7 @@ export const READERS: ReaderPersona[] = [
     teen_tagline: 'Hội cần vỗ về cảm xúc và khích lệ nhẹ nhàng.',
     badge: 'DỊU NHƯ MỘT CÁI ÔM',
     avatar_symbol: 'TT',
+    avatar_image: '/readers/tien-tu-chua-lanh.jpg',
     accent_color: '#5DB075',
     active: true,
     is_free: true,
@@ -181,6 +184,7 @@ export const READERS: ReaderPersona[] = [
     teen_tagline: 'Hội thích lập kế hoạch học tập thực tế và logic.',
     badge: 'KẾ HOẠCH 1-2-3',
     avatar_symbol: 'TL',
+    avatar_image: '/readers/tong-tai-ly-tri.jpg',
     accent_color: '#5B8DEF',
     active: true,
     is_free: true,
@@ -201,6 +205,7 @@ export const READERS: ReaderPersona[] = [
     teen_tagline: 'Hội tò mò về biểu tượng cổ điển và triết lý xưa.',
     badge: 'HUYỀN BÍ, NGHIỆP QUẢ',
     avatar_symbol: 'PS',
+    avatar_image: '/readers/phap-su-toi-co.jpg',
     accent_color: '#9D65E5',
     active: true,
     is_free: true,

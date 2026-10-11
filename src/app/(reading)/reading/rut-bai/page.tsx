@@ -7,6 +7,7 @@ import { useReadingStore } from '@/lib/reading-store';
 import { getSpreadPositionsForTopic } from '@/lib/safety';
 import { Sparkles, Wand2 } from 'lucide-react';
 import { TactileArcFan } from '@/components/TactileArcFan';
+import HamsterLoader from '@/components/HamsterLoader';
 import type { ReadingApiResponse } from '@/lib/api-types';
 
 export default function RutBaiPage() {
@@ -147,7 +148,17 @@ export default function RutBaiPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8 relative">
+      {/* Loading Overlay with Hamster Wheel */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 bg-[#0B0A12]/95 backdrop-blur-md flex items-center justify-center">
+          <HamsterLoader
+            message="Đang giải mã trải bài..."
+            subMessage="Các vị tinh tú và Reader đang chắt lọc thông điệp dành riêng cho bạn"
+          />
+        </div>
+      )}
+
       {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

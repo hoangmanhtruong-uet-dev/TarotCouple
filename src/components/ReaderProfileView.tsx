@@ -259,7 +259,15 @@ export default function ReaderProfileView({
                     color: reader.accent_color,
                   }}
                 >
-                  <span className="tracking-tighter select-none">{reader.avatar_symbol}</span>
+                  {reader.avatar_image ? (
+                    <img
+                      src={reader.avatar_image}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="tracking-tighter select-none">{reader.avatar_symbol}</span>
+                  )}
                   {/* Subtle inner rays */}
                   <div
                     className="absolute inset-0 opacity-15 pointer-events-none"

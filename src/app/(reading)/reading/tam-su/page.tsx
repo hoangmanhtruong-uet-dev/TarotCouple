@@ -131,17 +131,26 @@ export default function TamSuContextPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center mb-6"
       >
         <span className="text-[11px] font-bold tracking-[0.2em] text-[#D9B36A] uppercase block mb-1">
-          BƯỚC 2 / 4 • TÂM SỰ & CHỌN CHỦ ĐỀ
+          BƯỚC 2B • TÂM SỰ CÙNG VŨ TRỤ
         </span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
           Kể Chuyện Cho {activeReader.name}
         </h1>
-        <p className="text-xs sm:text-sm text-[#9E96B0] mt-1">
-          Chia sẻ năng lượng hiện tại để các lá bài hội tụ chuẩn xác nhất.
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-1">
+          <p className="text-xs sm:text-sm text-[#9E96B0]">
+            Chào <strong>{nickname || 'bạn'}</strong> ({2026 - birthYear} tuổi, {zodiacSign || 'Vũ Trụ'}).
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/reading/ve-ban')}
+            className="text-xs text-[#D9B36A] hover:underline underline-offset-2 ml-1"
+          >
+            (Sửa hồ sơ)
+          </button>
+        </div>
       </motion.div>
 
       <motion.div
@@ -150,47 +159,7 @@ export default function TamSuContextPage() {
         transition={{ duration: 0.4 }}
         className="bg-[#14121F]/80 border border-[#262235] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl mb-8"
       >
-        {/* Row 1: Nickname & Birth Year */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#D9B36A] mb-1.5 uppercase tracking-wider">
-              Biệt Danh Của Bạn
-            </label>
-            <input
-              type="text"
-              value={nickname}
-              onChange={(e) => setContextForm({ nickname: e.target.value })}
-              placeholder="VD: Linh, Mây, Bé Heo..."
-              maxLength={30}
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-sm text-[#F8F5F0] focus:border-[#D9B36A] focus:outline-none transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#D9B36A] mb-1.5 uppercase tracking-wider">
-              Năm Sinh (Xác định độ tuổi)
-            </label>
-            <select
-              value={birthYear}
-              onChange={(e) => setContextForm({ birthYear: Number(e.target.value) })}
-              className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-sm text-[#F8F5F0] focus:border-[#D9B36A] focus:outline-none transition-colors"
-            >
-              {BIRTH_YEAR_OPTIONS.map((yr) => (
-                <option key={yr} value={yr}>
-                  {yr} ({2026 - yr} tuổi)
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Row 2: Zodiac Selector (New visual component) */}
-        <ZodiacWheelSelector
-          selectedSign={zodiacSign}
-          onSelectSign={(sign) => setContextForm({ zodiacSign: sign })}
-        />
-
-        {/* Row 3: Deck Mode */}
+        {/* Row 1: Deck Mode */}
         <div>
           <label className="block text-xs font-semibold text-[#D9B36A] mb-1.5 uppercase tracking-wider">
             Quy Mô Bộ Bài
@@ -221,7 +190,7 @@ export default function TamSuContextPage() {
           </div>
         </div>
 
-        {/* Topic Pills */}
+        {/* Row 2: Topic Pills */}
         <div>
           <label className="block text-xs font-semibold text-[#D9B36A] mb-2 uppercase tracking-wider">
             Chủ Đề Trải Bài
@@ -253,7 +222,7 @@ export default function TamSuContextPage() {
           </div>
         </div>
 
-        {/* Sealed Parchment Letter (Hộp Thư Phong Ấn Tâm Sự) */}
+        {/* Row 3: Sealed Parchment Letter (Hộp Thư Phong Ấn Tâm Sự) */}
         <div
           className={`relative p-4 rounded-2xl border transition-all ${
             isFocusedTextarea
@@ -282,7 +251,7 @@ export default function TamSuContextPage() {
           />
         </div>
 
-        {/* Suggested Questions */}
+        {/* Row 4: Suggested Questions */}
         <div>
           <p className="text-[11px] font-semibold text-[#9E96B0] mb-2 uppercase tracking-wider">
             Gợi ý câu hỏi nhanh:
@@ -301,7 +270,7 @@ export default function TamSuContextPage() {
           </div>
         </div>
 
-        {/* Privacy Switch */}
+        {/* Row 5: Privacy Switch */}
         <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0B0A12]/80 border border-[#262235]">
           <div className="flex items-center gap-2.5">
             <Lock className="w-4 h-4 text-emerald-400" />
@@ -328,11 +297,11 @@ export default function TamSuContextPage() {
       <div className="flex items-center gap-3 max-w-md mx-auto">
         <button
           type="button"
-          onClick={() => router.push('/reading/reader')}
+          onClick={() => router.push('/reading/ve-ban')}
           className="flex-1 py-4 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-[#9E96B0] font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Chọn Lại Reader</span>
+          <span>Hồ Sơ (Về Bạn)</span>
         </button>
 
         <button
@@ -341,7 +310,7 @@ export default function TamSuContextPage() {
           disabled={isDissolving}
           className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span>Tiến Hành Rút Bài</span>
+          <span>Xáo & Rút Bài</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

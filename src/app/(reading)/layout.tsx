@@ -24,7 +24,7 @@ export default function ReadingLayout({
 
   // Determine current step index
   let currentStepIdx = 1;
-  if (pathname.includes('/reading/tam-su')) currentStepIdx = 2;
+  if (pathname.includes('/reading/ve-ban') || pathname.includes('/reading/tam-su')) currentStepIdx = 2;
   else if (pathname.includes('/reading/rut-bai')) currentStepIdx = 3;
   else if (pathname.includes('/reading/ket-qua') || pathname.includes('/reading/story')) currentStepIdx = 4;
 

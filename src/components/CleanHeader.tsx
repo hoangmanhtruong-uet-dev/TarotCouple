@@ -32,7 +32,7 @@ export default function CleanHeader({
               TAROT COUPLE
             </span>
             <span className="text-[8px] tracking-[0.16em] uppercase text-[#D9B36A]">
-              RWS 1909
+              Tarot AI
             </span>
           </div>
         </Link>

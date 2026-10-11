@@ -353,7 +353,7 @@ export const MAJOR_ARCANA: TarotCard[] = [
     name_en: 'The Lovers',
     name_vi: 'Đôi Tình Nhân',
     arcana: 'major',
-    rws_image_url: 'https://upload.wikimedia.org/wikipedia/commons/3/3a/TheLovers.jpg',
+    rws_image_url: 'https://upload.wikimedia.org/wikipedia/commons/d/d8/RWS_Tarot_06_Lovers.jpg',
     symbol_glyph: '♊',
     palette: { primary: '#F472B6', secondary: '#FCE7F3', glow: 'rgba(244, 114, 182, 0.4)' },
     keywords_up: ['Đồng điệu sâu sắc', 'Lựa chọn từ trái tim', 'Gắn kết chân thành', 'Hòa hợp', 'Nhất quán'],

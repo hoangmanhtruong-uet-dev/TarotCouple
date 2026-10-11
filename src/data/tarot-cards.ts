@@ -22,6 +22,9 @@ export interface ReaderPersona {
   accent_color: string;
   active: boolean;
   is_free: boolean;
+  keywords: [string, string, string];
+  not_suitable_for: string;
+  teen_not_suitable_for: string;
   sample_quote: string;
   sample_reading_snippet?: string;
   persona_prompt: string;
@@ -134,13 +137,16 @@ export const READERS: ReaderPersona[] = [
     name: 'Bà Cố Mỏ Hỗn',
     teen_safe_name: 'Bà Ngoại Vui Tính',
     title: 'ĐỘ GẮT 100%',
-    tagline: 'Hợp với: hội đang mập mờ, lụy ex, cần người mắng cho tỉnh.',
-    teen_tagline: 'Hợp với: hội cần lời khuyên hài hước, ấm áp về chuyện học đường.',
+    tagline: 'Hội đang mập mờ, lụy ex, cần người mắng cho tỉnh ngộ.',
+    teen_tagline: 'Hội cần lời khuyên hài hước, ấm áp về chuyện học đường.',
     badge: 'ĐỘ GẮT 100%',
     avatar_symbol: 'BC',
     accent_color: '#E5624A',
     active: true,
     is_free: true,
+    keywords: ['Sắc Sảo', 'Tỉnh Mộng', 'Check Var'],
+    not_suitable_for: 'Bạn đang rất mong manh hoặc chỉ cần được an ủi vỗ về.',
+    teen_not_suitable_for: 'Bạn đang muốn nghe lời phê bình nghiêm khắc.',
     sample_quote: 'Tỉnh lại đi cháu, nó bận rep người khác chứ không bận học đâu.',
     sample_reading_snippet: 'Lá bài The Devil lộn ngược: Mối quan hệ này không có tương lai đâu, chỉ có bạn tự huyễn hoặc thôi. Dừng lụy tình lại mà tập trung kiếm tiền đi!',
     persona_prompt:
@@ -151,13 +157,16 @@ export const READERS: ReaderPersona[] = [
     name: 'Tiên Tử Chữa Lành',
     teen_safe_name: 'Tiên Tử Chữa Lành',
     title: 'DỊU NHƯ MỘT CÁI ÔM',
-    tagline: 'Hợp với: hội đang burnout, áp lực học tập, vừa thất tình.',
-    teen_tagline: 'Hợp với: hội cần vỗ về cảm xúc và khích lệ nhẹ nhàng.',
+    tagline: 'Hội đang burnout, áp lực học tập, vừa thất tình cần chỗ dựa.',
+    teen_tagline: 'Hội cần vỗ về cảm xúc và khích lệ nhẹ nhàng.',
     badge: 'DỊU NHƯ MỘT CÁI ÔM',
     avatar_symbol: 'TT',
     accent_color: '#5DB075',
     active: true,
     is_free: true,
+    keywords: ['Dịu Dàng', 'Lắng Nghe', 'Chữa Lành'],
+    not_suitable_for: 'Bạn cần ai đó nói thẳng thừng, đanh thép, không vòng vo.',
+    teen_not_suitable_for: 'Bạn muốn các phương pháp kỷ luật cứng rắn ngay lập tức.',
     sample_quote: 'Vũ trụ biết bạn đã cố gắng nhiều rồi.',
     sample_reading_snippet: 'Lá The Star sáng rọi: Trái tim bạn đang dần hồi phục sau những tổn thương. Đừng tự tạo áp lực cho mình nữa, bình yên đang trên đường đến với bạn.',
     persona_prompt:
@@ -168,13 +177,16 @@ export const READERS: ReaderPersona[] = [
     name: 'Tổng Tài Lý Trí',
     teen_safe_name: 'Đàn Anh Điềm Tĩnh',
     title: 'PHÂN TÍCH, KẾ HOẠCH 1-2-3',
-    tagline: 'Hợp với: hội hỏi về sự nghiệp, tiền bạc, muốn cầm đằng chuôi.',
-    teen_tagline: 'Hợp với: hội thích lập kế hoạch học tập thực tế và logic.',
+    tagline: 'Hội hỏi về sự nghiệp, tài chính, muốn cầm đằng chuôi cuộc đời.',
+    teen_tagline: 'Hội thích lập kế hoạch học tập thực tế và logic.',
     badge: 'KẾ HOẠCH 1-2-3',
     avatar_symbol: 'TL',
     accent_color: '#5B8DEF',
     active: true,
     is_free: true,
+    keywords: ['Logic', 'Chiến Lược', 'Hành Động'],
+    not_suitable_for: 'Bạn đang cần được ôm ấp cảm xúc chứ chưa cần kế hoạch hành động.',
+    teen_not_suitable_for: 'Bạn chỉ muốn tâm sự vu vơ không cần tìm giải pháp.',
     sample_quote: 'Lá bài chỉ là dữ liệu. Quyết định vẫn là của bạn.',
     sample_reading_snippet: 'Phân tích SWOT qua lá The Emperor: Điểm mạnh của bạn là chuyên môn vững, nhưng điểm yếu là trì hoãn vì cầu toàn. Kế hoạch: Chia nhỏ mục tiêu 3 ngày tới.',
     persona_prompt:
@@ -185,13 +197,16 @@ export const READERS: ReaderPersona[] = [
     name: 'Pháp Sư Tối Cổ',
     teen_safe_name: 'Hiền Triết Cổ Đại',
     title: 'HUYỀN BÍ, NGHIỆP QUẢ',
-    tagline: 'Hợp với: hội thích tâm linh sâu, vibe witchy, tarot cổ điển.',
-    teen_tagline: 'Hợp với: hội tò mò về biểu tượng cổ điển và triết lý xưa.',
+    tagline: 'Hội thích tâm linh sâu sắc, vibe witchy huyền bí và tarot cổ điển.',
+    teen_tagline: 'Hội tò mò về biểu tượng cổ điển và triết lý xưa.',
     badge: 'HUYỀN BÍ, NGHIỆP QUẢ',
     avatar_symbol: 'PS',
     accent_color: '#9D65E5',
     active: true,
     is_free: true,
+    keywords: ['Huyền Bí', 'Nghiệp Quả', 'Tần Số'],
+    not_suitable_for: 'Bạn muốn câu trả lời ngắn gọn, thực dụng mì ăn liền.',
+    teen_not_suitable_for: 'Bạn chỉ tìm kiếm câu trả lời nhanh gọn có/không.',
     sample_quote: 'Có những duyên chưa dứt, từ rất lâu trước đêm nay.',
     sample_reading_snippet: 'Tần số bài The High Priestess: Giác quan thứ sáu của bạn đang rất nhạy. Đây là bài học linh hồn về sự kiên nhẫn và buông bỏ kiểm soát để đón nhận.',
     persona_prompt:

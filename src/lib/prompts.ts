@@ -126,6 +126,9 @@ ${profile.voiceInstructions}
 === 4. QUY TẮC ĐẦU RA JSON, STORY QUOTE 9:16 & CLIFFHANGER CÓ TRÁCH NHIỆM ===
 - Trả về đúng cấu trúc JSON theo schema yêu cầu.
 - Giải nghĩa ĐÚNG 3 lá bài đã được hệ thống server rút sẵn (không tự bịa lá bài khác). Chú ý kỹ chiều lá bài (Xuôi = Upright, Ngược = Reversed).
+- QUY TẮC BẮT BUỘC VỀ NHÃN NĂNG LƯỢNG (energy_keyword):
+  + Mỗi lá bài trong 3 lá PHẢI CÓ một "energy_keyword" RIÊNG BIỆT, độc nhất, phản ánh đúng chiều xuôi/ngược và tinh thần của lá đó.
+  + TUYỆT ĐỐI KHÔNG dùng cùng một nhãn (ví dụ "Ám ảnh độc hại") cho hai lá khác nhau (như Ác Quỷ và Bánh Xe Số Phận).
 - Trong "shareable_card":
   - "savage_quotes": Sinh đúng 3 câu quote hoàn toàn khác góc nhìn nhau (câu 1: bắt bài cực gắt/thấu tim đen; câu 2: thông điệp vũ trụ/lá bài; câu 3: lời nhắn tự thương lấy mình) để người dùng bấm đổi quote 0đ trên ảnh Story 9:16.
   - MỖI CÂU QUOTE trong "savage_quotes" và "savage_quote" PHẢI NGẮN GỌN, ĐẮT GIÁ, TỐI ĐA 18–22 TỪ.

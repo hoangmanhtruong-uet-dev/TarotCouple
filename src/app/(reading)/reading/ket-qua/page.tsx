@@ -288,24 +288,24 @@ function CardSpotlightView({
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="p-4 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
+          className="p-5 sm:p-6 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
         >
-          <p className="text-[11px] font-bold text-[#D9B36A] uppercase tracking-wider mb-2">
+          <p className="text-xs font-bold text-[#D9B36A] uppercase tracking-wider mb-2">
             Ý nghĩa lá bài
           </p>
-          <p className="text-sm text-[#F8F5F0] leading-relaxed">{coreMeaning}</p>
+          <p className="text-base text-[#F8F5F0] leading-[1.6]">{coreMeaning}</p>
         </motion.div>
 
         <motion.div
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="p-4 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
+          className="p-5 sm:p-6 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
         >
-          <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-2">
+          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
             Luận giải cho bạn
           </p>
-          <p className="text-sm text-[#9E96B0] leading-relaxed">{cardAnalysis.interpretation}</p>
+          <p className="text-base text-[#9E96B0] leading-[1.6]">{cardAnalysis.interpretation}</p>
         </motion.div>
 
         {hook && (
@@ -414,83 +414,107 @@ function VerdictView({
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="p-5 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#120F1D] border border-[#D9B36A]/40 space-y-4 mb-4 shadow-xl"
+        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#120F1D] border border-[#D9B36A]/40 space-y-4 mb-5 shadow-xl"
       >
         <div>
-          <span className="text-[10px] font-bold tracking-wider text-[#D9B36A] uppercase block mb-2">
+          <span className="text-xs font-bold tracking-wider text-[#D9B36A] uppercase block mb-2">
             CHỐT HẠ TỔNG QUAN
           </span>
-          <p className="text-sm text-[#F8F5F0] leading-relaxed">{result.overall_verdict}</p>
+          <p className="text-base text-[#F8F5F0] leading-[1.6]">{result.overall_verdict}</p>
         </div>
 
         <div className="border-t border-[#262235] pt-4">
-          <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase block mb-2">
+          <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase block mb-2">
             HÀNH ĐỘNG NÊN LÀM NGAY
           </span>
-          <p className="text-sm text-[#9E96B0] leading-relaxed">{result.actionable_next_step}</p>
+          <p className="text-base text-[#9E96B0] leading-[1.6]">{result.actionable_next_step}</p>
         </div>
       </motion.div>
 
-      {/* Quote Switcher */}
+      {/* THẺ GỢI Ý LÁ THỨ 4 (THAY THẾ KHỐI QUOTE - BẤM CHẠM = MỞ MÀN CLARIFIER) */}
       <motion.div
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.45 }}
-        className="p-5 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-5 shadow-xl"
+        onClick={onContinue}
+        className="group p-5 rounded-3xl bg-[#14121F]/90 border border-[#D9B36A]/40 hover:border-[#D9B36A] transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
+        style={{
+          boxShadow: `0 0 25px ${accentColor}18`,
+        }}
       >
-        <span className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider block mb-3">
-          Chọn câu quote cho Story 9:16 (3 phương án miễn phí):
-        </span>
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {quotes.map((_, qIdx) => (
-            <button
-              key={qIdx}
-              type="button"
-              onClick={() => setActiveQuoteIdx(qIdx as 0 | 1 | 2)}
-              className="py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer"
-              style={
-                activeQuoteIdx === qIdx
-                  ? { backgroundColor: accentColor + '25', borderColor: accentColor, color: '#E5C687' }
-                  : { backgroundColor: '#0B0A12', borderColor: '#262235', color: '#9E96B0' }
-              }
-            >
-              Phương án {qIdx + 1}
-            </button>
-          ))}
+        {/* Ambient background glow */}
+        <div
+          className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-20 pointer-events-none"
+          style={{ backgroundColor: accentColor }}
+        />
+
+        <div className="flex items-center gap-4 relative z-10">
+          {/* Lá úp phát sáng nhịp thở nhẹ */}
+          <motion.div
+            animate={
+              shouldReduceMotion
+                ? {}
+                : {
+                    boxShadow: [
+                      `0 0 10px ${accentColor}30`,
+                      `0 0 24px ${accentColor}70`,
+                      `0 0 10px ${accentColor}30`,
+                    ],
+                  }
+            }
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-16 h-24 sm:w-18 sm:h-28 rounded-xl bg-gradient-to-br from-[#262135] to-[#120F1D] border-2 border-[#D9B36A]/70 flex flex-col items-center justify-center shrink-0 text-center relative overflow-hidden"
+          >
+            <div className="text-[#D9B36A] text-lg font-serif">✦</div>
+            <div className="text-[9px] font-bold text-[#E5C687] tracking-wider uppercase mt-1">Lá 4</div>
+            <div className="absolute inset-1 rounded-lg border border-[#D9B36A]/20 pointer-events-none" />
+          </motion.div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold text-[#D9B36A] tracking-wider uppercase bg-[#D9B36A]/10 px-2.5 py-0.5 rounded-full border border-[#D9B36A]/30">
+                Gợi mở bí mật · 5 Sao ⭐
+              </span>
+            </div>
+            <h3 className="font-display text-base font-bold text-[#F8F5F0] mb-1 group-hover:text-[#E5C687] transition-colors">
+              Mở Khóa Lá Bài Làm Rõ Thứ 4
+            </h3>
+            <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
+              {result.cliffhanger_upsell?.tease_text ||
+                `Vũ trụ đang giấu một nút thắt quan trọng. Hãy để ${readerDisplayName} lật mở lá bài thứ 4 để soi sâu hơn.`}
+            </p>
+          </div>
+
+          <div className="shrink-0 text-[#D9B36A] group-hover:translate-x-1 transition-transform">
+            <ArrowRight className="w-5 h-5" />
+          </div>
         </div>
-        <motion.div
-          key={activeQuoteIdx}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-3.5 rounded-xl bg-[#0B0A12] border border-[#D9B36A]/30 text-sm text-[#F8F5F0] italic font-serif"
-        >
-          &ldquo;{selectedQuote}&rdquo;
-        </motion.div>
       </motion.div>
 
-      {/* Fixed bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
+      {/* Fixed bottom actions: Ưu tiên nút Lá Thứ 4 khi chưa mở */}
+      <div className="fixed bottom-0 left-0 right-0 p-3.5 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)] z-30">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          <Link
-            href="/reading/story"
-            className="flex-1 py-3.5 rounded-2xl text-[#0B0A12] font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+          <button
+            type="button"
+            onClick={onContinue}
+            className="flex-1 py-3.5 sm:py-4 rounded-2xl text-[#0B0A12] font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg active:scale-98"
             style={{
               background: `linear-gradient(135deg, #D9B36A, #C49A4D)`,
               boxShadow: '0 4px 25px rgba(217,179,106,0.35)',
             }}
           >
-            <Share2 className="w-4 h-4" />
-            <span>Xuất Ảnh Story 9:16</span>
-          </Link>
-          <button
-            type="button"
-            onClick={onContinue}
-            className="py-3.5 px-4 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-            style={{ color: accentColor }}
-          >
-            <Zap className="w-4 h-4" />
-            <span className="whitespace-nowrap">Lá Thứ 4</span>
+            <Star className="w-4 h-4 fill-[#0B0A12]" />
+            <span>Mở Lá Thứ 4 · 5 Sao</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
+
+          <Link
+            href="/reading/story"
+            className="py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border-2 border-[#D9B36A]/70 text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+          >
+            <Share2 className="w-4 h-4 text-[#D9B36A]" />
+            <span className="whitespace-nowrap">Xuất Story 9:16</span>
+          </Link>
         </div>
       </div>
     </motion.div>
@@ -550,28 +574,28 @@ function ClarifierView({
       <motion.div
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="p-5 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#0B0A12] border border-emerald-500/30 mb-4"
+        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#0B0A12] border border-emerald-500/30 mb-5 shadow-lg"
       >
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2.5">
           <MessageSquare className="w-4 h-4 text-emerald-400" />
-          <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
             Lời khuyên ngắn gọn từ {readerDisplayName}
           </span>
         </div>
-        <p className="text-sm text-[#F8F5F0] leading-relaxed">
+        <p className="text-base text-[#F8F5F0] leading-[1.6]">
           {result.actionable_next_step}
         </p>
 
         {/* Cliffhanger tease if available */}
         {result.cliffhanger_upsell && (
-          <div className="mt-3 border-t border-[#262235] pt-3">
+          <div className="mt-4 border-t border-[#262235] pt-3.5">
             <button
               type="button"
               onClick={() => setExpandedAdvice(!expandedAdvice)}
-              className="flex items-center gap-1.5 text-[11px] text-[#9E96B0] hover:text-[#E5C687] cursor-pointer transition-colors"
+              className="flex items-center gap-1.5 text-xs text-[#9E96B0] hover:text-[#E5C687] cursor-pointer transition-colors"
             >
-              {expandedAdvice ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              <span>{result.cliffhanger_upsell.tease_text}</span>
+              {expandedAdvice ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              <span className="leading-relaxed">{result.cliffhanger_upsell.tease_text}</span>
             </button>
           </div>
         )}
@@ -622,15 +646,15 @@ function ClarifierView({
                 </p>
               </div>
             </div>
-            <div className="p-4 rounded-2xl bg-[#0B0A12] border border-[#262235]">
-              <p className="text-xs text-[#9E96B0] leading-relaxed mb-3">{clarifierCard.interpretation}</p>
+            <div className="p-5 rounded-2xl bg-[#0B0A12] border border-[#262235]">
+              <p className="text-base text-[#F8F5F0] leading-[1.6] mb-3">{clarifierCard.interpretation}</p>
               {clarifierCard.advice && (
-                <p className="text-xs text-[#F8F5F0] leading-relaxed border-t border-[#262235] pt-3">
+                <p className="text-base text-[#E5C687] leading-[1.6] border-t border-[#262235] pt-3">
                   {clarifierCard.advice}
                 </p>
               )}
             </div>
-            <p className="text-xs italic text-[#D9B36A] font-serif px-1">
+            <p className="text-sm italic text-[#D9B36A] font-serif px-1 leading-relaxed">
               &ldquo;{clarifierCard.savageQuote}&rdquo;
             </p>
           </motion.div>

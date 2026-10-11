@@ -307,7 +307,16 @@ export const ReadingOutputSchema = z.object({
     ),
   metrics: ReadingMetricsSchema.optional(),
   cliffhanger_upsell: CliffhangerUpsellSchema.optional(),
-});
+}).refine(
+  (data) => {
+    const kws = data.cards_analysis.map((c) => c.energy_keyword.trim().toLowerCase());
+    return new Set(kws).size === kws.length;
+  },
+  {
+    message: 'Mỗi lá bài trong 3 lá bắt buộc phải có nhãn năng lượng (energy_keyword) riêng biệt, không được trùng lặp nhau.',
+    path: ['cards_analysis'],
+  }
+);
 export type ReadingOutput = z.infer<typeof ReadingOutputSchema>;
 
 /**

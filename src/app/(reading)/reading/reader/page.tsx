@@ -14,10 +14,12 @@ export default function ReaderSelectionPage() {
   const shouldReduceMotion = useReducedMotion();
   const selectedReaderId = useReadingStore((state) => state.selectedReaderId);
   const setSelectedReaderId = useReadingStore((state) => state.setSelectedReaderId);
+  const hasFilledProfile = useReadingStore((state) => state.hasFilledProfile);
   const nickname = useReadingStore((state) => state.nickname);
   const birthYear = useReadingStore((state) => state.birthYear);
 
   const [isEnteringTent, setIsEnteringTent] = useState(false);
+  const [activeMobileIdx, setActiveMobileIdx] = useState(0);
 
   const currentReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
 
@@ -25,8 +27,8 @@ export default function ReaderSelectionPage() {
     setSelectedReaderId(readerId, accentColor);
     setIsEnteringTent(true);
     setTimeout(() => {
-      // If user already has profile (nickname & birthYear), jump straight to 2b (tam-su), else go to 2a (ve-ban)
-      if (nickname && nickname.trim() && birthYear) {
+      // If user has already filled their profile, jump straight to 2b (tam-su), else go to 2a (ve-ban)
+      if (hasFilledProfile && nickname && nickname.trim() && birthYear) {
         router.push('/reading/tam-su');
       } else {
         router.push('/reading/ve-ban');
@@ -34,8 +36,21 @@ export default function ReaderSelectionPage() {
     }, shouldReduceMotion ? 50 : 400);
   };
 
+  const handleMobileScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const cardWidth = el.scrollWidth / READERS.length;
+    const currentIdx = Math.round(el.scrollLeft / cardWidth);
+    if (currentIdx !== activeMobileIdx && currentIdx >= 0 && currentIdx < READERS.length) {
+      setActiveMobileIdx(currentIdx);
+      const targetReader = READERS[currentIdx];
+      if (targetReader && targetReader.id !== selectedReaderId) {
+        setSelectedReaderId(targetReader.id, targetReader.accent_color);
+      }
+    }
+  };
+
   return (
-    <div className="relative max-w-6xl mx-auto px-4 py-4 sm:py-6 overflow-hidden">
+    <div className="relative max-w-6xl mx-auto px-4 pt-4 sm:pt-6 pb-32 sm:pb-36 overflow-hidden">
       {/* Tent Curtain Transition Overlay */}
       <AnimatePresence>
         {isEnteringTent && !shouldReduceMotion && (
@@ -63,29 +78,128 @@ export default function ReaderSelectionPage() {
         )}
       </AnimatePresence>
 
-      {/* Header Title Banner */}
+      {/* Header Title Banner (Thống nhất khung, bỏ chữ BƯỚC thừa vì đã có Stepper) */}
       <div className="text-center mb-6 shrink-0">
-        <span className="text-[11px] font-bold tracking-[0.2em] text-[#D9B36A] uppercase block mb-1">
-          BƯỚC 1 / 4 • CHỌN READER
-        </span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
           Chọn Người Giải Mã Vận Mệnh
         </h1>
         <p className="text-xs sm:text-sm text-[#9E96B0] mt-1 max-w-lg mx-auto">
-          Mỗi Reader mang một trường năng lượng và phong cách riêng biệt. Chọn người chạm đến trực giác của bạn nhất lúc này.
+          Mỗi Reader mang một trường năng lượng và phong cách riêng biệt. Hãy chọn người chạm đến trực giác của bạn nhất lúc này.
         </p>
       </div>
 
-      {/* Desktop 2-Column Layout / Mobile Stacked Carousel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: 4 Reader Compact Cards (Desktop: lg:col-span-5, Mobile: horizontal scrollable or list) */}
+      {/* MOBILE ONLY: Carousel 1 thẻ lớn, vuốt ngang, thẻ 2 bên lấp ló, 4 chấm chỉ vị trí */}
+      <div className="block lg:hidden mb-6">
+        <div
+          onScroll={handleMobileScroll}
+          className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-4 px-6 py-2"
+        >
+          {READERS.map((reader) => {
+            const isSelected = selectedReaderId === reader.id;
+
+            return (
+              <div
+                key={reader.id}
+                onClick={() => setSelectedReaderId(reader.id, reader.accent_color)}
+                className={`snap-center shrink-0 w-[84vw] max-w-[320px] rounded-3xl p-5 border transition-all cursor-pointer bg-[#14121F] flex flex-col justify-between min-h-[380px] shadow-lg ${
+                  isSelected ? 'ring-2' : 'opacity-80'
+                }`}
+                style={{
+                  borderColor: isSelected ? reader.accent_color : '#262235',
+                  boxShadow: isSelected ? `0 0 25px ${reader.accent_color}30` : undefined,
+                }}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold shadow-inner"
+                      style={{
+                        backgroundColor: `${reader.accent_color}25`,
+                        border: `1.5px solid ${reader.accent_color}60`,
+                        color: reader.accent_color,
+                      }}
+                    >
+                      {reader.avatar_symbol}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase"
+                        style={{
+                          backgroundColor: `${reader.accent_color}20`,
+                          color: reader.accent_color,
+                          border: `1px solid ${reader.accent_color}40`,
+                        }}
+                      >
+                        {reader.badge}
+                      </span>
+                      {isSelected && (
+                        <span
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0"
+                          style={{ backgroundColor: reader.accent_color }}
+                        >
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="font-display text-xl font-bold text-[#F8F5F0] mb-1">
+                    {reader.name}
+                  </h3>
+                  <p className="text-xs text-[#E5C687] mb-3">
+                    {reader.tagline}
+                  </p>
+
+                  <div className="p-3 rounded-xl bg-[#0B0A12]/80 border border-[#262235] text-xs italic text-[#D9B36A] font-serif mb-3 leading-relaxed">
+                    &ldquo;{reader.sample_quote}&rdquo;
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#0B0A12]/60 border border-[#262235]/60 text-[11px] text-[#9E96B0] leading-relaxed">
+                    <span className="text-[#F8F5F0] font-semibold block mb-0.5">Mẫu lời giải:</span>
+                    {reader.sample_reading_snippet}
+                  </div>
+                </div>
+
+                <div className="text-center pt-2 text-[10px] text-[#9E96B0]">
+                  {isSelected ? '✓ Đang chọn' : 'Chạm để chọn'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 4 Chấm chỉ vị trí Mobile Indicator */}
+        <div className="flex items-center justify-center gap-2 mt-4">
+          {READERS.map((reader, idx) => {
+            const isSelected = selectedReaderId === reader.id;
+            return (
+              <button
+                key={reader.id}
+                type="button"
+                aria-label={`Chọn ${reader.name}`}
+                onClick={() => setSelectedReaderId(reader.id, reader.accent_color)}
+                className={`h-2 rounded-full transition-all cursor-pointer ${
+                  isSelected ? 'w-6 bg-[#D9B36A]' : 'w-2 bg-[#262235]'
+                }`}
+                style={{
+                  backgroundColor: isSelected ? reader.accent_color : undefined,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* DESKTOP (từ 1024px): Bố cục chia đôi song song */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-6 items-start">
+        {/* Cột Trái: Danh sách 4 Reader gọn (avatar, tên, nhãn) */}
         <div className="lg:col-span-5 space-y-3">
-          <p className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider hidden lg:block mb-2">
+          <p className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider mb-2">
             Danh Sách 4 Vị Reader
           </p>
 
-          {/* Reader List / Mobile Carousel */}
-          <div className="flex lg:flex-col overflow-x-auto lg:overflow-visible no-scrollbar gap-3 pb-2 lg:pb-0 snap-x snap-mandatory">
+          <div className="space-y-3">
             {READERS.map((reader) => {
               const isSelected = selectedReaderId === reader.id;
 
@@ -93,9 +207,9 @@ export default function ReaderSelectionPage() {
                 <div
                   key={reader.id}
                   onClick={() => setSelectedReaderId(reader.id, reader.accent_color)}
-                  className={`snap-center shrink-0 w-[260px] lg:w-full p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center gap-3.5 ${
+                  className={`w-full p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center gap-3.5 ${
                     isSelected
-                      ? 'bg-[#14121F] shadow-[0_0_25px_rgba(217,179,106,0.18)] ring-1'
+                      ? 'bg-[#14121F] shadow-[0_0_20px_rgba(217,179,106,0.18)] ring-1'
                       : 'bg-[#0E0D17]/80 hover:bg-[#14121F]/70 border-[#262235]'
                   }`}
                   style={{
@@ -115,9 +229,9 @@ export default function ReaderSelectionPage() {
                     <span>{reader.avatar_symbol}</span>
                   </div>
 
-                  {/* Name & Title */}
+                  {/* Name & Badge (Không lặp chữ) */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                    <div className="flex items-center justify-between gap-1 mb-1">
                       <h3 className="font-display text-sm font-bold text-[#F8F5F0] truncate">
                         {reader.name}
                       </h3>
@@ -150,116 +264,151 @@ export default function ReaderSelectionPage() {
           </div>
         </div>
 
-        {/* Right Column: Detailed Reader Preview & Sticky Action (Desktop: lg:col-span-7) */}
+        {/* Cột Phải: Khung xem trước lớn của Reader đang chọn */}
         <div className="lg:col-span-7">
-          <div
-            className="rounded-3xl p-5 sm:p-6 border bg-[#14121F]/90 backdrop-blur shadow-2xl relative flex flex-col justify-between min-h-[460px]"
-            style={{
-              borderColor: `${currentReader.accent_color}60`,
-              boxShadow: `0 10px 40px ${currentReader.accent_color}15`,
-            }}
-          >
-            {/* Top Preview Header */}
-            <div>
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3.5">
-                  <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-inner"
-                    style={{
-                      backgroundColor: `${currentReader.accent_color}30`,
-                      border: `2px solid ${currentReader.accent_color}70`,
-                      color: currentReader.accent_color,
-                    }}
-                  >
-                    {currentReader.avatar_symbol}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F8F5F0]">
-                        {currentReader.name}
-                      </h2>
-                      <span
-                        className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase"
-                        style={{
-                          backgroundColor: `${currentReader.accent_color}20`,
-                          color: currentReader.accent_color,
-                          border: `1px solid ${currentReader.accent_color}40`,
-                        }}
-                      >
-                        {currentReader.badge}
-                      </span>
-                    </div>
-                    <p
-                      className="text-xs font-semibold mt-0.5"
-                      style={{ color: currentReader.accent_color }}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentReader.id}
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -12, scale: 0.98 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="rounded-3xl p-6 border bg-[#14121F]/90 backdrop-blur shadow-2xl relative flex flex-col justify-between min-h-[460px]"
+              style={{
+                borderColor: `${currentReader.accent_color}60`,
+                boxShadow: `0 10px 40px ${currentReader.accent_color}18`,
+              }}
+            >
+              <div>
+                {/* Top Row: Avatar lớn + Tên + Nhãn */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3.5">
+                    <motion.div
+                      initial={shouldReduceMotion ? {} : { scale: 0.85, rotate: -6 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-inner"
+                      style={{
+                        backgroundColor: `${currentReader.accent_color}30`,
+                        border: `2px solid ${currentReader.accent_color}70`,
+                        color: currentReader.accent_color,
+                      }}
                     >
-                      {currentReader.title}
-                    </p>
+                      {currentReader.avatar_symbol}
+                    </motion.div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-display text-xl sm:text-2xl font-bold text-[#F8F5F0]">
+                          {currentReader.name}
+                        </h2>
+                        <span
+                          className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase"
+                          style={{
+                            backgroundColor: `${currentReader.accent_color}20`,
+                            color: currentReader.accent_color,
+                            border: `1px solid ${currentReader.accent_color}40`,
+                          }}
+                        >
+                          {currentReader.badge}
+                        </span>
+                      </div>
+                      <p
+                        className="text-xs font-semibold mt-0.5"
+                        style={{ color: currentReader.accent_color }}
+                      >
+                        {currentReader.title}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0B0A12] border border-[#262235] text-[11px] text-[#D9B36A]">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Đang chọn</span>
                   </div>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0B0A12] border border-[#262235] text-[11px] text-[#D9B36A]">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Đang chọn</span>
+                {/* Thanh chỉ số năng lượng Reader chạy đầy mượt mà (Animated Energy Gauge) */}
+                <div className="mb-4 p-3 rounded-xl bg-[#0B0A12]/80 border border-[#262235]/60">
+                  <div className="flex justify-between text-[10px] font-semibold text-[#9E96B0] mb-1.5 uppercase tracking-wider">
+                    <span>Độ cộng hưởng trực giác</span>
+                    <span style={{ color: currentReader.accent_color }}>98% Tương Thích</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-[#1D192C] overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: '98%' }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: currentReader.accent_color }}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Tagline / Hợp với */}
-              <div className="p-3 rounded-xl bg-[#0B0A12]/60 border border-[#262235] text-xs text-[#E5C687] mb-4">
-                <strong>Đối tượng phù hợp:</strong> {currentReader.tagline}
-              </div>
-
-              {/* Sample Quote */}
-              <div className="mb-4">
-                <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider mb-1.5">
-                  Câu Nói Thương Hiệu
-                </p>
-                <div className="p-3.5 rounded-xl bg-[#0B0A12]/90 border border-[#262235]/80 text-xs sm:text-sm italic text-[#F8F5F0] font-serif leading-relaxed">
-                  &ldquo;{currentReader.sample_quote}&rdquo;
+                {/* Dòng "Hợp với" */}
+                <div className="p-3.5 rounded-xl bg-[#0B0A12]/60 border border-[#262235] text-xs text-[#E5C687] mb-4">
+                  <strong>Hợp với:</strong> {currentReader.tagline}
                 </div>
-              </div>
 
-              {/* Sample Reading Snippet (Ví dụ phong cách giải mã bài) */}
-              <div className="mb-6">
-                <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Feather className="w-3.5 h-3.5 text-[#D9B36A]" />
-                  <span>Mẫu Lời Giải Mã Thực Tế</span>
-                </p>
-                <div
-                  className="p-3.5 rounded-xl bg-[#0B0A12]/90 border text-xs sm:text-sm text-[#9E96B0] leading-relaxed"
-                  style={{ borderColor: `${currentReader.accent_color}35` }}
-                >
-                  <p className="text-[#F8F5F0]">
-                    {currentReader.sample_reading_snippet ||
-                      'Mỗi lá bài phản chiếu chính xác năng lượng và rào cản bạn đang đối mặt, kèm hành động cụ thể để xoay chuyển cục diện.'}
+                {/* Câu trích hiện mượt từng cụm chữ */}
+                <div className="mb-4">
+                  <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider mb-1.5">
+                    Câu Trích Dẫn
                   </p>
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    className="p-3.5 rounded-xl bg-[#0B0A12]/90 border border-[#262235]/80 text-xs sm:text-sm italic text-[#F8F5F0] font-serif leading-relaxed"
+                  >
+                    &ldquo;{currentReader.sample_quote}&rdquo;
+                  </motion.div>
+                </div>
+
+                {/* Mẫu lời giải ngắn 2-3 dòng đúng giọng Reader */}
+                <div className="mb-4">
+                  <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Feather className="w-3.5 h-3.5 text-[#D9B36A]" />
+                    <span>Mẫu Lời Giải Ngắn</span>
+                  </p>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.2 }}
+                    className="p-3.5 rounded-xl bg-[#0B0A12]/90 border text-xs sm:text-sm text-[#9E96B0] leading-relaxed"
+                    style={{ borderColor: `${currentReader.accent_color}35` }}
+                  >
+                    <p className="text-[#F8F5F0]">
+                      {currentReader.sample_reading_snippet ||
+                        'Mỗi lá bài phản chiếu chính xác năng lượng và rào cản bạn đang đối mặt, kèm hành động cụ thể để xoay chuyển cục diện.'}
+                    </p>
+                  </motion.div>
                 </div>
               </div>
-            </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
 
-            {/* Bottom Actions: Sticky / Fixed at bottom of container */}
-            <div className="pt-4 border-t border-[#262235]/80 space-y-3">
-              <button
-                type="button"
-                onClick={() => handleSelectAndProceed(selectedReaderId, currentReader.accent_color)}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-base shadow-[0_4px_25px_rgba(217,179,106,0.35)] transition-all transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Vào Lều {currentReader.name}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+      {/* THANH ĐÁY CỐ ĐỊNH (Luôn nhìn thấy cả trên Mobile và Desktop, kèm Safe-Area iPhone) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
+        <div className="max-w-xl mx-auto flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleSelectAndProceed(selectedReaderId, currentReader.accent_color)}
+            className="w-full py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm sm:text-base shadow-[0_4px_25px_rgba(217,179,106,0.35)] transition-all transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>Vào Lều {currentReader.name}</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
 
-              {/* Sub-link for Couple Mode positioned cleanly below main CTA */}
-              <div className="text-center">
-                <Link
-                  href="/couple"
-                  className="inline-flex items-center gap-1.5 text-xs text-[#9E96B0] hover:text-[#E5C687] transition-colors"
-                >
-                  <Heart className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Muốn bói cùng người ấy? Chuyển sang <strong>Bói Đôi</strong> &rarr;</span>
-                </Link>
-              </div>
-            </div>
-          </div>
+          {/* Link Chuyển sang Bói Đôi đặt nhỏ ngay dưới nút chính */}
+          <Link
+            href="/couple"
+            className="inline-flex items-center gap-1.5 text-xs text-[#9E96B0] hover:text-[#E5C687] transition-colors"
+          >
+            <Heart className="w-3.5 h-3.5 text-rose-400" />
+            <span>Muốn bói cùng người ấy? Chuyển sang <strong>Bói Đôi</strong> &rarr;</span>
+          </Link>
         </div>
       </div>
     </div>

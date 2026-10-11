@@ -122,4 +122,21 @@ describe('Zustand Reading Flow Store & F5 Persistence Suite', () => {
     expect(parsed.state.questionText).toBe('Chiến lược quý 4 như thế nào?');
     expect(parsed.state.selectedFanIndices).toEqual([0, 21, 55]);
   });
+
+  it('6. tracks hasFilledProfile flag to skip /reading/ve-ban on subsequent readings', () => {
+    const store = useReadingStore.getState();
+    expect(store.hasFilledProfile).toBe(false);
+
+    // User fills profile for the first time
+    store.setContextForm({
+      hasFilledProfile: true,
+      nickname: 'An Nhiên',
+      birthYear: 2012, // 14 years old (Kid/Teen safe)
+    });
+
+    const updated = useReadingStore.getState();
+    expect(updated.hasFilledProfile).toBe(true);
+    expect(updated.nickname).toBe('An Nhiên');
+    expect(updated.birthYear).toBe(2012);
+  });
 });

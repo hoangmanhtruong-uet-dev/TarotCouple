@@ -9,6 +9,7 @@ export interface ReadingFlowState {
   readerAccentColor: string;
   
   // Step 2: Context & Form
+  hasFilledProfile: boolean;
   nickname: string;
   partnerNickname: string;
   zodiacSign: string;
@@ -29,6 +30,7 @@ export interface ReadingFlowState {
   // Actions
   setSelectedReaderId: (id: ReaderId, accentColor: string) => void;
   setContextForm: (data: Partial<{
+    hasFilledProfile: boolean;
     nickname: string;
     partnerNickname: string;
     zodiacSign: string;
@@ -58,7 +60,8 @@ export const useReadingStore = create<ReadingFlowState>()(
       selectedReaderId: 'ba_co_mo_hon',
       readerAccentColor: '#E5624A',
 
-      nickname: 'Linh',
+      hasFilledProfile: false,
+      nickname: '',
       partnerNickname: '',
       zodiacSign: '',
       birthYear: 2004,

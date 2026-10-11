@@ -89,6 +89,24 @@ export default function MeProfilePage() {
 
       {/* Menu List */}
       <div className="bg-[#14121F]/80 border border-[#262235] rounded-3xl p-3 space-y-1 mb-8 shadow-xl">
+        <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
+          <Link
+            href="/reading/ve-ban"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#D9B36A]/10 border border-[#D9B36A]/30 flex items-center justify-center text-[#E5C687]">
+                <Sparkles className="w-5 h-5 text-[#D9B36A]" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#F8F5F0]">Hồ Sơ Tâm Linh Của Bạn</p>
+                <p className="text-xs text-[#9E96B0]">Sửa biệt danh, năm sinh, cung hoàng đạo</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[#9E96B0]" />
+          </Link>
+        </motion.div>
+
         <motion.button
           whileHover={shouldReduceMotion ? {} : { x: 4 }}
           type="button"

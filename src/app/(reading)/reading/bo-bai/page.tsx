@@ -28,10 +28,11 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-// Hằng số luật bộ bài cho tài khoản free
-export const FREE_DAILY_READINGS = 3;
-export const FREE_DAILY_FULL_DECK_READINGS = 1;
-export const FULL_DECK_UNLOCK_STAR_COST = 5; // TODO: Giá tạm thời 5 Sao, sau có thể điều chỉnh theo quyết định kinh doanh
+import {
+  FREE_DAILY_READINGS,
+  FREE_DAILY_FULL_DECK_READINGS,
+  FULL_DECK_UNLOCK_STAR_COST,
+} from '@/lib/quota-store';
 
 const READER_DECK_PROMPTS: Record<ReaderId, string> = {
   ba_co_mo_hon:
@@ -79,12 +80,33 @@ export default function BoBaiSelectionPage() {
   const {
     selectedReaderId,
     readerAccentColor,
+    hasFilledProfile,
     nickname,
     birthYear,
+    selectedTopic,
     deckMode,
     questionText,
     setContextForm,
   } = useReadingStore();
+
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Route guard: Nếu chưa điền thông tin hoặc chưa chọn chủ đề thì chuyển về bước còn thiếu
+  useEffect(() => {
+    if (!isHydrated) return;
+    const hasProfile = hasFilledProfile && Boolean(nickname?.trim()) && Boolean(birthYear);
+    if (!hasProfile) {
+      router.replace('/reading/ve-ban');
+      return;
+    }
+    if (!selectedTopic) {
+      router.replace('/reading/chu-de');
+      return;
+    }
+  }, [isHydrated, hasFilledProfile, nickname, birthYear, selectedTopic, router]);
 
   const activeReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
 
@@ -109,6 +131,7 @@ export default function BoBaiSelectionPage() {
   const [isOutOfTurnsSheetOpen, setIsOutOfTurnsSheetOpen] = useState(false);
   const [isUnlockingLoading, setIsUnlockingLoading] = useState(false);
   const [unlockToast, setUnlockToast] = useState<string | null>(null);
+  const [isLockShaking, setIsLockShaking] = useState(false);
 
   // Aux growth modals
   const [isWalletOpen, setIsWalletOpen] = useState(false);
@@ -166,7 +189,9 @@ export default function BoBaiSelectionPage() {
 
   const handleSelectDeck = (deckId: DeckMode) => {
     if (deckId === 'full_78' && isFullDeckLocked) {
-      // Bấm vào ổ khóa -> Hiện bottom sheet xác nhận trừ Sao
+      // Bấm vào ổ khóa -> Rung ổ khóa và hiện bottom sheet xác nhận trừ Sao
+      setIsLockShaking(true);
+      setTimeout(() => setIsLockShaking(false), 450);
       setIsUnlockSheetOpen(true);
       return;
     }
@@ -219,7 +244,13 @@ export default function BoBaiSelectionPage() {
   };
 
   return (
-    <div className="relative max-w-xl mx-auto px-4 pt-4 sm:pt-6 pb-36 overflow-hidden">
+    <motion.div
+      initial={shouldReduceMotion ? {} : { opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={shouldReduceMotion ? {} : { opacity: 0, x: -16 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="relative max-w-xl mx-auto px-4 pt-4 sm:pt-6 pb-36 overflow-hidden"
+    >
       {/* Toast thông báo */}
       <AnimatePresence>
         {unlockToast && (
@@ -341,7 +372,8 @@ export default function BoBaiSelectionPage() {
           return (
             <motion.div
               key={deck.id}
-              whileHover={shouldReduceMotion ? {} : { scale: 1.015, y: -2 }}
+              animate={isSelected && !isLocked ? { y: -2 } : { y: 0 }}
+              whileHover={shouldReduceMotion ? {} : { scale: 1.015, y: -3 }}
               whileTap={
                 isLocked
                   ? { x: [-3, 3, -2, 2, 0] }
@@ -372,7 +404,9 @@ export default function BoBaiSelectionPage() {
             >
               {/* Top row: Badge + Card count */}
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span
+                <motion.span
+                  animate={isLocked && isLockShaking ? { x: [-4, 4, -4, 4, -2, 2, 0] } : {}}
+                  transition={{ duration: 0.4 }}
                   className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
                   style={{
                     backgroundColor: isLocked
@@ -396,7 +430,7 @@ export default function BoBaiSelectionPage() {
                 >
                   {isLocked && <Lock className="w-3 h-3 text-amber-400" />}
                   {isLocked ? 'Khóa Lượt 2 & 3 • Cần 5 Sao' : deck.badge}
-                </span>
+                </motion.span>
 
                 <div className="flex items-center gap-1.5 text-xs text-[#D9B36A] font-semibold">
                   <Layers className="w-3.5 h-3.5" />
@@ -814,6 +848,6 @@ export default function BoBaiSelectionPage() {
         quota={quota}
         onQuotaUpdated={(q) => setQuota(q)}
       />
-    </div>
+    </motion.div>
   );
 }

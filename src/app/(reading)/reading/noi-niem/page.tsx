@@ -79,6 +79,7 @@ export default function NoiNiemPage() {
   const {
     selectedReaderId,
     readerAccentColor,
+    hasFilledProfile,
     nickname,
     birthYear,
     selectedTopic,
@@ -86,6 +87,25 @@ export default function NoiNiemPage() {
     hideQuestionOnShare,
     setContextForm,
   } = useReadingStore();
+
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Route guard: Nếu chưa điền thông tin hoặc chưa chọn chủ đề thì chuyển về bước còn thiếu
+  useEffect(() => {
+    if (!isHydrated) return;
+    const hasProfile = hasFilledProfile && Boolean(nickname?.trim()) && Boolean(birthYear);
+    if (!hasProfile) {
+      router.replace('/reading/ve-ban');
+      return;
+    }
+    if (!selectedTopic) {
+      router.replace('/reading/chu-de');
+      return;
+    }
+  }, [isHydrated, hasFilledProfile, nickname, birthYear, selectedTopic, router]);
 
   const activeReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
 
@@ -140,7 +160,13 @@ export default function NoiNiemPage() {
   const topicSamples = SAMPLE_QUESTIONS_BY_TOPIC[selectedTopic] || [];
 
   return (
-    <div className="relative max-w-xl mx-auto px-4 pt-4 sm:pt-6 pb-36 overflow-hidden">
+    <motion.div
+      initial={shouldReduceMotion ? {} : { opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={shouldReduceMotion ? {} : { opacity: 0, x: -16 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="relative max-w-xl mx-auto px-4 pt-4 sm:pt-6 pb-36 overflow-hidden"
+    >
       {/* 1. Avatar nhỏ Reader + Câu mở đầu theo giọng Reader */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -178,19 +204,30 @@ export default function NoiNiemPage() {
         </div>
       </motion.div>
 
-      {/* 2. Ô nhập lớn "Nỗi niềm phong ấn gửi vũ trụ" */}
+      {/* 2. Ô nhập lớn "Nỗi niềm phong ấn gửi vũ trụ" kèm viền thở breathing glow */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          boxShadow: isFocusedTextarea
+            ? [
+                `0 0 15px ${readerAccentColor}20`,
+                `0 0 28px ${readerAccentColor}45`,
+                `0 0 15px ${readerAccentColor}20`,
+              ]
+            : '0 0 0px rgba(0,0,0,0)',
+        }}
+        transition={{
+          duration: isFocusedTextarea ? 2.2 : 0.3,
+          repeat: isFocusedTextarea ? Infinity : 0,
+          ease: 'easeInOut',
+        }}
         className={`relative p-4 sm:p-5 rounded-2xl border transition-all mb-3 ${
           isFocusedTextarea ? 'bg-[#141021]' : 'bg-[#0B0A12]'
         }`}
         style={{
           borderColor: isFocusedTextarea ? readerAccentColor : '#262235',
-          boxShadow: isFocusedTextarea
-            ? `0 0 20px ${readerAccentColor}25`
-            : undefined,
         }}
       >
         <div className="flex items-center justify-between mb-2.5">
@@ -230,7 +267,13 @@ export default function NoiNiemPage() {
 
         <textarea
           value={questionText}
-          onFocus={() => setIsFocusedTextarea(true)}
+          onFocus={(e) => {
+            setIsFocusedTextarea(true);
+            // Cuộn mượt để không bị bàn phím ảo iOS che khuất
+            setTimeout(() => {
+              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          }}
           onBlur={() => setIsFocusedTextarea(false)}
           onChange={(e) => {
             if (e.target.value.length <= 300) {
@@ -240,8 +283,37 @@ export default function NoiNiemPage() {
           placeholder="Kể chi tiết câu chuyện, tình huống mập mờ, phân vân hay bế tắc bạn đang gặp phải..."
           maxLength={300}
           rows={5}
-          className="w-full bg-transparent text-sm text-[#F8F5F0] placeholder-[#5E5873] focus:outline-none resize-none leading-relaxed"
+          className="relative z-10 w-full bg-transparent text-sm text-[#F8F5F0] placeholder-[#5E5873] focus:outline-none resize-none leading-relaxed"
         />
+
+        {/* Hạt sáng nhẹ trôi lên khi gõ/focus, không làm giật khi gõ */}
+        {isFocusedTextarea && !shouldReduceMotion && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+            {[0, 1, 2, 3].map((p) => (
+              <motion.div
+                key={p}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{
+                  opacity: [0, 0.45, 0],
+                  y: [-5, -45],
+                  x: [0, (p % 2 === 0 ? 8 : -8)],
+                }}
+                transition={{
+                  duration: 2.4 + p * 0.4,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: p * 0.45,
+                }}
+                className="absolute bottom-3 w-1.5 h-1.5 rounded-full"
+                style={{
+                  left: `${20 + p * 22}%`,
+                  backgroundColor: readerAccentColor,
+                  boxShadow: `0 0 8px ${readerAccentColor}`,
+                }}
+              />
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {/* 3. Công tắc "Ẩn câu hỏi khi chia sẻ ảnh Story" đặt NGAY DƯỚI ô nhập, bật sẵn */}
@@ -375,6 +447,6 @@ export default function NoiNiemPage() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

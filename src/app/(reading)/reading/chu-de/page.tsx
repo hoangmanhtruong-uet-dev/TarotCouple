@@ -78,12 +78,27 @@ export default function ChuDeSelectionPage() {
   const {
     selectedReaderId,
     readerAccentColor,
+    hasFilledProfile,
     nickname,
     birthYear,
     selectedTopic,
     questionText,
     setContextForm,
   } = useReadingStore();
+
+  const [isHydrated, setIsHydrated] = useState(false);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  // Route guard: Nếu chưa điền thông tin Về Bạn thì chuyển về /reading/ve-ban
+  useEffect(() => {
+    if (!isHydrated) return;
+    const hasProfile = hasFilledProfile && Boolean(nickname?.trim()) && Boolean(birthYear);
+    if (!hasProfile) {
+      router.replace('/reading/ve-ban');
+    }
+  }, [isHydrated, hasFilledProfile, nickname, birthYear, router]);
 
   const activeReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
 
@@ -139,7 +154,13 @@ export default function ChuDeSelectionPage() {
   };
 
   return (
-    <div className="relative max-w-xl mx-auto px-4 py-6 sm:py-8">
+    <motion.div
+      initial={shouldReduceMotion ? {} : { opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={shouldReduceMotion ? {} : { opacity: 0, x: -16 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="relative max-w-xl mx-auto px-4 py-6 sm:py-8"
+    >
       {/* Header: Avatar nhỏ Reader + Câu mở đầu theo giọng Reader */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -212,6 +233,8 @@ export default function ChuDeSelectionPage() {
             <motion.button
               key={top.id}
               type="button"
+              animate={isTapped ? { scale: 1.02 } : isSelected ? { scale: 1.005 } : { scale: 1 }}
+              transition={{ duration: 0.2 }}
               whileHover={shouldReduceMotion ? {} : { scale: 1.015, y: -2 }}
               whileTap={shouldReduceMotion ? {} : { scale: 0.985 }}
               onClick={() => handleSelectTopic(top.id)}
@@ -284,6 +307,6 @@ export default function ChuDeSelectionPage() {
           Chạm thẻ để sang màn Kể Nỗi Niềm
         </span>
       </div>
-    </div>
+    </motion.div>
   );
 }

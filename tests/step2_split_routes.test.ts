@@ -81,4 +81,26 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
     store.setContextForm({ deckMode: 'full_78' });
     expect(useReadingStore.getState().deckMode).toBe('full_78');
   });
+
+  it('6. detects missing profile and missing topic for route guard protection', () => {
+    // Unfilled profile
+    useReadingStore.setState({ hasFilledProfile: false, nickname: '' });
+    const s1 = useReadingStore.getState();
+    const hasProfile1 = s1.hasFilledProfile && Boolean(s1.nickname?.trim()) && Boolean(s1.birthYear);
+    expect(hasProfile1).toBe(false); // Needs redirect to /reading/ve-ban
+
+    // Profile filled but missing topic
+    useReadingStore.setState({ hasFilledProfile: true, nickname: 'Alice', birthYear: 2004, selectedTopic: '' as any });
+    const s2 = useReadingStore.getState();
+    const hasProfile2 = s2.hasFilledProfile && Boolean(s2.nickname?.trim()) && Boolean(s2.birthYear);
+    expect(hasProfile2).toBe(true);
+    expect(Boolean(s2.selectedTopic)).toBe(false); // Needs redirect to /reading/chu-de
+  });
+
+  it('7. verifies 10-15 age safety: payments strictly disabled and ba_ngoai persona override', () => {
+    const policy = classifyAgeTier(2014, 2026, 'ba_co_mo_hon'); // 12 years old
+    expect(policy.isKidTeenSafeMode).toBe(true);
+    expect(policy.paymentEnabled).toBe(false); // Zero path to bank payment
+    expect(policy.effectivePersona).toBe('ba_ngoai_vui_tinh');
+  });
 });

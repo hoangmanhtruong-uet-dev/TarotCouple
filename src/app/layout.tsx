@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google";
+import PhoneFrameContainer from "@/components/PhoneFrameContainer";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -45,7 +46,7 @@ export default function RootLayout({
       className={`${beVietnamPro.variable} ${playfair.variable} dark`}
     >
       <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#D9B36A]/30 selection:text-[#E5C687]">
-        {children}
+        <PhoneFrameContainer>{children}</PhoneFrameContainer>
       </body>
     </html>
   );

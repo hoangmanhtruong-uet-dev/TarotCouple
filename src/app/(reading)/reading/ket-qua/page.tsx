@@ -41,6 +41,7 @@ import {
 import FollowupChatModal from '@/components/FollowupChatModal';
 import { ALL_TAROT_CARDS } from '@/data/tarot-cards';
 import { READERS } from '@/data/tarot-cards';
+import { getCardTopicInterpretation } from '@/data/topic-interpretations';
 import type { ClarifierCardPayload, DrawnCardClientPayload } from '@/lib/api-types';
 import type { ReadingOutput, CardAnalysis } from '@/lib/schemas';
 
@@ -268,9 +269,16 @@ function CardSpotlightView({
     );
   }
 
-  // PHASE: detail — Giải nghĩa đầy đủ (bám sát đúng chủ đề đã chọn)
+  // PHASE: detail — Giải nghĩa chuyên sâu bám sát 100% chủ đề từ Dataset
+  const specializedData = getCardTopicInterpretation(
+    drawn.card.id,
+    drawn.reversed,
+    (topic as any) || 'love'
+  );
+
   const rawCoreMeaning = drawn.reversed ? drawn.card.core_meaning_rev : drawn.card.core_meaning_up;
-  const coreMeaning = formatTopicCoreMeaning(rawCoreMeaning, topic);
+  const coreMeaning = specializedData?.meaning || formatTopicCoreMeaning(rawCoreMeaning, topic);
+  const specializedAdvice = specializedData?.advice;
 
   return (
     <motion.div
@@ -313,7 +321,7 @@ function CardSpotlightView({
           className="text-[10px] font-bold tracking-widest uppercase"
           style={{ color: accentColor }}
         >
-          Năng lượng: {cardAnalysis.energy_keyword}
+          Năng lượng: {specializedData?.keyword || cardAnalysis.energy_keyword}
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5 mb-5">
@@ -350,7 +358,13 @@ function CardSpotlightView({
           <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
             Luận giải cho bạn
           </p>
-          <p className="text-base text-[#9E96B0] leading-[1.6]">{cardAnalysis.interpretation}</p>
+          <p className="text-base text-[#9E96B0] leading-[1.6] mb-3">{cardAnalysis.interpretation}</p>
+          {specializedAdvice && (
+            <p className="text-sm text-[#E5C687] leading-[1.6] border-t border-[#262235] pt-3 flex items-start gap-2">
+              <span className="font-bold text-amber-400 shrink-0">✦ Lời khuyên:</span>
+              <span>{specializedAdvice}</span>
+            </p>
+          )}
         </motion.div>
 
         {hook && (

@@ -56,10 +56,50 @@ const STAGE_CARD_IDX: Record<string, number> = {
 // ─── Spotlight sub-state ─────────────────────────────────────────────────────
 type SpotlightPhase = 'intro' | 'detail'; // intro = card nổi bật; detail = chi tiết giải nghĩa
 
-// ─── Helper: Reader accent color ─────────────────────────────────────────────
 function getReaderAccent(readerId?: string): string {
   const r = READERS.find((x) => x.id === readerId);
   return r?.accent_color || '#D9B36A';
+}
+
+/**
+ * Điều chỉnh 'Ý nghĩa lá bài' bám sát 100% vào chủ đề user đã chọn,
+ * loại bỏ hoàn toàn các câu chung chung kiểu 'Trong chuyện tình cảm hay công việc...'.
+ */
+function formatTopicCoreMeaning(text: string, topic?: string): string {
+  if (!text) return '';
+  const trimmed = text.trim();
+
+  if (topic === 'love' || topic === 'crush_school') {
+    // Chỉ tập trung vào khía cạnh tình duyên, cảm xúc, người ấy
+    return trimmed
+      .replace(/Trong chuyện tình cảm hay công việc,/gi, 'Trong chuyện tình cảm & kết nối trái tim,')
+      .replace(/Dù là công việc hay tình cảm,/gi, 'Trong tình duyên & mối quan hệ này,')
+      .replace(/trong công việc hay tình cảm/gi, 'trong chuyện tình cảm')
+      .replace(/công việc lẫn tình cảm/gi, 'tình cảm & sự gắn kết')
+      .replace(/chuyện tình cảm lẫn công việc/gi, 'chuyện tình cảm');
+  }
+
+  if (topic === 'career' || topic === 'study') {
+    // Chỉ tập trung vào học tập, sự nghiệp, mục tiêu công việc
+    return trimmed
+      .replace(/Trong chuyện tình cảm hay công việc,/gi, 'Trong con đường học tập & sự nghiệp,')
+      .replace(/Dù là công việc hay tình cảm,/gi, 'Trong công việc & định hướng học tập,')
+      .replace(/trong chuyện tình cảm hay công việc/gi, 'trong công việc & học tập')
+      .replace(/trong công việc hay tình cảm/gi, 'trong công việc')
+      .replace(/chuyện tình cảm lẫn công việc/gi, 'công việc & học tập')
+      .replace(/tình cảm lẫn công việc/gi, 'công việc & sự nghiệp');
+  }
+
+  if (topic === 'finance' || topic === 'daily_luck') {
+    // Chỉ tập trung vào tài chính, nguồn lực, vận may
+    return trimmed
+      .replace(/Trong chuyện tình cảm hay công việc,/gi, 'Về mặt tài vận & cơ hội thực tế,')
+      .replace(/Dù là công việc hay tình cảm,/gi, 'Về dòng tiền & vận may phía trước,')
+      .replace(/trong chuyện tình cảm hay công việc/gi, 'về tài chính & vận may')
+      .replace(/trong công việc hay tình cảm/gi, 'về tài chính');
+  }
+
+  return trimmed;
 }
 
 // ─── CardSpotlightView ───────────────────────────────────────────────────────
@@ -72,6 +112,7 @@ function CardSpotlightView({
   readerName,
   onTapDetail,   // Chạm lần 2 → chuyển sang detail
   phase,
+  topic,
 }: {
   drawn: DrawnCardClientPayload;
   cardAnalysis: CardAnalysis;
@@ -80,6 +121,7 @@ function CardSpotlightView({
   readerName: string;
   onTapDetail: () => void;
   phase: SpotlightPhase;
+  topic?: string;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const [flipped, setFlipped] = useState(false);
@@ -226,8 +268,9 @@ function CardSpotlightView({
     );
   }
 
-  // PHASE: detail — Giải nghĩa đầy đủ
-  const coreMeaning = drawn.reversed ? drawn.card.core_meaning_rev : drawn.card.core_meaning_up;
+  // PHASE: detail — Giải nghĩa đầy đủ (bám sát đúng chủ đề đã chọn)
+  const rawCoreMeaning = drawn.reversed ? drawn.card.core_meaning_rev : drawn.card.core_meaning_up;
+  const coreMeaning = formatTopicCoreMeaning(rawCoreMeaning, topic);
 
   return (
     <motion.div
@@ -578,6 +621,7 @@ function ClarifierView({
   onReset,
   accentColor,
   readerDisplayName,
+  onOpenFollowup,
 }: {
   drawnCards: [DrawnCardClientPayload, DrawnCardClientPayload, DrawnCardClientPayload];
   result: ReadingOutput;
@@ -589,6 +633,7 @@ function ClarifierView({
   onReset: () => void;
   accentColor: string;
   readerDisplayName: string;
+  onOpenFollowup?: () => void;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const [expandedAdvice, setExpandedAdvice] = useState(false);
@@ -776,6 +821,51 @@ function ClarifierView({
           </div>
         )}
       </motion.div>
+
+      {/* THẺ HỎI THÊM VỚI READER SAU KHI LẬP 3 LÁ / 4 LÁ (2 CÂU ĐẦU MIỄN PHÍ) */}
+      {onOpenFollowup && (
+        <motion.div
+          initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          onClick={onOpenFollowup}
+          className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#D9B36A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
+        >
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border"
+              style={{
+                borderColor: accentColor + '60',
+                backgroundColor: accentColor + '18',
+                color: accentColor,
+              }}
+            >
+              <MessageSquare className="w-6 h-6" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  2 câu đầu miễn phí ✨
+                </span>
+                <span className="text-[10px] text-[#9E96B0]">
+                  Sau đó: 5 Sao / câu
+                </span>
+              </div>
+              <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E5C687] transition-colors">
+                Hỏi Thêm Với {readerDisplayName}
+              </h3>
+              <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
+                Bạn muốn đào sâu hơn về trải bài này? Nhắn tin trực tiếp để {readerDisplayName} giải đáp nhé.
+              </p>
+            </div>
+
+            <div className="shrink-0 text-[#D9B36A] group-hover:translate-x-1 transition-transform">
+              <ArrowRight className="w-5 h-5" />
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Fixed bottom: Story + Reset */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
@@ -1014,6 +1104,7 @@ export default function KetQuaPage() {
                 readerName={readerDisplayName}
                 onTapDetail={handleTapDetail}
                 phase="intro"
+                topic={readingSuccess.topic}
               />
             ) : (
               <>
@@ -1025,6 +1116,7 @@ export default function KetQuaPage() {
                   readerName={readerDisplayName}
                   onTapDetail={handleTapDetail}
                   phase="detail"
+                  topic={readingSuccess.topic}
                 />
                 {/* Fixed CTA for detail phase */}
                 <div className="fixed bottom-0 left-0 right-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
@@ -1090,6 +1182,7 @@ export default function KetQuaPage() {
             }}
             accentColor={accentColor}
             readerDisplayName={readerDisplayName}
+            onOpenFollowup={() => setIsFollowupOpen(true)}
           />
         )}
       </AnimatePresence>

@@ -169,21 +169,38 @@ export default function MarketingLandingPage() {
 
         {/* PHẦN 2: Tiêu đề & Mô tả */}
         <div className="shrink-0 mb-3 sm:mb-4">
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.55,
-              delay: 0.2 * animDelayFactor,
-              ease: TRANSITION_EASINGS.smoothOut,
-            }}
-            className="font-display text-3xl sm:text-5xl lg:text-5xl font-bold tracking-tight text-[#F8F5F0] leading-tight mb-2.5"
-          >
-            <span>Vũ Trụ Không Trả Lời Sai,</span> <br />
-            <span className="shimmer-sweep font-display italic inline-block mt-0.5">
-              Chỉ Bạn Đang Tự Lừa Mình
+          <h1 className="font-display text-3xl sm:text-5xl lg:text-5xl font-bold tracking-tight text-[#F8F5F0] leading-tight mb-2.5">
+            <span className="inline-block">
+              {['Vũ', 'Trụ', 'Không', 'Trả', 'Lời', 'Sai,'].map((word, wIdx) => (
+                <motion.span
+                  key={wIdx}
+                  initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  transition={{
+                    duration: 0.45,
+                    delay: (0.15 + wIdx * 0.05) * animDelayFactor,
+                    ease: TRANSITION_EASINGS.smoothOut,
+                  }}
+                  className="inline-block mr-1.5 sm:mr-2"
+                >
+                  {word}
+                </motion.span>
+              ))}
             </span>
-          </motion.h1>
+            <br />
+            <motion.span
+              initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{
+                duration: 0.6,
+                delay: (0.5) * animDelayFactor,
+                ease: TRANSITION_EASINGS.smoothOut,
+              }}
+              className="shimmer-sweep font-display italic inline-block mt-0.5"
+            >
+              Chỉ Bạn Đang Tự Lừa Mình
+            </motion.span>
+          </h1>
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}

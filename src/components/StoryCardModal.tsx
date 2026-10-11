@@ -240,126 +240,121 @@ export function StoryCardModal({
                 </div>
               </div>
 
-              {/* Right Column: Controls (Privacy Toggle + 0đ Quote Switcher + Share CTAs) */}
-              <div className="md:col-span-7 flex flex-col justify-between space-y-5">
-                {/* 1. Privacy Toggle (Default ON per PLAN.md Section 5) */}
-                <div className="p-4 rounded-2xl bg-[#171424] border border-[#D4AF37]/25 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    {hideQuestion ? (
-                      <EyeOff className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <Eye className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                    )}
-                    <div>
-                      <p className="text-sm font-semibold text-[#F8F5F0]">
-                        Ẩn câu hỏi của tôi trên ảnh
-                      </p>
-                      <p className="text-xs text-[#A39BB5] mt-0.5">
-                        {hideQuestion
-                          ? 'Đang bật (Mặc định an toàn): Chỉ hiện 3 lá bài & câu Quote, giữ kín chuyện riêng tư.'
-                          : 'Đang tắt: Câu hỏi của bạn sẽ hiển thị công khai trên đầu ảnh Story.'}
-                      </p>
+                {/* Right Column: Controls (Page 9 & 10 of Redesign UI) */}
+                <div className="md:col-span-7 flex flex-col justify-between space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F8F5F0]">
+                      Ảnh Story của bạn
+                    </h3>
+                    <p className="text-xs text-[#9E96B0]">
+                      Chọn câu quote bạn muốn đăng, rồi chia sẻ hoặc tải về.
+                    </p>
+                  </div>
+
+                  {/* 1. Chọn Câu Quote (List view with radio / buttons) */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-[#9E96B0]">
+                      Câu quote
+                    </label>
+                    <div className="space-y-2">
+                      {quotes.map((qText, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setQuoteIndex(idx as 0 | 1 | 2)}
+                          className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer text-xs sm:text-sm leading-snug ${
+                            quoteIndex === idx
+                              ? 'bg-[#1D192C] border-[#D9B36A] text-[#F8F5F0] ring-1 ring-[#D9B36A]'
+                              : 'bg-[#0B0A12] border-[#262235] text-[#9E96B0] hover:text-[#F8F5F0]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <span
+                              className={`w-4 h-4 rounded-full border mt-0.5 shrink-0 flex items-center justify-center text-[10px] ${
+                                quoteIndex === idx
+                                  ? 'border-[#D9B36A] bg-[#D9B36A] text-[#0B0A12] font-bold'
+                                  : 'border-[#262235]'
+                              }`}
+                            >
+                              {quoteIndex === idx ? '✓' : ''}
+                            </span>
+                            <span>{qText}</span>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={hideQuestion}
-                    onClick={() => setHideQuestion((prev) => !prev)}
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      hideQuestion ? 'bg-emerald-500' : 'bg-zinc-700'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        hideQuestion ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* 2. Zero-Cost Quote Switcher (3 Options) */}
-                <div className="p-4 rounded-2xl bg-[#171424] border border-[#D4AF37]/25 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Đổi câu Quote khách/khịa khác (Miễn phí 0đ)
-                    </span>
-                    <span className="text-[11px] text-[#A39BB5]">
-                      Phương án {quoteIndex + 1}/3
-                    </span>
+                  {/* 2. Checkboxes (Ẩn câu hỏi của tôi & Hiện tên @Nickname) */}
+                  <div className="space-y-2.5 pt-1">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={hideQuestion}
+                        onChange={(e) => setHideQuestion(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-[#262235] bg-[#0B0A12] text-[#D9B36A] accent-[#D9B36A] cursor-pointer"
+                      />
+                      <div>
+                        <p className="text-xs font-medium text-[#F8F5F0]">
+                          Ẩn câu hỏi của tôi
+                        </p>
+                        <p className="text-[11px] text-[#9E96B0]">
+                          Ảnh không hiện bạn đã hỏi gì.
+                        </p>
+                      </div>
+                    </label>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    {([0, 1, 2] as const).map((idx) => (
+                  {/* Toast Feedback */}
+                  {statusToast && (
+                    <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-400/40 flex items-center gap-2 text-xs text-emerald-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>{statusToast}</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons (Page 9 & 10) */}
+                  <div className="space-y-2.5 pt-2">
+                    {/* Primary Button */}
+                    <button
+                      type="button"
+                      disabled={isSharing || isDownloading}
+                      onClick={handleNativeShare}
+                      className="w-full py-3 px-5 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs sm:text-sm shadow-[0_4px_16px_rgba(217,179,106,0.3)] transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
+                    >
+                      {isSharing ? 'Đang mở chia sẻ...' : 'Chia sẻ lên Story'}
+                    </button>
+
+                    {/* Secondary Row: Tải ảnh PNG | Sao chép link */}
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => setQuoteIndex(idx)}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                          quoteIndex === idx
-                            ? 'bg-[#D4AF37]/20 border-[#F3E5AB] text-[#F3E5AB] shadow-[0_0_15px_rgba(212,175,55,0.25)]'
-                            : 'bg-[#09080D]/60 border-white/10 text-[#A39BB5] hover:text-[#F8F5F0]'
-                        }`}
+                        disabled={isDownloading || isSharing}
+                        onClick={handleDownloadImage}
+                        className="py-2.5 px-3 rounded-xl border border-[#262235] hover:bg-[#14121F] text-xs font-medium text-[#E2E8F0] transition-colors cursor-pointer disabled:opacity-60"
                       >
-                        Phương án {idx + 1}
+                        {isDownloading ? 'Đang tải...' : 'Tải ảnh PNG'}
                       </button>
-                    ))}
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (navigator.clipboard) {
+                            await navigator.clipboard.writeText(window.location.origin);
+                            setStatusToast('Đã sao chép link trang!');
+                          }
+                        }}
+                        className="py-2.5 px-3 rounded-xl border border-[#262235] hover:bg-[#14121F] text-xs font-medium text-[#E2E8F0] transition-colors cursor-pointer"
+                      >
+                        Sao chép link
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-[#09080D]/90 border border-[#D4AF37]/20">
-                    <p className="font-display text-base sm:text-lg italic text-[#F8F5F0] leading-snug">
-                      “{activeQuote}”
-                    </p>
-                  </div>
+                  <p className="text-[10px] text-[#9E96B0]/75 leading-relaxed pt-1">
+                    Mã QR dẫn về trang giới thiệu, không lộ kết quả của bạn. Nếu ứng dụng chia sẻ không hiện, hãy tải ảnh rồi đăng thủ công.
+                  </p>
                 </div>
-
-                {/* Bonus Notice */}
-                <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-400/25 flex items-center gap-2.5 text-xs text-amber-200">
-                  <Gift className="w-4 h-4 text-amber-300 shrink-0" />
-                  <span>
-                    {bonusClaimed
-                      ? 'Bạn đã nhận +1 lượt bốc bài miễn phí từ chia sẻ hôm nay!'
-                      : 'Chia sẻ hoặc tải ảnh Story để nhận ngay +1 lượt bốc bài miễn phí hôm nay!'}
-                  </span>
-                </div>
-
-                {/* Toast Feedback */}
-                {statusToast && (
-                  <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-400/40 flex items-center gap-2 text-xs text-emerald-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{statusToast}</span>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <button
-                    type="button"
-                    disabled={isSharing || isDownloading}
-                    onClick={handleNativeShare}
-                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#E5C158] to-[#D4AF37] text-[#09080D] font-bold text-sm shadow-[0_8px_25px_rgba(212,175,55,0.35)] hover:brightness-110 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>
-                      {isSharing ? 'Đang mở chia sẻ...' : 'Chia sẻ lên Story / TikTok'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isDownloading || isSharing}
-                    onClick={handleDownloadImage}
-                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl bg-[#171424] hover:bg-[#211C33] border border-[#D4AF37]/45 text-[#F3E5AB] font-semibold text-sm transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>
-                      {isDownloading ? 'Đang kết xuất PNG...' : 'Tải ảnh 9:16 (1080×1920)'}
-                    </span>
-                  </button>
-                </div>
-              </div>
             </div>
           </motion.div>
         </motion.div>

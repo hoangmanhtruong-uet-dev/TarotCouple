@@ -95,6 +95,21 @@ const SAMPLE_QUESTIONS_BY_TOPIC: Record<TopicId, string[]> = {
   ],
 };
 
+const ZODIAC_SIGNS = [
+  'Bạch Dương (21/3 - 19/4)',
+  'Kim Ngưu (20/4 - 20/5)',
+  'Song Tử (21/5 - 21/6)',
+  'Cự Giải (22/6 - 22/7)',
+  'Sư Tử (23/7 - 22/8)',
+  'Xử Nữ (23/8 - 22/9)',
+  'Thiên Bình (23/9 - 23/10)',
+  'Bọ Cạp (24/10 - 22/11)',
+  'Nhân Mã (23/11 - 21/12)',
+  'Ma Kết (22/12 - 19/1)',
+  'Bảo Bình (20/1 - 18/2)',
+  'Song Ngư (19/2 - 20/3)',
+];
+
 const BIRTH_YEAR_OPTIONS = Array.from(
   { length: 2016 - 1970 + 1 },
   (_, i) => 2016 - i
@@ -119,12 +134,15 @@ export default function TarotCoupleHomePage() {
   const [selectedReaderId, setSelectedReaderId] =
     useState<ReaderId>('ba_co_mo_hon');
 
-  // Step 2: User context, Age policy & Deck Mode ('major_22' | 'full_78')
-  const [nickname, setNickname] = useState<string>('Mèo Đêm');
+  // Step 2: User context, Age policy, Partner nickname, Zodiac & Deck Mode
+  const [nickname, setNickname] = useState<string>('Linh');
+  const [partnerNickname, setPartnerNickname] = useState<string>('');
+  const [zodiacSign, setZodiacSign] = useState<string>('');
   const [birthYear, setBirthYear] = useState<number>(2004);
   const [selectedTopic, setSelectedTopic] = useState<TopicId>('love');
   const [deckMode, setDeckMode] = useState<DeckMode>('full_78');
   const [questionText, setQuestionText] = useState<string>('');
+  const [hideQuestionOnShare, setHideQuestionOnShare] = useState<boolean>(true);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Step 3: Shuffle & Fan Selection
@@ -919,211 +937,146 @@ export default function TarotCoupleHomePage() {
                 transition={{ duration: 0.4 }}
                 className="space-y-6 sm:space-y-8"
               >
-                {/* Hero Header */}
-                <div className="border-b border-[#D4AF37]/20 pb-5 sm:pb-6 space-y-3">
-                  <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-[#D4AF37] font-semibold">
-                    ✦ Nghi Thức Tarot Phản Chiếu Tâm Lý • 4 Persona & Trọn Bộ 78 Lá RWS ✦
-                  </p>
-                  <h1
-                    className={`font-display font-bold text-[#F8F5F0] leading-[1.15] tracking-tight ${
-                      isPhoneSimulator
-                        ? 'text-2xl sm:text-3xl'
-                        : 'text-2xl sm:text-5xl'
-                    }`}
-                  >
-                    Chọn Người Đọc Bài Cho Đêm Suy Của Bạn.
+                {/* Header Title (Page 1 & 2 of Redesign UI) */}
+                <div className="space-y-2">
+                  <h1 className="font-display text-2xl sm:text-4xl font-bold text-[#F8F5F0] tracking-tight">
+                    Chọn người đọc bài cho đêm suy của bạn
                   </h1>
-                  <p className="text-xs sm:text-sm text-[#A39BB5] max-w-2xl leading-relaxed">
-                    Lá bài do hệ thống xáo ngẫu nhiên chuẩn mật mã (CSPRNG). Tự tay rút 3 lá định mệnh, mở khóa Lá Làm Rõ thứ 4 và xuất ngay ảnh Story 9:16 sắc sảo.
+                  <p className="text-xs sm:text-sm text-[#9E96B0] leading-relaxed">
+                    Bài được xáo bằng bộ tạo số ngẫu nhiên an toàn và bạn tự tay rút 3 lá. Reader chỉ giải nghĩa những lá đã rút.
                   </p>
-
-                  {/* ─── Quick Age / Năm Sinh Selector (Bảo vệ độ tuổi 10+) ─── */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <label htmlFor="step1-birth-year" className="text-xs font-semibold text-[#D4AF37] shrink-0">
-                      🗓️ Năm sinh (bảo vệ 10+):
-                    </label>
-                    <select
-                      id="step1-birth-year"
-                      value={birthYear}
-                      onChange={(e) => setBirthYear(Number(e.target.value))}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#12101B] border border-[#D4AF37]/40 text-xs font-semibold text-[#F3E5AB] cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#D4AF37]"
-                    >
-                      {BIRTH_YEAR_OPTIONS.map((yr) => (
-                        <option key={yr} value={yr}>
-                          {yr} ({new Date().getFullYear() - yr} tuổi)
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* Live Age Policy Badge */}
-                    {agePolicy.tier === 'kid_teen_10_15' ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/45 text-xs font-bold text-emerald-200 animate-pulse">
-                        🌸 Chế độ Học Đường (10–15 tuổi): Bà Ngoại Vui Tính · Khóa thanh toán
-                      </span>
-                    ) : agePolicy.tier === 'teen_16_17' ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/40 text-xs font-semibold text-amber-200">
-                        🔞 Chế độ Teen 16–17: nội dung phù hợp lứa tuổi
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-[#A39BB5]">
-                        ✓ 18+ · Toàn bộ tính năng mở khóa
-                      </span>
-                    )}
-                  </div>
                 </div>
 
+                {/* 2-Column Desktop Layout (Page 1): 4 Readers on Left (cols 8), Info Cards on Right (cols 4) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left Column: 4 Readers 2x2 Grid */}
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {READERS.map((reader) => {
+                        const isSelected = selectedReaderId === reader.id;
 
-                {/* All 4 Readers Selectable Bento Grid */}
-                <div
-                  className={`grid gap-4 sm:gap-5 ${
-                    isPhoneSimulator
-                      ? 'grid-cols-1'
-                      : 'grid-cols-1 md:grid-cols-2'
-                  }`}
-                >
-                  {READERS.map((reader) => {
-                    const isSelected = selectedReaderId === reader.id;
-                    const isBaCo = reader.id === 'ba_co_mo_hon';
-
-                    return (
-                      <div
-                        key={reader.id}
-                        onClick={() => setSelectedReaderId(reader.id as ReaderId)}
-                        className={`relative rounded-3xl p-4 sm:p-6 transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-                          isSelected
-                            ? 'bg-gradient-to-b from-[#1E162B] to-[#120F1D] border-2 border-[#D4AF37] shadow-[0_16px_45px_rgba(212,175,55,0.22)]'
-                            : 'bg-[#12101B] border border-[#D4AF37]/30 hover:border-[#D4AF37]/70'
-                        }`}
-                      >
-                        <div className="space-y-3.5 sm:space-y-4">
-                          {/* Top Row: Avatar + Badges */}
-                          <div className="flex items-start justify-between gap-2.5">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-bold border shadow-inner shrink-0"
-                                style={{
-                                  borderColor: reader.accent_color,
-                                  backgroundColor: 'rgba(9, 8, 13, 0.75)',
-                                  color: reader.accent_color,
-                                }}
-                              >
-                                {reader.avatar_symbol}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <h2 className="font-display text-lg sm:text-2xl font-bold text-[#F8F5F0]">
-                                    {reader.name}
-                                  </h2>
-                                  {isBaCo ? (
-                                    <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase bg-rose-500/20 text-rose-200 border border-rose-400/40">
-                                      Hot nhất đêm nay
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <p className="text-xs font-medium text-[#D4AF37] mt-0.5">
-                                  {reader.title}
-                                </p>
-                              </div>
-                            </div>
-
-                            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0 bg-[#D4AF37]/15 text-[#F3E5AB] border-[#D4AF37]/40">
-                              {reader.badge}
-                            </span>
-                          </div>
-
-                          {/* Tagline */}
-                          <p className="text-xs sm:text-sm text-[#D8D2E7] leading-relaxed">
-                            {reader.tagline}
-                          </p>
-
-                          {/* Sample Quote Preview */}
-                          <div className="p-3 rounded-2xl bg-[#09080D]/80 border border-white/10">
-                            <p className="text-xs italic text-[#F3E5AB]">
-                              “{reader.sample_quote}”
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Footer Status */}
-                        <div className="mt-4 pt-3.5 border-t border-white/10 flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-[#A39BB5] truncate">
-                            {isBaCo
-                              ? 'Tự động chuyển sang Bà Ngoại Vui Tính nếu 10–15 tuổi'
-                              : `Phong cách: ${reader.title}`}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 text-xs font-bold shrink-0 ${
-                              isSelected ? 'text-[#F3E5AB]' : 'text-[#D4AF37]'
+                        return (
+                          <div
+                            key={reader.id}
+                            onClick={() => setSelectedReaderId(reader.id as ReaderId)}
+                            className={`relative rounded-2xl p-4 sm:p-5 transition-all duration-200 cursor-pointer border ${
+                              isSelected
+                                ? 'bg-[#1D192C] border-[#D9B36A] shadow-[0_8px_30px_rgba(217,179,106,0.15)] ring-1 ring-[#D9B36A]'
+                                : 'bg-[#14121F] border-[#262235] hover:border-[#D9B36A]/50'
                             }`}
                           >
-                            {isSelected ? (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                Đang chọn
-                              </>
-                            ) : (
-                              'Chọn Reader này →'
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                            <div className="space-y-3">
+                              {/* Header: Monogram Avatar + Name + Title */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border"
+                                    style={{
+                                      borderColor: `${reader.accent_color}55`,
+                                      backgroundColor: `${reader.accent_color}18`,
+                                      color: reader.accent_color,
+                                    }}
+                                  >
+                                    {reader.avatar_symbol}
+                                  </div>
+                                  <div>
+                                    <h2 className="font-display text-base sm:text-lg font-bold text-[#F8F5F0] leading-snug">
+                                      {reader.name}
+                                    </h2>
+                                    <p
+                                      className="text-[10px] font-bold tracking-wider uppercase mt-0.5"
+                                      style={{ color: reader.accent_color }}
+                                    >
+                                      {reader.title}
+                                    </p>
+                                  </div>
+                                </div>
 
-                {/* Couple Mode Quick Switch Banner + Primary Step 1 CTA */}
-                <div
-                  className={`grid gap-4 items-center pt-1 ${
-                    isPhoneSimulator
-                      ? 'grid-cols-1'
-                      : 'grid-cols-1 lg:grid-cols-12'
-                  }`}
-                >
-                  <div
-                    className={`${
-                      isPhoneSimulator ? '' : 'lg:col-span-7'
-                    } p-4 sm:p-5 rounded-3xl bg-[#12101B] border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5`}
-                  >
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#D4AF37]">
-                        <Users className="w-4 h-4" />
-                        <span>Chế độ Bói Đôi (TarotCouple • Hợp Cạ & Red Flag 🚩)</span>
-                      </div>
-                      <p className="text-xs text-[#A39BB5]">
-                        Tự soi mối quan hệ hoặc tạo phòng bí mật 48h mời người ấy cùng rút bài — ẩn bảo mật câu hỏi riêng tư.
-                      </p>
+                                {isSelected && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#E5C687] shrink-0">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-[#E5C687]" />
+                                    Đang chọn
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Sample Quote */}
+                              <p className="text-xs italic text-[#E5C687]/90 leading-relaxed">
+                                “{reader.sample_quote}”
+                              </p>
+
+                              {/* Hợp với... */}
+                              <p className="text-xs text-[#9E96B0] leading-relaxed pt-1 border-t border-white/5">
+                                {reader.tagline}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveMainMode('couple')}
-                      className="px-4 py-2.5 rounded-2xl bg-[#171424] hover:bg-[#231E36] border border-[#D4AF37]/40 text-xs font-semibold text-[#F3E5AB] shrink-0 transition-colors cursor-pointer"
-                    >
-                      Mở Bói Đôi ngay →
-                    </button>
+
+                    {/* Bottom Selected Bar (Desktop & Mobile) */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#14121F] border border-[#262235] flex items-center justify-between gap-3">
+                      <div className="text-xs text-[#9E96B0]">
+                        Bạn chọn: <strong className="text-[#F8F5F0] font-semibold">{activeReaderObj.name}</strong>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!questionText) {
+                            const defaultSamples = SAMPLE_QUESTIONS_BY_TOPIC[selectedTopic];
+                            if (defaultSamples?.[0]) {
+                              setQuestionText(defaultSamples[0]);
+                            }
+                          }
+                          setStep(2);
+                        }}
+                        className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-[0_4px_16px_rgba(217,179,106,0.3)] active:scale-[0.98]"
+                      >
+                        <span>Tiếp tục với {activeReaderObj.name}</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div
-                    className={`${
-                      isPhoneSimulator ? '' : 'lg:col-span-5'
-                    } flex justify-end`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!questionText) {
-                          const defaultSamples =
-                            SAMPLE_QUESTIONS_BY_TOPIC[selectedTopic];
-                          if (defaultSamples?.[0]) {
-                            setQuestionText(defaultSamples[0]);
-                          }
-                        }
-                        setStep(2);
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#E6C665] to-[#D4AF37] text-[#09080D] font-bold text-sm sm:text-base shadow-[0_10px_30px_rgba(212,175,55,0.35)] hover:brightness-110 transition-all cursor-pointer active:scale-[0.98]"
-                    >
-                      <span>Bước vào Lều {activeReaderObj.name}</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
+                  {/* Right Column (Page 1 Desktop Side Column) */}
+                  <div className="lg:col-span-4 space-y-4">
+                    {/* Card 1: HÔM NAY - Còn 3 lượt miễn phí */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 space-y-2">
+                      <span className="text-[10px] font-bold tracking-widest text-[#9E96B0] uppercase block">
+                        HÔM NAY
+                      </span>
+                      <p className="font-display text-xl font-bold text-[#F8F5F0]">
+                        Còn {quota.remainingToday} lượt miễn phí
+                      </p>
+                      <p className="text-xs text-[#9E96B0] leading-relaxed">
+                        Lượt làm mới lúc 00:00. Điểm danh 7 ngày liên tiếp để nhận một lượt Bói Đôi.
+                      </p>
+                    </div>
+
+                    {/* Card 2: Bói Đôi Teaser */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-[#D9B36A]">
+                        <Users className="w-4 h-4" />
+                        <span>Bói Đôi</span>
+                      </div>
+                      <p className="text-xs text-[#9E96B0] leading-relaxed">
+                        Mời người ấy cùng rút một lá. Kết quả hai chiều chỉ mở khi cả hai đã rút, câu hỏi của bạn được giữ kín.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveMainMode('couple')}
+                        className="w-full py-2.5 px-3 rounded-xl bg-[#1D192C] hover:bg-[#262238] border border-[#D9B36A]/35 text-xs font-semibold text-[#E5C687] transition-colors cursor-pointer"
+                      >
+                        Thử Bói Đôi →
+                      </button>
+                    </div>
+
+                    {/* Disclaimer Mini */}
+                    <p className="text-[11px] text-[#9E96B0]/75 leading-relaxed px-1">
+                      Tarot là hình thức giải trí và tự phản chiếu, không thay thế tư vấn y tế, pháp lý hay tài chính.
+                    </p>
                   </div>
                 </div>
               </motion.section>
@@ -1135,315 +1088,238 @@ export default function TarotCoupleHomePage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
-                className="max-w-3xl mx-auto space-y-5"
+                className="space-y-6"
               >
-                {/* Header with Back Button */}
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="inline-flex items-center gap-1 text-xs sm:text-sm text-[#A39BB5] hover:text-[#F8F5F0] cursor-pointer"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Đổi Reader khác</span>
-                  </button>
-
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#171424] border border-[#D4AF37]/40 text-xs text-[#F3E5AB]">
-                    <span>{activeReaderObj.avatar_symbol}</span>
-                    <span>
-                      Reader:{' '}
-                      <strong>
-                        {agePolicy.isKidTeenSafeMode &&
-                        selectedReaderId === 'ba_co_mo_hon'
-                          ? 'Bà Ngoại Vui Tính'
-                          : activeReaderObj.name}
-                      </strong>
-                    </span>
-                  </div>
+                {/* Header Title (Page 3 & 4 of Redesign UI) */}
+                <div className="space-y-1">
+                  <h1 className="font-display text-2xl sm:text-4xl font-bold text-[#F8F5F0] tracking-tight">
+                    Kể {activeReaderObj.name} nghe đi
+                  </h1>
+                  <p className="text-xs sm:text-sm text-[#9E96B0]">
+                    Càng cụ thể, lá bài càng sát. Kể ngắn thôi, tối đa 300 ký tự.
+                  </p>
                 </div>
 
-                <div className="rounded-3xl bg-[#12101B] border border-[#D4AF37]/35 p-4 sm:p-8 space-y-5 sm:space-y-6 shadow-[0_20px_60px_rgba(0,0,0,0.65)]">
-                  <div>
-                    <h2 className="font-display text-xl sm:text-3xl font-bold text-[#F8F5F0]">
-                      Kể Chuyện & Chọn Chủ Đề Trải Bài
-                    </h2>
-                    <p className="text-xs sm:text-sm text-[#A39BB5] mt-1">
-                      Thông tin năm sinh giúp hệ thống điều chỉnh ngôn từ và chủ đề phù hợp đúng lứa tuổi của bạn.
-                    </p>
-                  </div>
-
-                  {/* Row 1: Nickname + Birth Year */}
-                  <div
-                    className={`grid gap-4 ${
-                      isPhoneSimulator
-                        ? 'grid-cols-1'
-                        : 'grid-cols-1 sm:grid-cols-2'
-                    }`}
-                  >
+                {/* 2-Column Desktop Layout (Page 3): Form on Left (cols 8), Reader Advice & Suggestions on Right (cols 4) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left Column: Form */}
+                  <div className="lg:col-span-8 space-y-5 rounded-2xl bg-[#14121F] border border-[#262235] p-5 sm:p-7">
+                    {/* 1. Chủ đề */}
                     <div className="space-y-2">
-                      <label
-                        htmlFor="nickname-input"
-                        className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]"
-                      >
-                        Biệt danh của bạn (Hiển thị trên thẻ bài)
+                      <label className="block text-xs font-semibold text-[#9E96B0]">
+                        Chủ đề
                       </label>
-                      <input
-                        id="nickname-input"
-                        type="text"
-                        maxLength={40}
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        placeholder="Ví dụ: Mèo Đêm, Cú Nhỏ..."
-                        className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB]"
+                      <div className="flex flex-wrap gap-2">
+                        {agePolicy.allowedTopics.map((topicItem) => {
+                          const isSelected = selectedTopic === topicItem.id;
+                          return (
+                            <button
+                              key={topicItem.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTopic(topicItem.id);
+                                const samples = SAMPLE_QUESTIONS_BY_TOPIC[topicItem.id];
+                                if (samples?.[0]) setQuestionText(samples[0]);
+                              }}
+                              className={`py-2 px-4 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#1D192C] text-[#E5C687] border border-[#D9B36A] shadow-sm'
+                                  : 'bg-[#0B0A12] text-[#9E96B0] border border-[#262235] hover:text-[#F8F5F0]'
+                              }`}
+                            >
+                              {topicItem.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 2. Biệt danh người ấy & Cung hoàng đạo */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="partner-nickname-input"
+                          className="block text-xs font-semibold text-[#9E96B0]"
+                        >
+                          Biệt danh người ấy (tuỳ chọn)
+                        </label>
+                        <input
+                          id="partner-nickname-input"
+                          type="text"
+                          maxLength={30}
+                          value={partnerNickname}
+                          onChange={(e) => setPartnerNickname(e.target.value)}
+                          placeholder="Ví dụ: Crush, Ex, Bạn ấy..."
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0A12] border border-[#262235] text-xs sm:text-sm text-[#F8F5F0] placeholder:text-[#9E96B0]/40 focus:outline-none focus:border-[#D9B36A]"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="zodiac-select"
+                          className="block text-xs font-semibold text-[#9E96B0]"
+                        >
+                          Cung hoàng đạo (tuỳ chọn)
+                        </label>
+                        <select
+                          id="zodiac-select"
+                          value={zodiacSign}
+                          onChange={(e) => setZodiacSign(e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#0B0A12] border border-[#262235] text-xs sm:text-sm text-[#F8F5F0] focus:outline-none focus:border-[#D9B36A] cursor-pointer"
+                        >
+                          <option value="">Chọn cung của bạn</option>
+                          {ZODIAC_SIGNS.map((z) => (
+                            <option key={z} value={z}>
+                              {z}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 3. Ô chuyện mất ngủ (300 ký tự) */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor="question-textarea"
+                          className="block text-xs font-semibold text-[#9E96B0]"
+                        >
+                          Chuyện gì đang làm bạn mất ngủ?
+                        </label>
+                        <span className="text-[11px] font-mono text-[#9E96B0]">
+                          {questionText.length}/300
+                        </span>
+                      </div>
+                      <textarea
+                        id="question-textarea"
+                        rows={4}
+                        maxLength={300}
+                        value={questionText}
+                        onChange={(e) => setQuestionText(e.target.value)}
+                        placeholder="Ví dụ: Em với bạn này nhắn tin 2 tháng rồi mà chưa thấy tỏ tình..."
+                        className="w-full p-3.5 rounded-xl bg-[#0B0A12] border border-[#262235] text-xs sm:text-sm text-[#F8F5F0] placeholder:text-[#9E96B0]/40 focus:outline-none focus:border-[#D9B36A] leading-relaxed resize-none"
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="birthyear-select"
-                        className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]"
-                      >
-                        Năm sinh ({CURRENT_REFERENCE_YEAR - birthYear} tuổi)
-                      </label>
-                      <select
-                        id="birthyear-select"
-                        value={birthYear}
-                        onChange={(e) =>
-                          setBirthYear(Number.parseInt(e.target.value, 10))
-                        }
-                        className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB]"
-                      >
-                        {BIRTH_YEAR_OPTIONS.map((yr) => (
-                          <option key={yr} value={yr}>
-                            Sinh năm {yr} ({CURRENT_REFERENCE_YEAR - yr} tuổi)
-                          </option>
-                        ))}
-                      </select>
-
-                      {/* Quick Age-Tier Demo Pills */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                        <span className="text-[11px] text-[#A39BB5]">
-                          Chọn nhanh:
-                        </span>
-                        {[
-                          { yr: 2004, label: '2004 (18+)' },
-                          { yr: 2009, label: '2009 (16–17t)' },
-                          { yr: 2013, label: '2013 (10–15t Học Đường)' },
-                        ].map((preset) => (
-                          <button
-                            key={preset.yr}
-                            type="button"
-                            onClick={() => setBirthYear(preset.yr)}
-                            className={`px-2 py-0.5 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
-                              birthYear === preset.yr
-                                ? 'bg-[#D4AF37]/25 border-[#F3E5AB] text-[#F3E5AB]'
-                                : 'bg-[#09080D] border-white/10 text-[#A39BB5] hover:text-[#F8F5F0]'
-                            }`}
-                          >
-                            {preset.label}
-                          </button>
-                        ))}
+                    {/* 4. Checkbox Ẩn câu hỏi trên ảnh chia sẻ */}
+                    <label className="flex items-start gap-3 cursor-pointer select-none pt-1">
+                      <input
+                        type="checkbox"
+                        checked={hideQuestionOnShare}
+                        onChange={(e) => setHideQuestionOnShare(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-[#262235] bg-[#0B0A12] text-[#D9B36A] accent-[#D9B36A] cursor-pointer"
+                      />
+                      <div>
+                        <p className="text-xs font-medium text-[#F8F5F0]">
+                          Ẩn câu hỏi trên ảnh chia sẻ
+                        </p>
+                        <p className="text-[11px] text-[#9E96B0] mt-0.5">
+                          Ảnh chỉ hiện lá bài, câu quote và chỉ số. Người khác không thấy bạn hỏi gì.
+                        </p>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Age-Tier Guardrail Banner */}
-                  {agePolicy.isKidTeenSafeMode ? (
-                    <div
-                      data-testid="kid-teen-safe-badge"
-                      className="p-3.5 sm:p-4 rounded-2xl bg-emerald-950/60 border border-emerald-400/50 text-emerald-100 text-xs sm:text-sm leading-relaxed shadow-[0_0_25px_rgba(16,185,129,0.2)]"
-                    >
-                      <strong>
-                        🌸 Chế độ Học Đường Trong Sáng (10–15 tuổi) đã kích hoạt:
-                      </strong>{' '}
-                      Chủ đề học đường lành mạnh • Bà Ngoại Vui Tính • Khóa nạp tiền 100%.
-                    </div>
-                  ) : (
-                    <div className="px-4 py-2.5 rounded-2xl bg-[#171424] border border-white/10 text-xs text-[#A39BB5] flex items-center justify-between gap-2">
-                      <span>{agePolicy.policySummaryVi}</span>
-                      <span className="text-[#F3E5AB] font-semibold shrink-0">
-                        {agePolicy.age} tuổi
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Deck Selector Toggle: 22 Major Arcana vs Full 78 RWS */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB] flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      Chọn Bộ Bài Tarot (Deck Mode)
                     </label>
-                    <div
-                      className={`grid gap-3 ${
-                        isPhoneSimulator
-                          ? 'grid-cols-1'
-                          : 'grid-cols-1 sm:grid-cols-2'
-                      }`}
-                    >
+
+                    {formError ? (
+                      <div className="p-3 rounded-xl bg-rose-950/70 border border-rose-400/40 text-xs text-rose-200">
+                        {formError}
+                      </div>
+                    ) : null}
+
+                    {/* Bottom Action Buttons (Page 3 & 4) */}
+                    <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#262235]">
                       <button
                         type="button"
-                        onClick={() => setDeckMode('major_22')}
-                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                          deckMode === 'major_22'
-                            ? 'bg-[#221A33] border-[#F3E5AB] shadow-[0_0_18px_rgba(212,175,55,0.25)]'
-                            : 'bg-[#09080D]/70 border-white/10 hover:border-[#D4AF37]/40'
-                        }`}
+                        onClick={() => setStep(1)}
+                        className="py-2.5 px-4 rounded-xl text-xs font-medium text-[#9E96B0] hover:text-[#F8F5F0] transition-colors cursor-pointer"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-display text-sm sm:text-base font-bold text-[#F8F5F0]">
-                            Bộ 22 Lá Ẩn Chính (Major Arcana)
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D4AF37]/20 text-[#F3E5AB] shrink-0">
-                            Cô đọng
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#A39BB5] mt-1">
-                          Tập trung vào các bước ngoặt lớn và bài học tâm linh cốt lõi.
-                        </p>
+                        Quay lại
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => setDeckMode('full_78')}
-                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                          deckMode === 'full_78'
-                            ? 'bg-[#221A33] border-[#F3E5AB] shadow-[0_0_18px_rgba(212,175,55,0.25)]'
-                            : 'bg-[#09080D]/70 border-white/10 hover:border-[#D4AF37]/40'
-                        }`}
+                        onClick={handleProceedToStep3}
+                        className="inline-flex items-center gap-2 py-2.5 px-6 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-[0_4px_16px_rgba(217,179,106,0.3)] active:scale-[0.98]"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-display text-sm sm:text-base font-bold text-[#F8F5F0]">
-                            Trọn Bộ 78 Lá Tarot (RWS 1909)
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-200 border border-emerald-400/40 shrink-0">
-                            Đầy đủ 78 lá
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#A39BB5] mt-1">
-                          Kết hợp 22 lá Major + 56 lá Minor (Gậy, Cốc, Kiếm, Tiền) soi chi tiết từng hành vi.
-                        </p>
+                        <span>Xào bài →</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Topic Selector */}
-                  <div className="space-y-2.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
-                      Chọn Chủ Đề Trải Bài 3 Lá
-                    </label>
-                    <div
-                      className={`grid gap-3 ${
-                        isPhoneSimulator
-                          ? 'grid-cols-1'
-                          : 'grid-cols-1 sm:grid-cols-3'
-                      }`}
-                    >
-                      {agePolicy.allowedTopics.map((topicItem) => {
-                        const isSelected = selectedTopic === topicItem.id;
-                        return (
-                          <button
-                            key={topicItem.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedTopic(topicItem.id);
-                              const samples =
-                                SAMPLE_QUESTIONS_BY_TOPIC[topicItem.id];
-                              if (samples?.[0]) {
-                                setQuestionText(samples[0]);
-                              }
+                  {/* Right Column (Page 3 Desktop Side Column) */}
+                  <div className="lg:col-span-4 space-y-4">
+                    {/* Reader Mini Card */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                            style={{
+                              backgroundColor: `${activeReaderObj.accent_color}22`,
+                              color: activeReaderObj.accent_color,
                             }}
-                            className={`p-3.5 sm:p-4 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
-                              isSelected
-                                ? 'bg-gradient-to-b from-[#231B32] to-[#151120] border-[#F3E5AB] shadow-[0_0_20px_rgba(212,175,55,0.25)]'
-                                : 'bg-[#09080D]/70 border-white/10 hover:border-[#D4AF37]/50'
-                            }`}
                           >
-                            <div>
-                              <p className="font-display text-base font-bold text-[#F8F5F0]">
-                                {topicItem.label}
-                              </p>
-                              <p className="text-xs text-[#A39BB5] mt-1 leading-relaxed">
-                                {topicItem.description}
-                              </p>
-                            </div>
-                            <div className="mt-3 pt-2 border-t border-white/10 text-[11px] text-[#D4AF37] font-medium">
-                              1. {topicItem.positions[0]} • 2.{' '}
-                              {topicItem.positions[1]} • 3. {topicItem.positions[2]}
-                            </div>
+                            {activeReaderObj.avatar_symbol}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-[#F8F5F0]">
+                              {activeReaderObj.name}
+                            </p>
+                            <span className="text-[10px] text-[#9E96B0]">
+                              {activeReaderObj.title}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setStep(1)}
+                          className="text-xs text-[#E5C687] hover:underline cursor-pointer"
+                        >
+                          Đổi Reader
+                        </button>
+                      </div>
+
+                      <p className="text-xs italic text-[#E5C687]/90 leading-relaxed pt-2 border-t border-white/5">
+                        “Kể đi, tui nghe. Đừng kể dài quá, bà già rồi.”
+                      </p>
+                    </div>
+
+                    {/* Gợi ý câu hỏi */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 space-y-2.5">
+                      <span className="text-[10px] font-bold tracking-wider text-[#9E96B0] uppercase block">
+                        GỢI Ý CÂU HỎI
+                      </span>
+                      <div className="space-y-1.5">
+                        {(SAMPLE_QUESTIONS_BY_TOPIC[selectedTopic] || []).map((sample, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setQuestionText(sample)}
+                            className="w-full text-left p-2.5 rounded-xl bg-[#0B0A12] hover:bg-[#1D192C] border border-[#262235] text-xs text-[#E2E8F0] leading-snug transition-colors cursor-pointer"
+                          >
+                            {sample}
                           </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Question Textarea + 1-Click Sample Chips */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label
-                        htmlFor="question-textarea"
-                        className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]"
-                      >
-                        Câu chuyện hoặc câu hỏi của bạn
-                      </label>
-                      <span
-                        className={`text-xs font-mono ${
-                          questionText.length > 280
-                            ? 'text-amber-300 font-bold'
-                            : 'text-[#A39BB5]'
-                        }`}
-                      >
-                        {questionText.length} / 300
-                      </span>
-                    </div>
-
-                    <textarea
-                      id="question-textarea"
-                      rows={3}
-                      maxLength={300}
-                      value={questionText}
-                      onChange={(e) => setQuestionText(e.target.value)}
-                      placeholder="Kể ngắn gọn hoàn cảnh của bạn để 3 lá bài phản chiếu rõ nhất..."
-                      className="w-full p-3.5 sm:p-4 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] placeholder:text-[#A39BB5]/50 focus:outline-none focus:border-[#F3E5AB] leading-relaxed"
-                    />
-
-                    {/* Sample Question Chips */}
-                    <div className="space-y-1.5 pt-1">
-                      <span className="text-[11px] text-[#A39BB5] block">
-                        Chạm chọn nhanh câu hỏi mẫu (1-click):
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {(SAMPLE_QUESTIONS_BY_TOPIC[selectedTopic] || []).map(
-                          (sample, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setQuestionText(sample)}
-                              className="text-left text-xs px-3 py-1.5 rounded-xl bg-[#171424] hover:bg-[#231D36] border border-[#D4AF37]/25 text-[#D8D2E7] transition-colors cursor-pointer"
-                            >
-                              “{sample}”
-                            </button>
-                          )
-                        )}
+                        ))}
                       </div>
                     </div>
-                  </div>
 
-                  {formError ? (
-                    <div className="p-3.5 rounded-2xl bg-rose-950/80 border border-rose-400/40 flex items-center gap-2.5 text-xs text-rose-200">
-                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                      <span>{formError}</span>
+                    {/* Privacy Note & Support Line */}
+                    <div className="p-4 rounded-2xl bg-[#14121F]/80 border border-[#262235] text-[11px] text-[#9E96B0] space-y-1.5 leading-relaxed">
+                      <p>
+                        🔒 Câu hỏi chỉ dùng để giải bài và xoá được trong Cài đặt.
+                      </p>
+                      <p>
+                        Đang rất tệ?{' '}
+                        <button
+                          type="button"
+                          onClick={() => setIsLegalModalOpen(true)}
+                          className="text-[#E5C687] underline cursor-pointer"
+                        >
+                          Xem đường dây hỗ trợ.
+                        </button>
+                      </p>
                     </div>
-                  ) : null}
-
-                  {/* Submit to Step 3 */}
-                  <button
-                    type="button"
-                    onClick={handleProceedToStep3}
-                    className="w-full inline-flex items-center justify-center gap-2 py-4 px-5 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#E5C158] to-[#D4AF37] text-[#09080D] font-bold text-sm sm:text-base shadow-[0_10px_30px_rgba(212,175,55,0.35)] hover:brightness-110 transition-all cursor-pointer active:scale-[0.98]"
-                  >
-                    <Wand2 className="w-5 h-5" />
-                    <span>Bắt Đầu Nghi Thức Xào Bài & Rút 3 Lá</span>
-                  </button>
+                  </div>
                 </div>
               </motion.section>
             ) : null}
@@ -1453,133 +1329,61 @@ export default function TarotCoupleHomePage() {
               <motion.section
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-4xl mx-auto space-y-5"
+                className="max-w-4xl mx-auto space-y-6"
               >
-                {/* Top Context Bar + Deck Mode Toggle */}
-                <div className="flex flex-wrap items-center justify-between gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="inline-flex items-center gap-1 text-xs sm:text-sm text-[#A39BB5] hover:text-[#F8F5F0] cursor-pointer"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Sửa câu hỏi</span>
-                  </button>
+                {/* Header (Page 5 & 6 of Redesign UI) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <h1 className="font-display text-2xl sm:text-4xl font-bold text-[#F8F5F0] tracking-tight">
+                      Chọn lá bài đang gọi bạn
+                    </h1>
+                    <p className="text-xs sm:text-sm text-[#9E96B0]">
+                      {shuffleStage === 'charge'
+                        ? `Giữ nút để xáo và nạp năng lượng vào bộ bài (${totalDeckCards} lá).`
+                        : `Bộ bài đã được xáo. Chạm vào lá bạn thấy bị thu hút. Còn ${3 - selectedFanIndices.length} lá.`}
+                    </p>
+                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex rounded-full bg-[#12101B] border border-[#D4AF37]/35 p-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeckMode('major_22');
-                          setSelectedFanIndices([]);
-                        }}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer ${
-                          deckMode === 'major_22'
-                            ? 'bg-[#D4AF37] text-[#09080D]'
-                            : 'text-[#A39BB5]'
-                        }`}
-                      >
-                        22 Lá Ẩn Chính
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeckMode('full_78');
-                          setSelectedFanIndices([]);
-                        }}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer ${
-                          deckMode === 'full_78'
-                            ? 'bg-[#D4AF37] text-[#09080D]'
-                            : 'text-[#A39BB5]'
-                        }`}
-                      >
-                        Trọn Bộ 78 Lá
-                      </button>
-                    </div>
-
-                    <div className="text-[11px] text-[#F3E5AB] bg-[#171424] border border-[#D4AF37]/30 px-3 py-1 rounded-full">
-                      Chủ đề:{' '}
-                      <strong>
-                        {
-                          agePolicy.allowedTopics.find(
-                            (t) => t.id === selectedTopic
-                          )?.label
-                        }
-                      </strong>
-                    </div>
+                  {/* Reader Speech Bubble */}
+                  <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-[#14121F] border border-[#262235] text-xs text-[#E5C687] self-start sm:self-auto shrink-0">
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                      style={{
+                        backgroundColor: `${activeReaderObj.accent_color}25`,
+                        color: activeReaderObj.accent_color,
+                      }}
+                    >
+                      {activeReaderObj.avatar_symbol}
+                    </span>
+                    <span className="italic">“Chọn lẹ đi, đêm dài lắm.”</span>
                   </div>
                 </div>
 
-                {/* SUB-STAGE 3A: ENERGY CHARGE & SHUFFLE */}
+                {/* Sub-stage 3A: Quick Charge Orb */}
                 {shuffleStage === 'charge' ? (
-                  <div className="rounded-3xl bg-[#12101B] border border-[#D4AF37]/35 p-6 sm:p-12 text-center space-y-7 shadow-[0_20px_60px_rgba(0,0,0,0.75)]">
-                    <div className="space-y-2 max-w-lg mx-auto">
-                      <span className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-[#D4AF37] font-semibold">
-                        ✦ Nghi Thức Kết Nối Trực Giác ({totalDeckCards} Lá Bài) ✦
-                      </span>
-                      <h2 className="font-display text-2xl sm:text-4xl font-bold text-[#F8F5F0]">
-                        Hít Sâu & Truyền Năng Lượng Vào Bộ Bài
-                      </h2>
-                      <p className="text-xs sm:text-sm text-[#A39BB5]">
-                        Nhẩm lại câu hỏi của bạn: <em>“{questionText}”</em>
+                  <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-8 sm:p-14 text-center space-y-6">
+                    <div className="space-y-2 max-w-md mx-auto">
+                      <p className="text-xs text-[#9E96B0]">
+                        Nhẩm lại câu hỏi của bạn: <em className="text-[#E5C687]">“{questionText}”</em>
                       </p>
                     </div>
 
-                    {/* Animated Shuffling Deck Stack */}
-                    <div className="relative h-48 sm:h-52 flex items-center justify-center">
-                      {[0, 1, 2, 3, 4].map((idx) => (
-                        <motion.div
-                          key={idx}
-                          animate={
-                            isCharging
-                              ? {
-                                  x: [0, (idx - 2) * 34, 0],
-                                  y: [0, idx % 2 === 0 ? -12 : 12, 0],
-                                  rotate: [
-                                    (idx - 2) * 5,
-                                    (idx - 2) * -8,
-                                    (idx - 2) * 4,
-                                  ],
-                                }
-                              : {
-                                  x: (idx - 2) * 14,
-                                  rotate: (idx - 2) * 4,
-                                }
-                          }
-                          transition={{
-                            duration: 0.65,
-                            repeat: isCharging ? Infinity : 0,
-                            ease: 'easeInOut',
-                          }}
-                          className="absolute w-28 h-44 rounded-2xl bg-gradient-to-b from-[#231834] to-[#0F0B18] border border-[#D4AF37]/60 shadow-[0_10px_25px_rgba(0,0,0,0.7)] flex items-center justify-center"
-                        >
-                          <span className="text-2xl text-[#D4AF37]">✦</span>
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    {/* Ritual Energy Orb Button */}
                     <div className="flex flex-col items-center gap-4">
                       <button
                         type="button"
                         onMouseDown={startEnergyCharge}
                         onTouchStart={startEnergyCharge}
                         onClick={startEnergyCharge}
-                        className="relative inline-flex items-center justify-center px-6 sm:px-8 py-4 rounded-full bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] text-[#09080D] font-bold text-xs sm:text-base shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                        className="py-3 px-8 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs sm:text-sm shadow-[0_4px_20px_rgba(217,179,106,0.3)] transition-all cursor-pointer active:scale-[0.98]"
                       >
-                        <Flame className="w-5 h-5 mr-2 shrink-0" />
-                        <span>
-                          {isCharging
-                            ? `Đang xáo ${totalDeckCards} lá bài & hội tụ năng lượng... ${chargeProgress}%`
-                            : 'Giữ 3 giây để truyền năng lượng & Xào bài'}
-                        </span>
+                        {isCharging
+                          ? `Đang xáo bài... ${chargeProgress}%`
+                          : 'Giữ để truyền năng lượng & Xào bài'}
                       </button>
 
-                      {/* Progress Bar */}
-                      <div className="w-64 h-2 rounded-full bg-[#09080D] border border-[#D4AF37]/30 overflow-hidden">
+                      <div className="w-56 h-1.5 rounded-full bg-[#0B0A12] border border-[#262235] overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] transition-all duration-100"
+                          className="h-full bg-[#D9B36A] transition-all duration-100"
                           style={{ width: `${chargeProgress}%` }}
                         />
                       </div>
@@ -1587,73 +1391,88 @@ export default function TarotCoupleHomePage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (chargeIntervalRef.current) {
-                            clearInterval(chargeIntervalRef.current);
-                          }
+                          if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
                           setChargeProgress(100);
                           setIsCharging(false);
                           setShuffleStage('fan');
                         }}
-                        className="text-xs text-[#A39BB5] hover:text-[#F3E5AB] underline cursor-pointer"
+                        className="text-xs text-[#9E96B0] hover:text-[#E5C687] underline cursor-pointer"
                       >
                         Trải {totalDeckCards} lá bài ra bàn ngay →
                       </button>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  /* Sub-stage 3B: Arc Fan & 3 Position Slots */
+                  <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 sm:p-8 space-y-6">
+                    {/* Interactive Arc Fan Cards */}
+                    <div className="pt-2 pb-6 flex items-center justify-center overflow-x-auto no-scrollbar">
+                      <div className="relative h-44 sm:h-52 w-full max-w-xl flex items-center justify-center">
+                        {Array.from({ length: Math.min(totalDeckCards, 22) }, (_, fanIdx) => {
+                          const pickOrder = selectedFanIndices.indexOf(fanIdx);
+                          const isPicked = pickOrder !== -1;
+                          const totalVisual = Math.min(totalDeckCards, 22);
+                          const angle = ((fanIdx - (totalVisual - 1) / 2) / (totalVisual / 2)) * 32;
+                          const offsetX = (fanIdx - (totalVisual - 1) / 2) * 18;
+                          const offsetY = Math.abs(fanIdx - (totalVisual - 1) / 2) * 2.2;
 
-                {/* SUB-STAGE 3B: ARC FAN PICKER */}
-                {shuffleStage === 'fan' ? (
-                  <div className="rounded-3xl bg-[#12101B] border border-[#D4AF37]/35 p-4 sm:p-8 space-y-5 shadow-[0_20px_60px_rgba(0,0,0,0.75)]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3.5">
-                      <div>
-                        <h2 className="font-display text-xl sm:text-3xl font-bold text-[#F8F5F0]">
-                          Chạm Chọn 3 Lá Bài Định Mệnh ({selectedFanIndices.length}/3)
-                        </h2>
-                        <p className="text-xs sm:text-sm text-[#A39BB5]">
-                          Đang mở:{' '}
-                          <strong className="text-[#F3E5AB]">
-                            {deckMode === 'full_78'
-                              ? 'Trọn Bộ 78 Lá Tarot (RWS 1909)'
-                              : 'Bộ 22 Lá Ẩn Chính (Major Arcana)'}
-                          </strong>
-                        </p>
+                          return (
+                            <motion.button
+                              key={fanIdx}
+                              type="button"
+                              disabled={isPicked || selectedFanIndices.length >= 3}
+                              onClick={() => handlePickFanCard(fanIdx)}
+                              whileHover={{ y: -14, scale: 1.08 }}
+                              style={{
+                                transform: isPicked
+                                  ? `translateY(-30px) scale(0.9)`
+                                  : `translateX(${offsetX}px) translateY(${offsetY}px) rotate(${angle}deg)`,
+                                zIndex: isPicked ? 30 : fanIdx,
+                              }}
+                              className={`absolute w-14 h-24 sm:w-16 sm:h-28 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-between p-1.5 shadow-lg ${
+                                isPicked
+                                  ? 'bg-[#1D192C] border-[#D9B36A] ring-2 ring-[#D9B36A]'
+                                  : 'bg-gradient-to-b from-[#1C182B] to-[#0F0D17] border-[#D9B36A]/40 hover:border-[#E5C687]'
+                              }`}
+                            >
+                              <span className="text-[8px] text-[#D9B36A]/70 font-mono">
+                                #{fanIdx + 1}
+                              </span>
+                              <div className="w-5 h-5 rounded-full border border-[#D9B36A]/30 flex items-center justify-center text-[10px] text-[#E5C687]">
+                                {isPicked ? `0${pickOrder + 1}` : '✦'}
+                              </div>
+                              <span className="text-[7px] text-[#9E96B0] uppercase">
+                                {isPicked ? `Đã chọn` : 'Rút lá'}
+                              </span>
+                            </motion.button>
+                          );
+                        })}
                       </div>
-
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={handleQuickPickThree}
-                        className="px-3.5 py-2 rounded-xl bg-[#171424] hover:bg-[#241E38] border border-[#D4AF37]/45 text-xs font-semibold text-[#F3E5AB] shrink-0 transition-colors cursor-pointer"
-                      >
-                        ✨ Rút nhanh 3 lá theo trực giác
-                      </button>
                     </div>
 
-                    {/* 3 Spread Position Slots (Sticky & Compact 3-Column Grid for 375px Phone Screen) */}
-                    <div className="sticky top-24 z-20 grid grid-cols-3 gap-2 sm:gap-3 bg-[#12101B]/95 backdrop-blur-md py-1">
+                    {/* 3 Position Slots (Page 5 & 6) */}
+                    <div className="grid grid-cols-3 gap-3 sm:gap-4 pt-2 border-t border-[#262235]">
                       {[0, 1, 2].map((slotIdx) => {
                         const pickedFanIdx = selectedFanIndices[slotIdx];
                         const isFilled = pickedFanIdx !== undefined;
+
                         return (
                           <div
                             key={slotIdx}
-                            className={`p-2 sm:p-3.5 rounded-2xl border text-center transition-all ${
+                            className={`p-3 sm:p-4 rounded-xl border text-center transition-all ${
                               isFilled
-                                ? 'bg-[#1D162B] border-[#F3E5AB] shadow-[0_0_20px_rgba(212,175,55,0.25)]'
-                                : 'bg-[#09080D]/80 border-dashed border-[#D4AF37]/35'
+                                ? 'bg-[#1D192C] border-[#D9B36A]'
+                                : 'bg-[#0B0A12] border-dashed border-[#262235]'
                             }`}
                           >
-                            <span className="text-[9px] sm:text-xs uppercase tracking-wider text-[#D4AF37] font-semibold block">
-                              Vị trí 0{slotIdx + 1}
+                            <span className="text-[10px] font-semibold text-[#D9B36A] block">
+                              {slotIdx + 1}
                             </span>
-                            <p className="font-display text-xs sm:text-base font-bold text-[#F8F5F0] truncate mt-0.5">
+                            <p className="font-display text-xs sm:text-sm font-bold text-[#F8F5F0] truncate mt-0.5">
                               {currentSpreadPositions[slotIdx]}
                             </p>
-                            <span className="mt-1.5 inline-block px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-black/50 text-[#F3E5AB] border border-[#D4AF37]/30 truncate max-w-full">
-                              {isFilled
-                                ? `Lá #${pickedFanIdx + 1}`
-                                : 'Chờ rút...'}
+                            <span className="mt-1 inline-block text-[11px] text-[#9E96B0]">
+                              {isFilled ? `✓ Đã rút` : 'Chờ rút...'}
                             </span>
                           </div>
                         );
@@ -1661,71 +1480,48 @@ export default function TarotCoupleHomePage() {
                     </div>
 
                     {formError ? (
-                      <div className="p-3.5 rounded-2xl bg-rose-950/80 border border-rose-400/40 flex items-center gap-2.5 text-xs text-rose-200">
-                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                        <span>{formError}</span>
+                      <div className="p-3 rounded-xl bg-rose-950/70 border border-rose-400/40 text-xs text-rose-200">
+                        {formError}
                       </div>
                     ) : null}
 
-                    {/* Loading State while Server Shuffles & AI Validates */}
-                    {isSubmitting ? (
-                      <div className="py-12 text-center space-y-4">
-                        <div className="w-14 h-14 rounded-full border-2 border-[#D4AF37] border-t-transparent animate-spin mx-auto" />
-                        <p className="font-display text-xl font-bold text-[#F3E5AB]">
-                          {activeReaderObj.name} đang lật mở 3 lá bài của bạn...
-                        </p>
-                        <p className="text-xs text-[#A39BB5]">
-                          Hệ thống đang ánh xạ CSPRNG và giải mã năng lượng theo đúng chủ đề bạn chọn.
-                        </p>
+                    {/* Bottom Action Controls (Page 5 & 6) */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#262235]">
+                      <div className="text-xs text-[#9E96B0]">
+                        Đã rút <strong className="text-[#F8F5F0] font-semibold">{selectedFanIndices.length}/3</strong> lá
                       </div>
-                    ) : (
-                      /* Interactive Arc Fan Grid (22 or 78 cards) */
-                      <div
-                        className={`grid gap-2 sm:gap-2.5 pt-2 pb-4 justify-items-center max-h-[420px] overflow-y-auto pr-1 ${
-                          isPhoneSimulator
-                            ? 'grid-cols-4'
-                            : 'grid-cols-4 sm:grid-cols-6 md:grid-cols-11'
-                        }`}
-                      >
-                        {Array.from({ length: totalDeckCards }, (_, fanIdx) => {
-                          const pickOrder = selectedFanIndices.indexOf(fanIdx);
-                          const isPicked = pickOrder !== -1;
-                          const tiltAngle = ((fanIdx % 11) - 5) * 1.5;
 
-                          return (
-                            <motion.button
-                              key={fanIdx}
-                              type="button"
-                              data-testid={`fan-card-${fanIdx}`}
-                              disabled={
-                                isPicked || selectedFanIndices.length >= 3
-                              }
-                              onClick={() => handlePickFanCard(fanIdx)}
-                              whileHover={{ y: -8, scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              style={{ rotate: isPicked ? 0 : tiltAngle }}
-                              className={`relative w-16 h-24 sm:w-20 sm:h-28 rounded-xl p-1.5 border transition-all cursor-pointer flex flex-col items-center justify-between ${
-                                isPicked
-                                  ? 'bg-gradient-to-b from-[#D4AF37]/35 to-[#1D152B] border-2 border-[#F3E5AB] shadow-[0_0_24px_rgba(212,175,55,0.6)] -translate-y-2'
-                                  : 'bg-gradient-to-b from-[#1E152A] via-[#130E1D] to-[#09080D] border-[#D4AF37]/45 hover:border-[#F3E5AB]'
-                              }`}
-                            >
-                              <span className="text-[9px] text-[#D4AF37]/80 font-mono">
-                                #{fanIdx + 1}
-                              </span>
-                              <div className="w-7 h-7 rounded-full border border-[#D4AF37]/40 flex items-center justify-center text-[#F3E5AB] text-xs">
-                                {isPicked ? `0${pickOrder + 1}` : '✦'}
-                              </div>
-                              <span className="text-[8px] uppercase tracking-wider text-[#F3E5AB]/75">
-                                {isPicked ? `Vị trí ${pickOrder + 1}` : 'Rút lá'}
-                              </span>
-                            </motion.button>
-                          );
-                        })}
+                      <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                        {selectedFanIndices.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFanIndices([])}
+                            className="py-2.5 px-4 rounded-xl border border-[#262235] text-xs font-medium text-[#9E96B0] hover:text-[#F8F5F0] cursor-pointer"
+                          >
+                            Chọn lại
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={selectedFanIndices.length < 3 || isSubmitting}
+                          onClick={() => {
+                            if (selectedFanIndices.length === 3) {
+                              void handlePickFanCard(selectedFanIndices[2]!);
+                            }
+                          }}
+                          className={`flex-1 sm:flex-initial py-2.5 px-6 rounded-xl font-semibold text-xs sm:text-sm transition-all ${
+                            selectedFanIndices.length === 3 && !isSubmitting
+                              ? 'bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] cursor-pointer shadow-[0_4px_16px_rgba(217,179,106,0.3)] active:scale-[0.98]'
+                              : 'bg-[#1D192C] text-[#9E96B0]/50 border border-[#262235] cursor-not-allowed'
+                          }`}
+                        >
+                          {isSubmitting ? 'Đang giải mã...' : 'Giải mã 3 lá →'}
+                        </button>
                       </div>
-                    )}
+                    </div>
                   </div>
-                ) : null}
+                )}
               </motion.section>
             ) : null}
 
@@ -1743,428 +1539,217 @@ export default function TarotCoupleHomePage() {
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45 }}
-                className="space-y-6 sm:space-y-8"
+                className="space-y-6"
               >
-                {/* Top Summary Banner */}
-                <div className="rounded-3xl bg-[#12101B] border border-[#D4AF37]/35 p-4 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-3 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/45 text-xs font-bold text-[#F3E5AB]">
-                        ✦ {readingSuccess.readerBadge}
-                      </span>
-                      <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-[#A39BB5]">
-                        Chủ đề: {readingSuccess.topicLabel}
-                      </span>
-                      {readingSuccess.isKidTeenSafeMode ? (
-                        <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-xs text-emerald-200 font-semibold">
-                          🌸 Chế độ Học Đường Trong Sáng (10–15t)
+                {/* 2-Column Layout (Page 7 Desktop & Page 8 Mobile) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left Column (cols 8): 3 Cards Analysis + CHỐT HẠ */}
+                  <div className="lg:col-span-8 space-y-6">
+                    {/* Reader Meta Hook */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                          style={{
+                            backgroundColor: `${activeReaderObj.accent_color}25`,
+                            color: activeReaderObj.accent_color,
+                          }}
+                        >
+                          {activeReaderObj.avatar_symbol}
                         </span>
-                      ) : null}
+                        <span className="text-xs text-[#9E96B0]">
+                          {readingSuccess.readerDisplayName} đọc cho {readingSuccess.nickname} · {readingSuccess.topicLabel}
+                        </span>
+                      </div>
+
+                      <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0] italic leading-snug">
+                        “{readingSuccess.result.greeting_hook}”
+                      </h1>
                     </div>
-                    <h2 className="font-display text-xl sm:text-3xl font-bold text-[#F8F5F0]">
-                      Thông Điệp Vũ Trụ Gửi Đến @{readingSuccess.nickname}
-                    </h2>
+
+                    {/* 3 Drawn Cards (Vertical List matching Page 7 & 8) */}
+                    <div className="space-y-4">
+                      {readingSuccess.drawnCards.map((drawnSlot, idx) => {
+                        const analysis =
+                          readingSuccess.result.cards_analysis[idx] ??
+                          readingSuccess.result.cards_analysis[0]!;
+
+                        return (
+                          <div
+                            key={drawnSlot.position_index}
+                            className="rounded-2xl bg-[#14121F] border border-[#262235] p-4 sm:p-5 flex flex-col sm:flex-row items-start gap-4 transition-all"
+                          >
+                            {/* Card Visual / Thumbnail */}
+                            <div className="w-24 sm:w-28 shrink-0 flex flex-col items-center mx-auto sm:mx-0">
+                              <TarotCardVisual
+                                card={drawnSlot.card}
+                                reversed={drawnSlot.reversed}
+                                isFlipped={true}
+                                positionIndex={idx}
+                                positionLabel={drawnSlot.position_label}
+                                size="sm"
+                              />
+                            </div>
+
+                            {/* Card Content & Meaning */}
+                            <div className="flex-1 space-y-2">
+                              <span className="text-[10px] uppercase font-bold tracking-wider text-[#9E96B0] block">
+                                {idx + 1} · {drawnSlot.position_label.toUpperCase()}
+                              </span>
+
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-display text-base sm:text-lg font-bold text-[#F8F5F0]">
+                                  {drawnSlot.card.name_en}
+                                </h3>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                    drawnSlot.reversed
+                                      ? 'bg-[#E5624A]/15 text-[#E5624A] border border-[#E5624A]/40'
+                                      : 'bg-[#D9B36A]/15 text-[#E5C687] border border-[#D9B36A]/35'
+                                  }`}
+                                >
+                                  {drawnSlot.reversed ? 'Ngược' : 'Xuôi'}
+                                </span>
+                              </div>
+
+                              <p className="text-xs sm:text-sm text-[#E2E8F0] leading-relaxed">
+                                {analysis.interpretation}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Khối CHỐT HẠ (Page 7 & 8) */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#D9B36A]/40 p-5 space-y-2">
+                      <span className="text-[10px] font-bold tracking-widest text-[#D9B36A] uppercase block">
+                        CHỐT HẠ
+                      </span>
+                      <p className="text-xs sm:text-sm text-[#F8F5F0] leading-relaxed">
+                        {readingSuccess.result.overall_verdict}
+                      </p>
+                      {readingSuccess.result.actionable_next_step && (
+                        <p className="text-xs text-[#9E96B0] leading-relaxed pt-1.5 border-t border-white/5">
+                          👉 {readingSuccess.result.actionable_next_step}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Disclaimer Mini */}
+                    <p className="text-[11px] text-[#9E96B0]/75 leading-relaxed">
+                      Tarot là hình thức giải trí và tự phản chiếu, không dự đoán chắc chắn và không thay thế tư vấn chuyên môn.
+                    </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFlippedCards([true, true, true])}
-                      className="px-3.5 py-2 rounded-2xl bg-[#171424] hover:bg-[#221D34] border border-[#D4AF37]/45 text-xs font-semibold text-[#F3E5AB] transition-colors cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 inline mr-1.5" />
-                      Lật mở cả 3 lá
-                    </button>
+                  {/* Right Column (cols 4): ẢNH STORY 9:16 PREVIEW & MUỐN HỎI SÂU HƠN */}
+                  <div className="lg:col-span-4 space-y-5">
+                    {/* 1. ẢNH STORY 9:16 Preview Card */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 space-y-4">
+                      <span className="text-[10px] font-bold tracking-widest text-[#9E96B0] uppercase block">
+                        ẢNH STORY 9:16
+                      </span>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStoryModalReading(readingSuccess);
-                        setIsStoryModalOpen(true);
-                      }}
-                      className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#E6C665] text-[#09080D] text-xs font-bold shadow-[0_6px_20px_rgba(212,175,55,0.3)] hover:brightness-110 transition-all cursor-pointer"
-                    >
-                      <Share2 className="w-3.5 h-3.5 inline mr-1.5" />
-                      Xuất Ảnh Story 9:16
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile Swipe Hint */}
-                <p
-                  className={`${
-                    isPhoneSimulator ? 'block' : 'block sm:hidden'
-                  } text-center text-[11px] font-medium text-[#D4AF37]`}
-                >
-                  ↔ Vuốt ngang để xem lần lượt 3 lá bài 3D hoặc chạm vào lá bài để lật mở
-                </p>
-
-                {/* 3 Drawn Cards Interactive 3D Reveal Row (Horizontal Touch-Snap on Mobile) */}
-                <div
-                  className={
-                    isPhoneSimulator
-                      ? 'flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-3 pb-2'
-                      : 'flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-3 sm:grid sm:grid-cols-3 sm:gap-6 justify-items-center pb-2'
-                  }
-                >
-                  {readingSuccess.drawnCards.map((drawnSlot, idx) => {
-                    const isCardFlipped = flippedCards[idx] ?? true;
-                    const analysis =
-                      readingSuccess.result.cards_analysis[idx] ??
-                      readingSuccess.result.cards_analysis[0];
-
-                    return (
-                      <div
-                        key={drawnSlot.position_index}
-                        className={`${
-                          isPhoneSimulator
-                            ? 'min-w-[85%] snap-center shrink-0'
-                            : 'min-w-[85%] sm:min-w-0 snap-center shrink-0 w-full'
-                        } rounded-3xl bg-[#12101B] border border-[#D4AF37]/30 p-4 sm:p-5 flex flex-col items-center space-y-4 shadow-[0_14px_40px_rgba(0,0,0,0.65)]`}
-                      >
-                        <div className="text-center">
-                          <span className="text-[11px] uppercase tracking-widest text-[#D4AF37] font-semibold">
-                            Lá số 0{idx + 1} • {drawnSlot.position_label}
+                      {/* Mini Poster Preview */}
+                      <div className="relative aspect-[9/16] max-w-[210px] mx-auto rounded-xl bg-[#0B0A12] border border-[#D9B36A]/40 p-3.5 flex flex-col justify-between text-center overflow-hidden shadow-lg">
+                        <div className="space-y-1">
+                          <p className="text-[7px] text-[#9E96B0] uppercase tracking-wider">
+                            VŨ TRỤ GỬI ĐẾN @{readingSuccess.nickname.toUpperCase()}
+                          </p>
+                          <span
+                            className="inline-block px-2 py-0.5 rounded-full text-[8px] font-bold uppercase"
+                            style={{
+                              backgroundColor: `${activeReaderObj.accent_color}25`,
+                              color: activeReaderObj.accent_color,
+                            }}
+                          >
+                            {activeReaderObj.name}
                           </span>
                         </div>
 
-                        <TarotCardVisual
-                          card={drawnSlot.card}
-                          reversed={drawnSlot.reversed}
-                          isFlipped={isCardFlipped}
-                          positionIndex={idx}
-                          positionLabel={drawnSlot.position_label}
-                          size="md"
-                          onFlip={() => {
-                            setFlippedCards((prev) => {
-                              const next: [boolean, boolean, boolean] = [
-                                ...prev,
-                              ];
-                              next[idx] = !next[idx];
-                              return next;
-                            });
-                          }}
-                        />
-
-                        {/* Card Analysis Detail */}
-                        <div className="w-full pt-3 border-t border-white/10 space-y-2 text-left">
-                          <div className="flex items-center justify-between gap-2">
-                            <h3 className="font-display text-lg font-bold text-[#F8F5F0]">
-                              {drawnSlot.card.roman}. {drawnSlot.card.name_vi}
-                            </h3>
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#D4AF37]/15 text-[#F3E5AB] border border-[#D4AF37]/35 shrink-0">
-                              {analysis.energy_keyword}
-                            </span>
-                          </div>
-
-                          <p className="text-xs sm:text-sm text-[#D8D2E7] leading-relaxed">
-                            {analysis.interpretation}
-                          </p>
+                        {/* 3 Cards Mini Representation */}
+                        <div className="flex items-center justify-center gap-1 my-2">
+                          {readingSuccess.drawnCards.map((c, i) => (
+                            <div
+                              key={i}
+                              className="w-7 h-11 rounded border border-[#D9B36A]/40 bg-[#14121F] flex items-center justify-center text-[7px] font-mono text-[#D9B36A]"
+                            >
+                              {c.card.roman}
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
 
-                {/* Reader Greeting Hook, Overall Verdict & Actionable Next Step */}
-                <div
-                  className={`grid gap-6 ${
-                    isPhoneSimulator
-                      ? 'grid-cols-1'
-                      : 'grid-cols-1 lg:grid-cols-12'
-                  }`}
-                >
-                  {/* Left 7 Cols: Deep Reading */}
-                  <div
-                    className={`${
-                      isPhoneSimulator ? '' : 'lg:col-span-7'
-                    } rounded-3xl bg-[#12101B] border border-[#D4AF37]/35 p-5 sm:p-8 space-y-5 sm:space-y-6`}
-                  >
-                    <div className="space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-[#D4AF37]">
-                        ✦ Lời Mở Đầu Từ {readingSuccess.readerDisplayName}
-                      </span>
-                      <p className="font-display text-lg sm:text-2xl italic text-[#F8F5F0] leading-relaxed">
-                        “{readingSuccess.result.greeting_hook}”
-                      </p>
-                    </div>
-
-                    <div className="pt-4 border-t border-white/10 space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-[#D4AF37]">
-                        ✦ Tổng Kết Cục Diện (Overall Verdict)
-                      </span>
-                      <p className="text-sm sm:text-base text-[#E2E8F0] leading-relaxed">
-                        {readingSuccess.result.overall_verdict}
-                      </p>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-[#171424] border border-emerald-400/30 space-y-1.5">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
-                        <Compass className="w-4 h-4" />
-                        Bước Đi Thực Tế Tiếp Theo Dành Cho Bạn
-                      </span>
-                      <p className="text-xs sm:text-sm text-[#F8F5F0] leading-relaxed">
-                        {readingSuccess.result.actionable_next_step}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right 5 Cols: Highlighted Savage Quote Box + Story 9:16 Studio Trigger */}
-                  <div
-                    className={`${
-                      isPhoneSimulator ? '' : 'lg:col-span-5'
-                    } rounded-3xl bg-gradient-to-b from-[#1E162B] via-[#151120] to-[#0E0B16] border-2 border-[#D4AF37] p-5 sm:p-7 flex flex-col justify-between space-y-6 shadow-[0_20px_60px_rgba(212,175,55,0.2)]`}
-                  >
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-widest text-[#F3E5AB]">
-                          ✦ Câu Chốt Hạ Lên Story 9:16 ✦
-                        </span>
-                        <span className="text-[11px] text-[#A39BB5]">
-                          Đổi Quote 0đ
-                        </span>
-                      </div>
-
-                      {/* 3 Pre-generated Quote Tabs */}
-                      <div className="grid grid-cols-3 gap-2">
-                        {([0, 1, 2] as const).map((qIdx) => (
-                          <button
-                            key={qIdx}
-                            type="button"
-                            onClick={() => setActiveQuoteIdx(qIdx)}
-                            className={`py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                              activeQuoteIdx === qIdx
-                                ? 'bg-[#D4AF37] text-[#09080D] border-[#F3E5AB]'
-                                : 'bg-[#09080D]/60 text-[#A39BB5] border-white/10 hover:text-[#F8F5F0]'
-                            }`}
-                          >
-                            Phương án {qIdx + 1}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Active Quote Display */}
-                      <div className="p-4 sm:p-5 rounded-2xl bg-[#09080D]/90 border border-[#D4AF37]/40 space-y-3">
-                        <p className="font-display text-lg sm:text-2xl font-bold text-[#F8F5F0] leading-snug">
+                        <p className="font-display text-[10px] font-bold italic text-[#F8F5F0] leading-snug">
                           “
-                          {readingSuccess.result.shareable_card.savage_quotes[
-                            activeQuoteIdx
-                          ] || readingSuccess.result.shareable_card.savage_quote}
+                          {readingSuccess.result.shareable_card.savage_quotes[activeQuoteIdx] ||
+                            readingSuccess.result.shareable_card.savage_quote}
                           ”
                         </p>
-                        <p className="text-xs text-[#A39BB5] leading-relaxed">
-                          {readingSuccess.result.shareable_card.sub_advice}
-                        </p>
-                        <div className="pt-2 border-t border-white/10 text-xs text-[#F3E5AB] font-medium">
-                          ★ Vật phẩm độ mệnh:{' '}
-                          {readingSuccess.result.shareable_card.lucky_item}
+
+                        <div className="text-[7px] text-[#9E96B0] pt-1 border-t border-white/5">
+                          tarotcouple.vn
                         </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-3">
                       <button
                         type="button"
                         onClick={() => {
                           setStoryModalReading(readingSuccess);
                           setIsStoryModalOpen(true);
                         }}
-                        className="w-full inline-flex items-center justify-center gap-2 py-4 px-5 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] text-[#09080D] font-bold text-sm sm:text-base shadow-[0_10px_30px_rgba(212,175,55,0.4)] hover:brightness-110 transition-all cursor-pointer active:scale-[0.98]"
+                        className="w-full py-2.5 px-4 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs transition-all cursor-pointer shadow-[0_4px_16px_rgba(217,179,106,0.3)] active:scale-[0.98]"
                       >
-                        <Sparkles className="w-5 h-5" />
-                        <span>✨ Xuất Ảnh Story 9:16 & Chia Sẻ Ngay</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsTikTokStudioModalOpen(true)}
-                        data-testid="step4-tiktok-studio-btn"
-                        className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-[#171424] hover:bg-[#231D36] border border-[#D4AF37]/45 text-xs sm:text-sm font-bold text-[#F3E5AB] transition-colors cursor-pointer"
-                      >
-                        <span>🎬 Tạo Kịch Bản Đăng TikTok 3 Slide Từ Trải Bài Này</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleResetRitual}
-                        className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs sm:text-sm font-medium text-[#D8D2E7] transition-colors cursor-pointer"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        <span>Trải một câu hỏi mới</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ================= LÁ BÀI LÀM RÕ THỨ 4 (CLARIFIER CARD — 5 ⭐) ================= */}
-                {cliffhangerData ? (
-                  <div className="rounded-3xl bg-gradient-to-r from-[#1D152B] via-[#141020] to-[#1D152B] border-2 border-[#D4AF37]/50 p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                      <div className="space-y-1">
-                        <span className="px-3 py-1 rounded-full bg-[#D4AF37]/20 border border-[#F3E5AB] text-xs font-bold text-[#F3E5AB] inline-flex items-center gap-1.5">
-                          <Unlock className="w-3.5 h-3.5 text-[#D4AF37]" />
-                          Lá Bài Làm Rõ Thứ 4 (Clarifier Card • {cliffhangerData.clarifier_cost_stars} ⭐)
-                        </span>
-                        <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F8F5F0] pt-1">
-                          Đào Sâu Góc Khuất Chưa Lộ Diện Trong 3 Lá Đầu
-                        </h3>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsWalletModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#09080D]/80 border border-[#D4AF37]/40 text-xs font-bold text-[#F3E5AB] cursor-pointer self-start sm:self-auto"
-                      >
-                        <Star className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]" />
-                        <span>Số dư: {quota.starsBalance ?? 15} ⭐ (Nạp thêm)</span>
+                        Tuỳ chỉnh và chia sẻ
                       </button>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-[#D8D2E7] leading-relaxed italic bg-[#09080D]/60 p-4 rounded-2xl border border-[#D4AF37]/25">
-                      “{cliffhangerData.tease_text}”
-                    </p>
+                    {/* 2. MUỐN HỎI SÂU HƠN? (Clarifier Card Upsell) */}
+                    <div className="rounded-2xl bg-[#14121F] border border-[#262235] p-5 space-y-3.5">
+                      <span className="text-[10px] font-bold tracking-widest text-[#9E96B0] uppercase block">
+                        MUỐN HỎI SÂU HƠN?
+                      </span>
 
-                    {!clarifierCard ? (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-[#F3E5AB] block">
-                            Chọn câu hỏi đào sâu gợi ý hoặc tự nhập câu hỏi phụ:
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {cliffhangerData.suggested_followup_questions.map(
-                              (q, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => setFollowupQuestion(q)}
-                                  className={`text-left text-xs px-3.5 py-2 rounded-xl border transition-all cursor-pointer ${
-                                    followupQuestion === q
-                                      ? 'bg-[#D4AF37]/25 border-[#F3E5AB] text-[#F3E5AB] font-semibold'
-                                      : 'bg-[#09080D]/70 border-white/10 text-[#A39BB5] hover:text-[#F8F5F0]'
-                                  }`}
-                                >
-                                  “{q}”
-                                </button>
-                              )
-                            )}
-                          </div>
-                        </div>
+                      <p className="text-xs sm:text-sm font-semibold text-[#F8F5F0]">
+                        Rút thêm 1 lá làm rõ cho lá số 2
+                      </p>
 
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <input
-                            type="text"
-                            maxLength={200}
-                            value={followupQuestion}
-                            onChange={(e) =>
-                              setFollowupQuestion(e.target.value)
-                            }
-                            placeholder="Nhập câu hỏi làm rõ của bạn..."
-                            className="flex-1 px-4 py-3.5 rounded-2xl bg-[#09080D] border border-[#D4AF37]/40 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB]"
-                          />
+                      <p className="text-xs text-[#9E96B0] leading-relaxed">
+                        Lá làm rõ giúp xem người ấy đang nghĩ gì sau cùng. Bạn chọn một cách mở khoá.
+                      </p>
 
-                          <button
-                            type="button"
-                            disabled={isDrawingClarifier}
-                            onClick={() => void handleDrawClarifierCard()}
-                            className="py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] text-[#09080D] font-bold text-xs sm:text-sm shadow-[0_8px_25px_rgba(212,175,55,0.4)] hover:brightness-110 transition-all cursor-pointer shrink-0 disabled:opacity-60"
-                          >
-                            {isDrawingClarifier
-                              ? 'Đang rút Lá Thứ 4...'
-                              : '🔓 Rút Lá Bài Làm Rõ Thứ 4 (5 ⭐)'}
-                          </button>
-                        </div>
+                      <div className="space-y-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={isDrawingClarifier}
+                          onClick={() => void handleDrawClarifierCard()}
+                          className="w-full py-2.5 px-4 rounded-xl bg-[#E5C687] hover:bg-[#D9B36A] text-[#0B0A12] font-semibold text-xs transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                        >
+                          {isDrawingClarifier ? 'Đang mở khoá...' : 'Mở khoá bằng 5 Sao'}
+                        </button>
 
-                        {clarifierError ? (
-                          <p className="text-xs text-rose-300">
-                            {clarifierError}
-                          </p>
-                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setIsRewardModalOpen(true)}
+                          className="w-full py-2.5 px-4 rounded-xl bg-[#1D192C] hover:bg-[#262238] border border-[#262235] text-xs font-semibold text-[#E2E8F0] transition-colors cursor-pointer"
+                        >
+                          Xem quảng cáo 30 giây
+                        </button>
                       </div>
-                    ) : (
-                      /* Unlocked 4th Clarifier Card Result */
-                      <motion.div
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`grid gap-6 items-center pt-2 ${
-                          isPhoneSimulator
-                            ? 'grid-cols-1'
-                            : 'grid-cols-1 md:grid-cols-12'
-                        }`}
-                      >
-                        <div
-                          className={`${
-                            isPhoneSimulator ? '' : 'md:col-span-4'
-                          } flex flex-col items-center space-y-2`}
-                        >
-                          <TarotCardVisual
-                            card={clarifierCard.card}
-                            reversed={clarifierCard.reversed}
-                            isFlipped={isClarifierFlipped}
-                            positionIndex={3}
-                            positionLabel="LÁ LÀM RÕ THỨ 4"
-                            size="md"
-                            onFlip={() =>
-                              setIsClarifierFlipped((prev) => !prev)
-                            }
-                          />
-                        </div>
 
-                        <div
-                          className={`${
-                            isPhoneSimulator ? '' : 'md:col-span-8'
-                          } rounded-2xl bg-[#09080D]/85 border border-[#D4AF37]/45 p-4 sm:p-6 space-y-4`}
-                        >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-xs font-bold text-emerald-200">
-                              ✓ Đã mở khóa Lá Làm Rõ (-{clarifierCard.starsSpent} ⭐)
-                            </span>
-                            <span className="text-xs text-[#D4AF37] font-semibold">
-                              {clarifierCard.card.roman} •{' '}
-                              {clarifierCard.card.name_vi} (
-                              {clarifierCard.reversed
-                                ? 'Chiều Ngược ↺'
-                                : 'Chiều Xuôi ↑'}
-                              )
-                            </span>
-                          </div>
+                      <p className="text-[11px] text-[#9E96B0] text-center pt-1">
+                        Bạn đang có {quota.starsBalance ?? 15} Sao.
+                      </p>
+                    </div>
 
-                          <div>
-                            <p className="text-xs text-[#A39BB5]">
-                              Câu hỏi làm rõ:{' '}
-                              <em className="text-[#F3E5AB]">
-                                “{clarifierCard.questionAsked}”
-                              </em>
-                            </p>
-                            <p className="text-sm sm:text-base text-[#F8F5F0] leading-relaxed mt-2">
-                              {clarifierCard.interpretation}
-                            </p>
-                          </div>
-
-                          <div className="p-3.5 rounded-xl bg-[#171424] border border-emerald-400/30 space-y-1">
-                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                              Lời khuyên chốt hạ từ lá thứ 4:
-                            </span>
-                            <p className="text-xs sm:text-sm text-[#D8D2E7]">
-                              {clarifierCard.advice}
-                            </p>
-                          </div>
-
-                          <div className="p-3.5 rounded-xl bg-[#12101B] border border-[#D4AF37]/30">
-                            <p className="font-display text-base italic text-[#F3E5AB]">
-                              “{clarifierCard.savageQuote}”
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
+                    {/* 3. Bốc lượt mới Button */}
+                    <button
+                      type="button"
+                      onClick={handleResetRitual}
+                      className="w-full py-2.5 px-4 rounded-xl border border-[#262235] hover:bg-[#14121F] text-xs font-medium text-[#9E96B0] hover:text-[#F8F5F0] transition-colors cursor-pointer"
+                    >
+                      Bốc lượt mới
+                    </button>
                   </div>
-                ) : null}
-
-                {/* Mandatory Ethical Disclaimer */}
-                <div className="text-center pt-4 border-t border-white/10">
-                  <p className="text-xs text-[#A39BB5]">
-                    {readingSuccess.result.disclaimer}
-                  </p>
                 </div>
               </motion.section>
             ) : null}

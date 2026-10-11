@@ -254,107 +254,95 @@ export default function MobileBottomNav({
         </div>
       )}
 
-      {/* Fixed Thumb-Zone Bottom Tab Bar (5 Clean Tabs without duplicate text badges) */}
+      {/* Fixed Thumb-Zone Bottom Tab Bar (4 Tabs matching Redesign UI: Bốc bài | Bói Đôi | Hôm nay | Tôi) */}
       <nav
         aria-label="Thanh điều hướng chính"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D4AF37]/25 bg-[#09080D]/95 backdrop-blur-xl pb-safe"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9B36A]/20 bg-[#0B0A12]/95 backdrop-blur-xl pb-safe"
       >
-        <div className="mx-auto grid max-w-md grid-cols-5 items-center px-1.5 pt-1.5 pb-1">
-          {/* Tab 1: Bốc Bài Cá Nhân */}
+        <div className="mx-auto grid max-w-md grid-cols-4 items-center px-2 pt-1.5 pb-1">
+          {/* Tab 1: Bốc bài */}
           <button
             type="button"
             onClick={() => onSelectTab('solo')}
             className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 transition active:scale-95 ${
               activeTab === 'solo'
-                ? 'text-[#F3E5AB]'
-                : 'text-[#A39BB5] hover:text-white'
+                ? 'text-[#E5C687]'
+                : 'text-[#9E96B0] hover:text-white'
             }`}
           >
             <div
-              className={`flex h-7 w-11 items-center justify-center rounded-full transition ${
+              className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
                 activeTab === 'solo'
-                  ? 'bg-[#D4AF37]/25 border border-[#D4AF37]/50 shadow-[0_0_14px_rgba(212,175,55,0.3)]'
+                  ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40'
                   : ''
               }`}
             >
               <Sparkles className="h-4 w-4" />
             </div>
-            <span className="text-[10px] font-semibold tracking-tight">
-              Bốc Bài
+            <span className="text-[10px] font-medium tracking-tight">
+              Bốc bài
             </span>
           </button>
 
-          {/* Tab 2: Bói Đôi TarotCouple (No duplicate 'ĐÔI' text badge!) */}
+          {/* Tab 2: Bói Đôi */}
           <button
             type="button"
             onClick={() => onSelectTab('couple')}
             className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 transition active:scale-95 ${
               activeTab === 'couple'
-                ? 'text-rose-300'
-                : 'text-[#A39BB5] hover:text-white'
+                ? 'text-[#E5C687]'
+                : 'text-[#9E96B0] hover:text-white'
             }`}
           >
             <div
-              className={`flex h-7 w-11 items-center justify-center rounded-full transition ${
+              className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
                 activeTab === 'couple'
-                  ? 'bg-rose-500/25 border border-rose-400/50 shadow-[0_0_14px_rgba(244,63,94,0.3)]'
+                  ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40'
                   : ''
               }`}
             >
               <Heart className="h-4 w-4" />
             </div>
-            <span className="text-[10px] font-semibold tracking-tight">
+            <span className="text-[10px] font-medium tracking-tight">
               Bói Đôi
             </span>
           </button>
 
-          {/* Tab 3: Ngày Mới & Streak */}
+          {/* Tab 3: Hôm nay */}
           <button
             type="button"
             onClick={onOpenDailyStreak}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 text-[#A39BB5] hover:text-amber-300 transition active:scale-95"
+            className="flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 text-[#9E96B0] hover:text-[#E5C687] transition active:scale-95"
           >
-            <div className="flex h-8 w-12 items-center justify-center rounded-full border border-amber-400/40 bg-gradient-to-b from-amber-500/25 to-amber-600/10 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-              <Flame className="h-4 w-4" />
-              <span className="ml-0.5 text-[10px] font-extrabold">
-                {streakDays}
-              </span>
+            <div className="flex h-7 w-12 items-center justify-center rounded-full">
+              <Moon className="h-4 w-4" />
             </div>
-            <span className="text-[10px] font-semibold tracking-tight text-amber-200/90">
-              Ngày Mới
+            <span className="text-[10px] font-medium tracking-tight">
+              Hôm nay
             </span>
           </button>
 
-          {/* Tab 4: Ví Sao */}
-          <button
-            type="button"
-            onClick={onOpenWallet}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 text-[#A39BB5] hover:text-emerald-300 transition active:scale-95"
-          >
-            <div className="flex h-7 w-11 items-center justify-center rounded-full border border-emerald-500/25 bg-emerald-500/10 text-emerald-300">
-              <Star className="h-3.5 w-3.5 fill-emerald-400/30" />
-              <span className="ml-0.5 text-[10px] font-bold">{starsBalance}</span>
-            </div>
-            <span className="text-[10px] font-semibold tracking-tight">
-              Ví Sao
-            </span>
-          </button>
-
-          {/* Tab 5: Tiện Ích / Khám Phá */}
+          {/* Tab 4: Tôi (Mở Menu Cài đặt, Ví Sao, Quyền riêng tư & Cài đặt) */}
           <button
             type="button"
             onClick={() => setIsExploreSheetOpen(true)}
             className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1.5 transition active:scale-95 ${
               isExploreSheetOpen
-                ? 'text-[#F3E5AB]'
-                : 'text-[#A39BB5] hover:text-white'
+                ? 'text-[#E5C687]'
+                : 'text-[#9E96B0] hover:text-white'
             }`}
           >
-            <div className="flex h-7 w-11 items-center justify-center rounded-full">
+            <div
+              className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
+                isExploreSheetOpen
+                  ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40'
+                  : ''
+              }`}
+            >
               <Compass className="h-4 w-4" />
             </div>
-            <span className="text-[10px] font-semibold tracking-tight">
-              Tiện Ích
+            <span className="text-[10px] font-medium tracking-tight">
+              Tôi
             </span>
           </button>
         </div>

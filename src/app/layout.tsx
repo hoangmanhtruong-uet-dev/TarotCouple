@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Be_Vietnam_Pro, Cormorant_Garamond } from "next/font/google";
+import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -9,7 +9,7 @@ const beVietnamPro = Be_Vietnam_Pro({
   display: "swap",
 });
 
-const cormorant = Cormorant_Garamond({
+const playfair = Playfair_Display({
   subsets: ["latin", "vietnamese"],
   weight: ["600", "700"],
   style: ["normal", "italic"],
@@ -20,7 +20,7 @@ const cormorant = Cormorant_Garamond({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#09080D",
+  themeColor: "#0B0A12",
 };
 
 export const metadata: Metadata = {
@@ -42,9 +42,9 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${beVietnamPro.variable} ${cormorant.variable} dark`}
+      className={`${beVietnamPro.variable} ${playfair.variable} dark`}
     >
-      <body className="min-h-dvh bg-[#09080D] text-[#F8F5F0] antialiased selection:bg-[#D4AF37]/30 selection:text-[#F3E5AB]">
+      <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#D9B36A]/30 selection:text-[#E5C687]">
         {children}
       </body>
     </html>

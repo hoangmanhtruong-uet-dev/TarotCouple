@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --bg-obsidian: #09080d;
-  --bg-velvet: #12101b;
+  --bg-obsidian: #0b0a12;
+  --bg-velvet: #14121f;
   --bg-card: #171424;
-  --gold-antique: #d4af37;
-  --gold-champagne: #f3e5ab;
-  --crimson-ember: #e11d48;
-  --jade-healing: #10b981;
+  --bg-elevated: #1d192c;
+  --gold-antique: #d9b36a;
+  --gold-champagne: #e5c687;
+  --gold-border: rgba(217, 179, 106, 0.28);
+  --crimson-ember: #e5624a;
+  --jade-healing: #5db075;
   --text-ivory: #f8f5f0;
-  --text-muted: #a39bb5;
+  --text-muted: #9e96b0;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 

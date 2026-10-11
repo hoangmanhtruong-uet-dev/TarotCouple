@@ -910,6 +910,15 @@ export const MAJOR_ARCANA_TOPIC_DATASET: Record<number, TopicInterpretationMap> 
   },
 };
 
+import { MINOR_ARCANA_TOPIC_DATASET } from './minor-arcana-topic-dataset';
+
+export { MINOR_ARCANA_TOPIC_DATASET };
+
+export const FULL_78_TOPIC_DATASET: Record<number, TopicInterpretationMap> = {
+  ...MAJOR_ARCANA_TOPIC_DATASET,
+  ...MINOR_ARCANA_TOPIC_DATASET,
+};
+
 /**
  * Helper lấy dữ liệu giải mã chính xác 100% theo lá bài, chiều lá bài và chủ đề
  */
@@ -931,9 +940,13 @@ export function getCardTopicInterpretation(
       ? 'finance'
       : 'love';
 
-  const cardData = MAJOR_ARCANA_TOPIC_DATASET[cardId];
+  const cardData =
+    cardId <= 21
+      ? MAJOR_ARCANA_TOPIC_DATASET[cardId]
+      : MINOR_ARCANA_TOPIC_DATASET[cardId];
   if (!cardData) return null;
 
   const topicBlock = cardData[normTopic] ?? cardData.love;
   return reversed ? topicBlock.reversed : topicBlock.upright;
 }
+

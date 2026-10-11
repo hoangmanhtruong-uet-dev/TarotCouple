@@ -604,7 +604,7 @@ function buildPersonaCardInterpretation(
     card_name_vi: card.name_vi,
     card_name_en: card.name_en,
     reversed: card.reversed,
-    interpretation: interpretation.slice(0, 1200),
+    interpretation: interpretation.slice(0, 890),
     energy_keyword: effectivePrimaryKw.slice(0, 75),
   };
 }

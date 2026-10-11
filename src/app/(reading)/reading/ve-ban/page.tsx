@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useReadingStore } from '@/lib/reading-store';
 import { READERS } from '@/data/tarot-cards';
-import { ArrowRight, ArrowLeft, UserCheck, Sparkles } from 'lucide-react';
-import { ZodiacWheelSelector } from '@/components/ZodiacWheelSelector';
+import { ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
 
 const BIRTH_YEAR_OPTIONS = Array.from(
   { length: 2016 - 1970 + 1 },
@@ -44,6 +43,17 @@ export default function VeBanProfilePage() {
 
   const activeReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<'nickname' | 'birthYear' | 'zodiacSign' | null>(null);
+  const [fromMe, setFromMe] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isFromMe =
+        window.location.search.includes('from=me') ||
+        document.referrer.includes('/me');
+      setFromMe(isFromMe);
+    }
+  }, []);
 
   const handleSaveAndContinue = () => {
     if (!nickname.trim()) {
@@ -52,7 +62,11 @@ export default function VeBanProfilePage() {
     }
     setErrorMsg(null);
     setContextForm({ hasFilledProfile: true });
-    router.push('/reading/tam-su');
+    if (fromMe) {
+      router.push('/me');
+    } else {
+      router.push('/reading/tam-su');
+    }
   };
 
   return (
@@ -77,9 +91,6 @@ export default function VeBanProfilePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="bg-[#14121F]/90 border border-[#262235] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl mb-6"
-        style={{
-          boxShadow: `0 0 30px ${readerAccentColor}15`,
-        }}
       >
         {/* Nickname */}
         <div>
@@ -89,6 +100,8 @@ export default function VeBanProfilePage() {
           <input
             type="text"
             value={nickname}
+            onFocus={() => setFocusedField('nickname')}
+            onBlur={() => setFocusedField(null)}
             onChange={(e) => {
               setContextForm({ nickname: e.target.value });
               if (errorMsg) setErrorMsg(null);
@@ -97,8 +110,8 @@ export default function VeBanProfilePage() {
             maxLength={30}
             className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-sm text-[#F8F5F0] focus:outline-none transition-colors"
             style={{
-              borderColor: nickname.trim() ? readerAccentColor : undefined,
-              boxShadow: nickname.trim() ? `0 0 15px ${readerAccentColor}25` : undefined,
+              borderColor: focusedField === 'nickname' ? readerAccentColor : undefined,
+              boxShadow: focusedField === 'nickname' ? `0 0 15px ${readerAccentColor}25` : undefined,
             }}
           />
         </div>
@@ -110,10 +123,13 @@ export default function VeBanProfilePage() {
           </label>
           <select
             value={birthYear}
+            onFocus={() => setFocusedField('birthYear')}
+            onBlur={() => setFocusedField(null)}
             onChange={(e) => setContextForm({ birthYear: Number(e.target.value) })}
             className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-sm text-[#F8F5F0] focus:outline-none transition-colors cursor-pointer"
             style={{
-              borderColor: readerAccentColor,
+              borderColor: focusedField === 'birthYear' ? readerAccentColor : undefined,
+              boxShadow: focusedField === 'birthYear' ? `0 0 15px ${readerAccentColor}25` : undefined,
             }}
           >
             {BIRTH_YEAR_OPTIONS.map((yr) => (
@@ -145,10 +161,13 @@ export default function VeBanProfilePage() {
           </div>
           <select
             value={zodiacSign}
+            onFocus={() => setFocusedField('zodiacSign')}
+            onBlur={() => setFocusedField(null)}
             onChange={(e) => setContextForm({ zodiacSign: e.target.value })}
             className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-sm text-[#F8F5F0] focus:outline-none transition-colors cursor-pointer"
             style={{
-              borderColor: zodiacSign ? readerAccentColor : undefined,
+              borderColor: focusedField === 'zodiacSign' ? readerAccentColor : undefined,
+              boxShadow: focusedField === 'zodiacSign' ? `0 0 15px ${readerAccentColor}25` : undefined,
             }}
           >
             {ZODIAC_OPTIONS.map((opt) => (
@@ -168,20 +187,26 @@ export default function VeBanProfilePage() {
       <div className="flex items-center gap-3 max-w-md mx-auto">
         <button
           type="button"
-          onClick={() => router.push('/reading/reader')}
-          className="flex-1 py-4 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-[#9E96B0] font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+          onClick={() => {
+            if (fromMe) {
+              router.push('/me');
+            } else {
+              router.push('/reading/reader');
+            }
+          }}
+          className="flex-1 py-4 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-[#9E96B0] font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Đổi Reader</span>
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span>{fromMe ? 'Quay lại Hồ sơ' : 'Đổi Reader'}</span>
         </button>
 
         <button
           type="button"
           onClick={handleSaveAndContinue}
-          className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+          className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
         >
-          <span>Tiếp Tục (Đặt Câu Hỏi)</span>
-          <ArrowRight className="w-4 h-4" />
+          <span>{fromMe ? 'Lưu thay đổi' : 'Tiếp tục'}</span>
+          <ArrowRight className="w-4 h-4 shrink-0" />
         </button>
       </div>
     </div>

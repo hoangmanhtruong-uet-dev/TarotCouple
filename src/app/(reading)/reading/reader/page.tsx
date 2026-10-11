@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { READERS } from '@/data/tarot-cards';
 import { useReadingStore } from '@/lib/reading-store';
-import { Sparkles, ArrowRight, Check, Heart, Tent, Feather } from 'lucide-react';
+import { Sparkles, ArrowRight, Check, Heart, Tent } from 'lucide-react';
 import type { ReaderId } from '@/lib/schemas';
 
 export default function ReaderSelectionPage() {
@@ -154,15 +154,6 @@ export default function ReaderSelectionPage() {
                   <div className="p-3 rounded-xl bg-[#0B0A12]/80 border border-[#262235] text-xs italic text-[#D9B36A] font-serif mb-3 leading-relaxed">
                     &ldquo;{reader.sample_quote}&rdquo;
                   </div>
-
-                  <div className="p-3 rounded-xl bg-[#0B0A12]/60 border border-[#262235]/60 text-[11px] text-[#9E96B0] leading-relaxed">
-                    <span className="text-[#F8F5F0] font-semibold block mb-0.5">Mẫu lời giải:</span>
-                    {reader.sample_reading_snippet}
-                  </div>
-                </div>
-
-                <div className="text-center pt-2 text-[10px] text-[#9E96B0]">
-                  {isSelected ? '✓ Đang chọn' : 'Chạm để chọn'}
                 </div>
               </div>
             );
@@ -361,26 +352,6 @@ export default function ReaderSelectionPage() {
                     className="p-3.5 rounded-xl bg-[#0B0A12]/90 border border-[#262235]/80 text-xs sm:text-sm italic text-[#F8F5F0] font-serif leading-relaxed"
                   >
                     &ldquo;{currentReader.sample_quote}&rdquo;
-                  </motion.div>
-                </div>
-
-                {/* Mẫu lời giải ngắn 2-3 dòng đúng giọng Reader */}
-                <div className="mb-4">
-                  <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <Feather className="w-3.5 h-3.5 text-[#D9B36A]" />
-                    <span>Mẫu Lời Giải Ngắn</span>
-                  </p>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.2 }}
-                    className="p-3.5 rounded-xl bg-[#0B0A12]/90 border text-xs sm:text-sm text-[#9E96B0] leading-relaxed"
-                    style={{ borderColor: `${currentReader.accent_color}35` }}
-                  >
-                    <p className="text-[#F8F5F0]">
-                      {currentReader.sample_reading_snippet ||
-                        'Mỗi lá bài phản chiếu chính xác năng lượng và rào cản bạn đang đối mặt, kèm hành động cụ thể để xoay chuyển cục diện.'}
-                    </p>
                   </motion.div>
                 </div>
               </div>

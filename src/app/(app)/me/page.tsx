@@ -91,7 +91,7 @@ export default function MeProfilePage() {
       <div className="bg-[#14121F]/80 border border-[#262235] rounded-3xl p-3 space-y-1 mb-8 shadow-xl">
         <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
           <Link
-            href="/reading/ve-ban"
+            href="/reading/ve-ban?from=me"
             className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
           >
             <div className="flex items-center gap-3">

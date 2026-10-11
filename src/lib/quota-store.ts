@@ -21,6 +21,9 @@ import {
 } from '@/data/tarot-cards';
 
 export const DEFAULT_DAILY_LIMIT = 3;
+export const FREE_DAILY_READINGS = 3;
+export const FREE_DAILY_FULL_DECK_READINGS = 1;
+export const FULL_DECK_UNLOCK_STAR_COST = 5; // TODO: Giá tạm thời 5 Sao, sau có thể điều chỉnh theo quyết định kinh doanh
 export const MAX_BONUS_DRAWS_PER_DAY = 5;
 export const DAILY_AI_BUDGET_VND = Number(process.env.DAILY_AI_BUDGET_VND) || 50000;
 export const ESTIMATED_COST_PER_READING_VND = 25;
@@ -95,6 +98,7 @@ interface ClientQuotaRecord {
   dailyLimit: number;
   bonusDraws: number;
   dailySpendVnd: number;
+  fullDeckUnlockedDraws: number;
 }
 
 interface ClientWalletRecord {
@@ -346,6 +350,7 @@ function getOrCreateClientRecord(clientKey: string): ClientQuotaRecord {
     dailyLimit: DEFAULT_DAILY_LIMIT,
     bonusDraws: 0,
     dailySpendVnd: 0,
+    fullDeckUnlockedDraws: 0,
   };
   store.quotas.set(clientKey, created);
   return created;
@@ -374,6 +379,8 @@ function toQuotaPayload(record: ClientQuotaRecord): QuotaStatusPayload {
   const totalAvailable = record.dailyLimit + record.bonusDraws;
   const remainingToday = Math.max(0, totalAvailable - record.usedToday);
   const dailyPullCompletedToday = wallet.lastDailyPullDate === record.day;
+  const isFirstTurnFullDeckFree = record.usedToday < FREE_DAILY_FULL_DECK_READINGS;
+  const canUseFullDeck = isFirstTurnFullDeckFree || (record.fullDeckUnlockedDraws ?? 0) > 0;
 
   return {
     usedToday: record.usedToday,
@@ -385,6 +392,10 @@ function toQuotaPayload(record: ClientQuotaRecord): QuotaStatusPayload {
     dailyPullCompletedToday,
     dailySpendVnd: record.dailySpendVnd,
     dailySpendCapVnd: DAILY_SPEND_CAP_VND,
+    canUseFullDeck,
+    isFirstTurnFullDeckFree,
+    fullDeckUnlockCostStars: FULL_DECK_UNLOCK_STAR_COST,
+    fullDeckUnlockedDraws: record.fullDeckUnlockedDraws ?? 0,
   };
 }
 
@@ -815,15 +826,83 @@ export function canConsumeQuota(clientKey: string): {
 }
 
 /**
- * Deduct 1 reading from client quota and record estimated AI spend
+ * Check if the client is permitted to use the 78-card deck for their next reading.
+ * - Turn 1 (usedToday === 0): Free to pick 78 or 22 cards.
+ * - Turn 2 & 3+: 78-card deck is locked unless unlocked with Stars (FULL_DECK_UNLOCK_STAR_COST = 5).
+ */
+export function canUseFullDeck(clientKey: string): {
+  allowed: boolean;
+  isFirstFreeTurn: boolean;
+  unlockCostStars: number;
+  starsBalance: number;
+} {
+  const record = getOrCreateClientRecord(clientKey);
+  const wallet = getOrCreateWalletRecord(clientKey);
+  const isFirstFreeTurn = record.usedToday < FREE_DAILY_FULL_DECK_READINGS;
+  const allowed = isFirstFreeTurn || (record.fullDeckUnlockedDraws ?? 0) > 0;
+
+  return {
+    allowed,
+    isFirstFreeTurn,
+    unlockCostStars: FULL_DECK_UNLOCK_STAR_COST,
+    starsBalance: wallet.starsBalance,
+  };
+}
+
+/**
+ * Unlock 78-card deck for 1 reading using Stars from the client's wallet
+ */
+export function unlockFullDeckWithStars(clientKey: string): {
+  success: boolean;
+  error?: string;
+  starsBalance: number;
+  quota: QuotaStatusPayload;
+} {
+  const record = getOrCreateClientRecord(clientKey);
+  const wallet = getOrCreateWalletRecord(clientKey);
+
+  if (wallet.starsBalance < FULL_DECK_UNLOCK_STAR_COST) {
+    return {
+      success: false,
+      error: 'INSUFFICIENT_STARS',
+      starsBalance: wallet.starsBalance,
+      quota: getQuotaStatus(clientKey),
+    };
+  }
+
+  wallet.starsBalance -= FULL_DECK_UNLOCK_STAR_COST;
+  record.fullDeckUnlockedDraws = (record.fullDeckUnlockedDraws ?? 0) + 1;
+
+  recordFunnelEvent('bonus_unlocked', {
+    clientKey,
+    action: 'unlock_full_deck',
+    costStars: FULL_DECK_UNLOCK_STAR_COST,
+  });
+
+  return {
+    success: true,
+    starsBalance: wallet.starsBalance,
+    quota: getQuotaStatus(clientKey),
+  };
+}
+
+/**
+ * Deduct 1 reading from client quota and record estimated AI spend.
+ * If deckMode is 'full_78' and on turn 2+, consumes 1 fullDeckUnlockedDraws unit.
  */
 export function consumeQuota(
   clientKey: string,
   tokensIn: number = 0,
-  tokensOut: number = 0
+  tokensOut: number = 0,
+  deckMode?: DeckMode
 ): QuotaStatusPayload {
   const store = getStore();
   const record = getOrCreateClientRecord(clientKey);
+
+  if (deckMode === 'full_78' && record.usedToday >= FREE_DAILY_FULL_DECK_READINGS) {
+    record.fullDeckUnlockedDraws = Math.max(0, (record.fullDeckUnlockedDraws ?? 0) - 1);
+  }
+
   record.usedToday += 1;
 
   // Estimate cost in VND from tokens or default 25 VND per reading (PLAN.md Section 7.2)

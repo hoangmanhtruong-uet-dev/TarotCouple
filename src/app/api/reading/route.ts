@@ -11,6 +11,7 @@ import { PERSONA_PROFILES } from '@/lib/prompts';
 import {
   cacheReading,
   canConsumeQuota,
+  canUseFullDeck,
   consumeQuota,
   type FunnelEventName,
   getCachedReading,
@@ -20,6 +21,7 @@ import {
   grantBonusDraw,
   recordFunnelEvent,
   resolveClientKey,
+  unlockFullDeckWithStars,
 } from '@/lib/quota-store';
 import {
   classifyAgeTier,
@@ -167,6 +169,22 @@ export async function POST(request: Request) {
       };
       return NextResponse.json(errRes, { status: 429 });
     }
+
+    // Step 3b: Server-side Full Deck (78 cards) permission check
+    // Free accounts get 1 free 78-card reading per day. Subsequent turns require unlock with 5 Stars.
+    if (reqData.deck_mode === 'full_78') {
+      const fullDeckCheck = canUseFullDeck(clientKey);
+      if (!fullDeckCheck.allowed) {
+        const errRes: ReadingErrorResponse = {
+          status: 'error',
+          code: 'FORBIDDEN_DECK_MODE',
+          message:
+            'Tài khoản miễn phí chỉ được chọn bộ 78 lá ở lượt đầu tiên trong ngày. Từ lượt thứ hai trở đi, vui lòng chọn bộ 22 lá hoặc mở khóa bộ 78 lá bằng 5 Sao.',
+          quota: getQuotaStatus(clientKey),
+        };
+        return NextResponse.json(errRes, { status: 403 });
+      }
+    }
   }
 
   try {
@@ -268,7 +286,7 @@ export async function POST(request: Request) {
     // Step 6: Deduct quota, cache reading, and return full ReadingSuccessResponse
     const updatedQuota = bypassQuota
       ? getQuotaStatus(clientKey)
-      : consumeQuota(clientKey, aiResult.tokensIn, aiResult.tokensOut);
+      : consumeQuota(clientKey, aiResult.tokensIn, aiResult.tokensOut, reqData.deck_mode);
 
     const personaProfile = PERSONA_PROFILES[aiResult.effectivePersona];
 
@@ -335,7 +353,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const clientKey = resolveClientKey(request);
   let body: {
-    action?: 'share_bonus' | 'reward_ad_bonus' | 'reset_demo_quota' | 'track_event';
+    action?: 'share_bonus' | 'reward_ad_bonus' | 'reset_demo_quota' | 'track_event' | 'unlock_full_deck';
     event?: FunnelEventName;
     meta?: Record<string, unknown>;
   } = {};
@@ -344,6 +362,32 @@ export async function PUT(request: Request) {
     body = await request.json();
   } catch {
     // Default to share_bonus if empty body
+  }
+
+  if (body.action === 'unlock_full_deck') {
+    const unlockRes = unlockFullDeckWithStars(clientKey);
+    if (!unlockRes.success) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          code: 'INSUFFICIENT_STARS',
+          message: 'Bạn không đủ Sao để mở khóa bộ 78 lá. Cần 5 Sao.',
+          quota: unlockRes.quota,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        status: 'ok',
+        action: 'unlock_full_deck',
+        message: 'Đã mở khóa thành công bộ 78 lá cho lượt bốc bài tiếp theo!',
+        quota: unlockRes.quota,
+        funnel: getFunnelMetricsSummary(),
+      },
+      { status: 200 }
+    );
   }
 
   if (body.action === 'track_event' && body.event) {

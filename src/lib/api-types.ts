@@ -45,6 +45,10 @@ export interface QuotaStatusPayload {
   dailyPullCompletedToday?: boolean;
   dailySpendVnd?: number;
   dailySpendCapVnd?: number;
+  canUseFullDeck?: boolean;
+  isFirstTurnFullDeckFree?: boolean;
+  fullDeckUnlockCostStars?: number;
+  fullDeckUnlockedDraws?: number;
 }
 
 export interface ReadingSuccessResponse {
@@ -104,7 +108,8 @@ export interface ReadingErrorResponse {
     | 'DAILY_SPEND_CAP_EXCEEDED'
     | 'ROOM_NOT_FOUND'
     | 'ROOM_EXPIRED'
-    | 'INTERNAL_ERROR';
+    | 'INTERNAL_ERROR'
+    | 'FORBIDDEN_DECK_MODE';
   message: string;
   quota?: QuotaStatusPayload;
 }

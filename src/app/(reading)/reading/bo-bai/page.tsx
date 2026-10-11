@@ -7,25 +7,41 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReadingStore } from '@/lib/reading-store';
 import { READERS } from '@/data/tarot-cards';
 import type { DeckMode, ReaderId } from '@/lib/schemas';
+import type { QuotaStatusPayload } from '@/lib/api-types';
+import { WalletPayOSModal } from '@/components/WalletPayOSModal';
+import { DailyStreakModal } from '@/components/DailyStreakModal';
+import { ReferralAndAdModal } from '@/components/ReferralAndAdModal';
 import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
   Layers,
-  Crown,
+  Lock,
+  Unlock,
   Check,
-  Zap,
+  Star,
+  AlertCircle,
+  X,
+  Flame,
+  Gift,
+  CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
+
+// Hằng số luật bộ bài cho tài khoản free
+export const FREE_DAILY_READINGS = 3;
+export const FREE_DAILY_FULL_DECK_READINGS = 1;
+export const FULL_DECK_UNLOCK_STAR_COST = 5; // TODO: Giá tạm thời 5 Sao, sau có thể điều chỉnh theo quyết định kinh doanh
 
 const READER_DECK_PROMPTS: Record<ReaderId, string> = {
   ba_co_mo_hon:
-    'Chọn xem muốn rút 22 lá cốt lõi hay mở bung cả 78 lá cho rõ mười mươi nào!',
+    'Lượt đầu mở bung cả 78 lá thì tùy ý, các lượt sau muốn mở 78 lá thì cống nạp 5 Sao cho Bà Cố nhé!',
   tien_tu_chua_lanh:
-    'Mỗi bộ bài mang một tầng số khác nhau. Hãy để trực giác mách bảo bạn nhé...',
+    'Mỗi bộ bài mang một tầng số khác nhau. Bộ 22 lá cho bức tranh cốt lõi, còn 78 lá mở khóa từng ngóc ngách tâm hồn...',
   tong_tai_ly_tri:
-    'Quy mô dữ liệu: 22 lá cho bức tranh tổng quan hoặc 78 lá cho phân tích chuyên sâu.',
+    'Phân tầng tài nguyên: Lượt đầu miễn phí trọn gói 78 lá. Các phiên sau ưu tiên 22 lá hoặc đầu tư 5 Sao để mở phân tích toàn diện.',
   phap_su_toi_co:
-    'Khai mở năng lượng của 22 đại diện định mệnh hay toàn bộ 78 tầng rung động...',
+    'Khai mở năng lượng của 22 đại diện định mệnh hay triệu hồi trọn vẹn 78 tầng rung động huyền bí...',
 };
 
 const DECK_OPTIONS: {
@@ -42,7 +58,7 @@ const DECK_OPTIONS: {
     tagline: 'Năng lượng cốt lõi, bước ngoặt lớn',
     description:
       'Tập trung vào những bài học linh hồn lớn, chuyển biến định mệnh và thông điệp bao quát từ vũ trụ.',
-    badge: 'Kinh Điển • Năng Lượng Lớn',
+    badge: 'Kinh Điển • Luôn Miễn Phí',
     cardCount: 22,
   },
   {
@@ -64,6 +80,7 @@ export default function BoBaiSelectionPage() {
     selectedReaderId,
     readerAccentColor,
     nickname,
+    birthYear,
     deckMode,
     questionText,
     setContextForm,
@@ -71,7 +88,57 @@ export default function BoBaiSelectionPage() {
 
   const activeReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
 
+  // Quota server-side state
+  const [quota, setQuota] = useState<QuotaStatusPayload>({
+    usedToday: 0,
+    dailyLimit: FREE_DAILY_READINGS,
+    bonusDraws: 0,
+    remainingToday: 3,
+    starsBalance: 10,
+    canUseFullDeck: true,
+    isFirstTurnFullDeckFree: true,
+    fullDeckUnlockCostStars: FULL_DECK_UNLOCK_STAR_COST,
+    fullDeckUnlockedDraws: 0,
+  });
+
+  const [isLoadingQuota, setIsLoadingQuota] = useState(true);
   const [isDissolving, setIsDissolving] = useState(false);
+
+  // Bottom sheets & Modals state
+  const [isUnlockSheetOpen, setIsUnlockSheetOpen] = useState(false);
+  const [isOutOfTurnsSheetOpen, setIsOutOfTurnsSheetOpen] = useState(false);
+  const [isUnlockingLoading, setIsUnlockingLoading] = useState(false);
+  const [unlockToast, setUnlockToast] = useState<string | null>(null);
+
+  // Aux growth modals
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [isStreakOpen, setIsStreakOpen] = useState(false);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
+
+  // Fetch real quota from server
+  const fetchQuota = async () => {
+    try {
+      const res = await fetch('/api/reading');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.quota) {
+          setQuota(data.quota);
+          // If server says full deck is locked and user is currently on full_78, fallback to major_22
+          if (!data.quota.canUseFullDeck && deckMode === 'full_78') {
+            setContextForm({ deckMode: 'major_22' });
+          }
+        }
+      }
+    } catch {
+      // Fallback gracefully to default state
+    } finally {
+      setIsLoadingQuota(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchQuota();
+  }, []);
 
   // Typewriter effect
   const readerPrompt =
@@ -92,7 +159,59 @@ export default function BoBaiSelectionPage() {
     return () => clearInterval(timer);
   }, [readerPrompt, shouldReduceMotion]);
 
+  // Kiểm tra quyền bộ 78 lá và số lượt còn lại
+  const isOutOfTurns = (quota.remainingToday ?? 3) <= 0;
+  const isFullDeckLocked = !quota.canUseFullDeck;
+  const isUnder18 = birthYear ? 2026 - birthYear < 18 : false;
+
+  const handleSelectDeck = (deckId: DeckMode) => {
+    if (deckId === 'full_78' && isFullDeckLocked) {
+      // Bấm vào ổ khóa -> Hiện bottom sheet xác nhận trừ Sao
+      setIsUnlockSheetOpen(true);
+      return;
+    }
+    setContextForm({ deckMode: deckId });
+  };
+
+  const handleConfirmUnlock = async () => {
+    setIsUnlockingLoading(true);
+    try {
+      const res = await fetch('/api/reading', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlock_full_deck' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'ok') {
+        if (data.quota) setQuota(data.quota);
+        setContextForm({ deckMode: 'full_78' });
+        setIsUnlockSheetOpen(false);
+        setUnlockToast('🎉 Đã mở khóa thành công trọn bộ 78 lá cho lượt này!');
+        setTimeout(() => setUnlockToast(null), 3500);
+      } else {
+        // Không đủ Sao
+        setUnlockToast('Số dư Sao không đủ để mở khóa.');
+        setTimeout(() => setUnlockToast(null), 3000);
+      }
+    } catch {
+      setUnlockToast('Có lỗi xảy ra khi mở khóa, vui lòng thử lại.');
+      setTimeout(() => setUnlockToast(null), 3000);
+    } finally {
+      setIsUnlockingLoading(false);
+    }
+  };
+
   const handleStartShuffle = () => {
+    if (isOutOfTurns) {
+      setIsOutOfTurnsSheetOpen(true);
+      return;
+    }
+
+    if (deckMode === 'full_78' && isFullDeckLocked) {
+      setIsUnlockSheetOpen(true);
+      return;
+    }
+
     setIsDissolving(true);
     setTimeout(() => {
       router.push('/reading/rut-bai');
@@ -101,6 +220,27 @@ export default function BoBaiSelectionPage() {
 
   return (
     <div className="relative max-w-xl mx-auto px-4 pt-4 sm:pt-6 pb-36 overflow-hidden">
+      {/* Toast thông báo */}
+      <AnimatePresence>
+        {unlockToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-18 left-4 right-4 z-50 max-w-md mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] text-[#0B0A12] font-bold text-xs shadow-2xl flex items-center justify-between gap-2"
+          >
+            <span>{unlockToast}</span>
+            <button
+              type="button"
+              onClick={() => setUnlockToast(null)}
+              className="p-1 hover:bg-black/10 rounded-full"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Golden Particle Dissolve Overlay khi bấm Xáo bài */}
       <AnimatePresence>
         {isDissolving && !shouldReduceMotion && (
@@ -144,7 +284,7 @@ export default function BoBaiSelectionPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-start gap-3.5 p-4 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-6 shadow-xl"
+        className="flex items-start gap-3.5 p-4 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-5 shadow-xl"
       >
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 shadow-inner"
@@ -161,12 +301,15 @@ export default function BoBaiSelectionPage() {
             <h2 className="font-display text-sm font-bold text-[#F8F5F0]">
               {activeReader.name}
             </h2>
-            <Link
-              href="/reading/noi-niem"
-              className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] transition-colors truncate"
-            >
-              Nỗi niềm: <strong>{questionText ? 'Đã phong ấn' : 'Đọc theo chủ đề'}</strong> &rarr;
-            </Link>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
+                Lượt: {quota.remainingToday}/3
+              </span>
+              <span className="text-[10px] text-[#D9B36A] font-bold bg-[#D9B36A]/10 px-2 py-0.5 rounded-full border border-[#D9B36A]/30 flex items-center gap-1">
+                <Star className="w-2.5 h-2.5 fill-[#D9B36A]" />
+                {quota.starsBalance ?? 10}
+              </span>
+            </div>
           </div>
           <p className="text-xs text-[#E5C687] italic font-serif leading-relaxed min-h-[30px]">
             &ldquo;{displayedPrompt}&rdquo;
@@ -183,48 +326,76 @@ export default function BoBaiSelectionPage() {
           Chọn Quy Mô Bộ Bài
         </h1>
         <p className="text-xs text-[#9E96B0] mt-0.5">
-          Quyết định mức độ chi tiết và năng lượng phản chiếu của trải bài
+          {quota.usedToday === 0
+            ? '🎁 Lượt đầu tiên hôm nay: Bạn được tự do chọn bộ 78 lá hoặc 22 lá!'
+            : 'Từ lượt thứ 2: Bộ 22 lá miễn phí, bộ 78 lá có thể mở khóa bằng 5 Sao.'}
         </p>
       </div>
 
       {/* 2 Lựa chọn lớn */}
-      <div className="space-y-4 mb-8">
+      <div className="space-y-4 mb-6">
         {DECK_OPTIONS.map((deck) => {
           const isSelected = deckMode === deck.id;
+          const isLocked = deck.id === 'full_78' && isFullDeckLocked;
 
           return (
             <motion.div
               key={deck.id}
               whileHover={shouldReduceMotion ? {} : { scale: 1.015, y: -2 }}
-              whileTap={shouldReduceMotion ? {} : { scale: 0.985 }}
-              onClick={() => setContextForm({ deckMode: deck.id })}
+              whileTap={
+                isLocked
+                  ? { x: [-3, 3, -2, 2, 0] }
+                  : shouldReduceMotion
+                  ? {}
+                  : { scale: 0.985 }
+              }
+              onClick={() => handleSelectDeck(deck.id)}
               className={`p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
-                isSelected
+                isSelected && !isLocked
                   ? 'bg-[#181429] shadow-xl ring-1'
+                  : isLocked
+                  ? 'bg-[#110E1C]/80 border-[#322B45] opacity-90'
                   : 'bg-[#14121F]/80 hover:bg-[#181429]/60 border-[#262235]'
               }`}
               style={{
-                borderColor: isSelected ? readerAccentColor : '#262235',
-                boxShadow: isSelected
-                  ? `0 0 30px ${readerAccentColor}25`
-                  : undefined,
+                borderColor:
+                  isSelected && !isLocked
+                    ? readerAccentColor
+                    : isLocked
+                    ? '#3A3250'
+                    : '#262235',
+                boxShadow:
+                  isSelected && !isLocked
+                    ? `0 0 30px ${readerAccentColor}25`
+                    : undefined,
               }}
             >
               {/* Top row: Badge + Card count */}
               <div className="flex items-center justify-between gap-2 mb-2">
                 <span
-                  className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"
                   style={{
-                    backgroundColor: isSelected
+                    backgroundColor: isLocked
+                      ? '#2A233C'
+                      : isSelected
                       ? `${readerAccentColor}25`
                       : '#262235',
-                    color: isSelected ? readerAccentColor : '#9E96B0',
+                    color: isLocked
+                      ? '#E5C687'
+                      : isSelected
+                      ? readerAccentColor
+                      : '#9E96B0',
                     border: `1px solid ${
-                      isSelected ? `${readerAccentColor}50` : '#3B354D'
+                      isLocked
+                        ? '#5E4F28'
+                        : isSelected
+                        ? `${readerAccentColor}50`
+                        : '#3B354D'
                     }`,
                   }}
                 >
-                  {deck.badge}
+                  {isLocked && <Lock className="w-3 h-3 text-amber-400" />}
+                  {isLocked ? 'Khóa Lượt 2 & 3 • Cần 5 Sao' : deck.badge}
                 </span>
 
                 <div className="flex items-center gap-1.5 text-xs text-[#D9B36A] font-semibold">
@@ -235,8 +406,8 @@ export default function BoBaiSelectionPage() {
 
               {/* Title & Tagline */}
               <div className="mb-2">
-                <h3 className="font-display text-base sm:text-lg font-bold text-[#F8F5F0] mb-0.5">
-                  {deck.name}
+                <h3 className="font-display text-base sm:text-lg font-bold text-[#F8F5F0] mb-0.5 flex items-center gap-2">
+                  <span>{deck.name}</span>
                 </h3>
                 <p className="text-xs font-semibold text-[#E5C687]">
                   {deck.tagline}
@@ -244,35 +415,59 @@ export default function BoBaiSelectionPage() {
               </div>
 
               {/* Description */}
-              <p className="text-xs text-[#9E96B0] leading-relaxed">
+              <p className="text-xs text-[#9E96B0] leading-relaxed mb-3">
                 {deck.description}
               </p>
 
-              {/* Selection Check Icon */}
-              {isSelected && (
+              {/* Action row for Locked Full Deck */}
+              {isLocked ? (
+                <div className="pt-2 border-t border-[#262235] flex items-center justify-between">
+                  <span className="text-[11px] text-amber-300 flex items-center gap-1 font-semibold">
+                    <Star className="w-3.5 h-3.5 text-[#D9B36A] fill-[#D9B36A]" />
+                    Mở khóa bằng Ví Sao: 5 Sao
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsUnlockSheetOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#0B0A12] text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Unlock className="w-3.5 h-3.5" />
+                    <span>Mở khóa ngay</span>
+                  </button>
+                </div>
+              ) : isSelected ? (
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0 absolute top-5 right-5 shadow-md"
                   style={{ backgroundColor: readerAccentColor }}
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                 </div>
-              )}
+              ) : null}
             </motion.div>
           );
         })}
       </div>
 
-      {/* Gợi ý nhẹ */}
-      <div className="p-3.5 rounded-xl bg-[#0B0A12]/80 border border-[#262235] text-center mb-6">
-        <p className="text-[11px] text-[#9E96B0]">
-          Tip: Nếu bạn đang băn khoăn về quyết định lớn của cuộc đời, bộ <strong>22 lá</strong> cho câu trả lời cô đọng nhất. Nếu cần chi tiết hàng ngày, hãy chọn <strong>78 lá</strong>!
-        </p>
-      </div>
+      {/* Cảnh báo khi hết lượt hôm nay */}
+      {isOutOfTurns && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/40 text-xs text-rose-200 mb-6 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-rose-300 mb-1">Bạn đã hết lượt hôm nay (0/3)</p>
+            <p className="text-[11px] text-[#E5C687] leading-relaxed">
+              Bạn có thể nhận thêm lượt ngay bằng cách chia sẻ ảnh Story 9:16 hoặc tham gia điểm danh chuỗi!
+            </p>
+          </div>
+        </div>
+      )}
 
-      {/* THANH ĐÁY CỐ ĐỊNH: Nút "Xáo bài" dẫn sang /reading/rut-bai */}
+      {/* THANH ĐÁY CỐ ĐỊNH */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          {/* Nút phụ: Quay lại Nỗi niềm */}
+          {/* Nút phụ: Sửa Nỗi niềm */}
           <button
             type="button"
             onClick={() => router.push('/reading/noi-niem')}
@@ -287,14 +482,338 @@ export default function BoBaiSelectionPage() {
             type="button"
             onClick={handleStartShuffle}
             disabled={isDissolving}
-            className="flex-1 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm sm:text-base shadow-[0_4px_25px_rgba(217,179,106,0.35)] transition-all transform active:scale-98 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
+            className={`flex-1 py-3.5 sm:py-4 rounded-2xl font-bold text-sm sm:text-base shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer ${
+              isOutOfTurns
+                ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-[#F8F5F0]'
+                : 'bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] shadow-[0_4px_25px_rgba(217,179,106,0.35)] transform active:scale-98'
+            }`}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Xáo Bài & Rút Bài</span>
-            <ArrowRight className="w-4 h-4" />
+            {isOutOfTurns ? (
+              <>
+                <Gift className="w-4 h-4" />
+                <span>Nhận Thêm Lượt &rarr;</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Xáo Bài & Rút Bài</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* =========================================================================
+          BOTTOM SHEET 1: MỞ KHÓA BỘ 78 LÁ BẰNG SAO
+      ========================================================================== */}
+      <AnimatePresence>
+        {isUnlockSheetOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-[#14121F] border border-[#262235] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsUnlockSheetOpen(false)}
+                className="absolute top-4 right-4 p-2 text-[#9E96B0] hover:text-[#F8F5F0] rounded-full hover:bg-[#262235]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                  style={{
+                    backgroundColor: `${readerAccentColor}25`,
+                    color: readerAccentColor,
+                  }}
+                >
+                  <Unlock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-[#F8F5F0]">
+                    Mở Khóa Trọn Bộ 78 Lá
+                  </h3>
+                  <p className="text-xs text-[#9E96B0]">
+                    Khai mở chi tiết 56 lá Ẩn phụ cho trải bài sâu sắc
+                  </p>
+                </div>
+              </div>
+
+              {/* Chi tiết chi phí */}
+              <div className="p-4 rounded-2xl bg-[#0B0A12] border border-[#262235] mb-5 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#9E96B0]">Chi phí mở khóa:</span>
+                  <span className="text-amber-400 font-bold flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 fill-amber-400" />
+                    {FULL_DECK_UNLOCK_STAR_COST} Sao ⭐
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-[#262235]">
+                  <span className="text-[#9E96B0]">Số dư Ví Sao hiện tại:</span>
+                  <span className="text-[#F8F5F0] font-bold flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 text-[#D9B36A] fill-[#D9B36A]" />
+                    {quota.starsBalance ?? 10} Sao
+                  </span>
+                </div>
+              </div>
+
+              {/* Nếu đủ Sao: Nút xác nhận trừ Sao */}
+              {(quota.starsBalance ?? 0) >= FULL_DECK_UNLOCK_STAR_COST ? (
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={handleConfirmUnlock}
+                    disabled={isUnlockingLoading}
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Unlock className="w-4 h-4" />
+                    <span>
+                      {isUnlockingLoading
+                        ? 'Đang mở khóa...'
+                        : `Xác nhận trừ ${FULL_DECK_UNLOCK_STAR_COST} Sao để mở khóa`}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContextForm({ deckMode: 'major_22' });
+                      setIsUnlockSheetOpen(false);
+                    }}
+                    className="w-full py-3 text-xs text-[#9E96B0] hover:text-[#F8F5F0] cursor-pointer"
+                  >
+                    Dùng bộ 22 lá miễn phí cho lượt này &rarr;
+                  </button>
+                </div>
+              ) : (
+                /* Nếu không đủ Sao: Dẫn sang nạp Sao hoặc kiếm Sao */
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed mb-4">
+                    {isUnder18 ? (
+                      <div className="flex items-start gap-2">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Chính sách an toàn 10–15 tuổi:</strong> Tính năng nạp tiền ngân hàng được khóa bảo vệ. Bạn hoàn toàn có thể dùng Sao kiếm từ <strong>Điểm danh hàng ngày</strong> hoặc <strong>Mời bạn bè</strong> để mở khóa bộ 78 lá hoàn toàn miễn phí!
+                        </span>
+                      </div>
+                    ) : (
+                      <span>
+                        Số dư Ví Sao của bạn không đủ ({quota.starsBalance ?? 0}/{FULL_DECK_UNLOCK_STAR_COST} Sao). Hãy nạp thêm hoặc tham gia nhiệm vụ nhận Sao miễn phí!
+                      </span>
+                    )}
+                  </div>
+
+                  {!isUnder18 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUnlockSheetOpen(false);
+                        setIsWalletOpen(true);
+                      }}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Nạp Sao bằng PayOS VietQR &rarr;</span>
+                    </button>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUnlockSheetOpen(false);
+                        setIsStreakOpen(true);
+                      }}
+                      className="py-3 px-3 rounded-xl bg-[#0B0A12] hover:bg-[#1D192C] border border-amber-500/40 text-amber-400 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Flame className="w-4 h-4" />
+                      <span>Điểm danh (+2 ⭐)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUnlockSheetOpen(false);
+                        setIsReferralOpen(true);
+                      }}
+                      className="py-3 px-3 rounded-xl bg-[#0B0A12] hover:bg-[#1D192C] border border-emerald-500/40 text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Gift className="w-4 h-4" />
+                      <span>Mời bạn (+5 ⭐)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* =========================================================================
+          BOTTOM SHEET 2: HẾT LƯỢT HÔM NAY
+      ========================================================================== */}
+      <AnimatePresence>
+        {isOutOfTurnsSheetOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-[#14121F] border border-[#262235] p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setIsOutOfTurnsSheetOpen(false)}
+                className="absolute top-4 right-4 p-2 text-[#9E96B0] hover:text-[#F8F5F0] rounded-full hover:bg-[#262235]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center mb-5">
+                <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto mb-3">
+                  <AlertCircle className="w-7 h-7" />
+                </div>
+                <h3 className="font-display text-xl font-bold text-[#F8F5F0]">
+                  Hết Lượt Hôm Nay (0/3)
+                </h3>
+                <p className="text-xs text-[#9E96B0] mt-1 max-w-sm mx-auto leading-relaxed">
+                  Bạn đã dùng hết 3 lượt bốc bài miễn phí của ngày hôm nay. Hãy quay lại vào ngày mai hoặc nhận thêm lượt ngay bằng cách:
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {/* 1. Chia sẻ Story */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch('/api/reading', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'share_bonus' }),
+                    });
+                    await fetchQuota();
+                    setIsOutOfTurnsSheetOpen(false);
+                    setUnlockToast('🎉 Bạn được tặng +1 lượt bốc bài từ chia sẻ!');
+                  }}
+                  className="w-full p-4 rounded-2xl bg-[#0B0A12] hover:bg-[#1D192C] border border-[#262235] flex items-center justify-between text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-300">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#F8F5F0]">Chia sẻ Story 9:16</p>
+                      <p className="text-[11px] text-[#9E96B0]">Nhận ngay +1 lượt trải bài miễn phí</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-purple-400">+1 Lượt</span>
+                </button>
+
+                {/* 2. Điểm danh */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOutOfTurnsSheetOpen(false);
+                    setIsStreakOpen(true);
+                  }}
+                  className="w-full p-4 rounded-2xl bg-[#0B0A12] hover:bg-[#1D192C] border border-[#262235] flex items-center justify-between text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <Flame className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#F8F5F0]">Điểm danh hàng ngày</p>
+                      <p className="text-[11px] text-[#9E96B0]">Duy trì chuỗi streak nhận +2 Sao</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-400">+2 ⭐</span>
+                </button>
+
+                {/* 3. Mời bạn bè */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOutOfTurnsSheetOpen(false);
+                    setIsReferralOpen(true);
+                  }}
+                  className="w-full p-4 rounded-2xl bg-[#0B0A12] hover:bg-[#1D192C] border border-[#262235] flex items-center justify-between text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#F8F5F0]">Mời bạn bè dùng app</p>
+                      <p className="text-[11px] text-[#9E96B0]">Nhận +5 Sao khi bạn bè nhập mã</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400">+5 ⭐</span>
+                </button>
+
+                {/* 4. Nạp Sao (Chỉ hiện nếu 18+) */}
+                {!isUnder18 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOutOfTurnsSheetOpen(false);
+                      setIsWalletOpen(true);
+                    }}
+                    className="w-full p-4 rounded-2xl bg-gradient-to-r from-[#D9B36A]/10 to-[#C49A4D]/10 hover:from-[#D9B36A]/20 hover:to-[#C49A4D]/20 border border-[#D9B36A]/40 flex items-center justify-between text-left transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#D9B36A]/20 border border-[#D9B36A]/40 flex items-center justify-center text-[#E5C687]">
+                        <CreditCard className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-[#F8F5F0]">Nạp Ví Sao PayOS</p>
+                        <p className="text-[11px] text-[#9E96B0]">Gói Đêm Suy 19.000đ = 20 Sao</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-[#E5C687]">Nạp ngay &rarr;</span>
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Auxiliary Modals */}
+      <WalletPayOSModal
+        isOpen={isWalletOpen}
+        onClose={() => setIsWalletOpen(false)}
+        birthYear={birthYear}
+        quota={quota}
+        onQuotaUpdated={(q) => setQuota(q)}
+        onOpenDailyModal={() => setIsStreakOpen(true)}
+      />
+
+      <DailyStreakModal
+        isOpen={isStreakOpen}
+        onClose={() => setIsStreakOpen(false)}
+        nickname={nickname}
+        birthYear={birthYear}
+        readerId={selectedReaderId}
+        quota={quota}
+        onQuotaUpdated={(q) => setQuota(q)}
+      />
+
+      <ReferralAndAdModal
+        isOpen={isReferralOpen}
+        onClose={() => setIsReferralOpen(false)}
+        nickname={nickname}
+        quota={quota}
+        onQuotaUpdated={(q) => setQuota(q)}
+      />
     </div>
   );
 }

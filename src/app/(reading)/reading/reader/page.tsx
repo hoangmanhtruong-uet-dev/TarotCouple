@@ -1,16 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { READERS } from '@/data/tarot-cards';
 import { useReadingStore } from '@/lib/reading-store';
 import { Sparkles, ArrowRight, Check, Heart, Tent } from 'lucide-react';
 import type { ReaderId } from '@/lib/schemas';
 
-export default function ReaderSelectionPage() {
+function ReaderSelectionContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode');
+  const isCoupleMode = mode === 'couple';
+
   const shouldReduceMotion = useReducedMotion();
   const selectedReaderId = useReadingStore((state) => state.selectedReaderId);
   const setSelectedReaderId = useReadingStore((state) => state.setSelectedReaderId);
@@ -27,7 +31,11 @@ export default function ReaderSelectionPage() {
     setSelectedReaderId(readerId, accentColor);
     setIsEnteringTent(true);
     setTimeout(() => {
-      // If user has already filled their profile, jump straight to 2b (tam-su), else go to 2a (ve-ban)
+      if (isCoupleMode) {
+        router.push('/couple');
+        return;
+      }
+      // If user has already filled their profile, jump straight to chu-de, else go to ve-ban
       if (hasFilledProfile && nickname && nickname.trim() && birthYear) {
         router.push('/reading/chu-de');
       } else {
@@ -81,10 +89,12 @@ export default function ReaderSelectionPage() {
       {/* Header Title Banner (Thống nhất khung, bỏ chữ BƯỚC thừa vì đã có Stepper) */}
       <div className="text-center mb-6 shrink-0">
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
-          Chọn Người Giải Mã Vận Mệnh
+          {isCoupleMode ? 'Chọn Reader Soi Kèo Mối Quan Hệ' : 'Chọn Người Giải Mã Vận Mệnh'}
         </h1>
         <p className="text-xs sm:text-sm text-[#9E96B0] mt-1 max-w-lg mx-auto">
-          Mỗi Reader mang một trường năng lượng và phong cách riêng biệt. Hãy chọn người chạm đến trực giác của bạn nhất lúc này.
+          {isCoupleMode
+            ? 'Mỗi Reader có góc nhìn độc đáo về tình cảm và mối quan hệ. Hãy chọn người phù hợp nhất với câu chuyện của hai bạn.'
+            : 'Mỗi Reader mang một trường năng lượng và phong cách riêng biệt. Hãy chọn người chạm đến trực giác của bạn nhất lúc này.'}
         </p>
       </div>
 
@@ -368,20 +378,30 @@ export default function ReaderSelectionPage() {
             onClick={() => handleSelectAndProceed(selectedReaderId, currentReader.accent_color)}
             className="w-full py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm sm:text-base shadow-[0_4px_25px_rgba(217,179,106,0.35)] transition-all transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
           >
-            <span>Vào Lều {currentReader.name}</span>
+            <span>{isCoupleMode ? `Chọn ${currentReader.name} & Bắt Đầu Bói Đôi` : `Vào Lều ${currentReader.name}`}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          {/* Link Chuyển sang Bói Đôi đặt nhỏ ngay dưới nút chính */}
-          <Link
-            href="/couple"
-            className="inline-flex items-center gap-1.5 text-xs text-[#9E96B0] hover:text-[#E5C687] transition-colors"
-          >
-            <Heart className="w-3.5 h-3.5 text-rose-400" />
-            <span>Muốn bói cùng người ấy? Chuyển sang <strong>Bói Đôi</strong> &rarr;</span>
-          </Link>
+          {/* Link Chuyển sang Bói Đôi đặt nhỏ ngay dưới nút chính (chỉ hiện khi đang ở solo mode) */}
+          {!isCoupleMode && (
+            <Link
+              href="/reading/reader?mode=couple"
+              className="inline-flex items-center gap-1.5 text-xs text-[#9E96B0] hover:text-[#E5C687] transition-colors"
+            >
+              <Heart className="w-3.5 h-3.5 text-rose-400" />
+              <span>Muốn bói cùng người ấy? Chuyển sang <strong>Bói Đôi</strong> &rarr;</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ReaderSelectionPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#D9B36A] text-sm font-medium">Đang chuẩn bị lều Reader...</div>}>
+      <ReaderSelectionContent />
+    </Suspense>
   );
 }

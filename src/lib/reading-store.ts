@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ReaderId, TopicId, DeckMode } from './schemas';
 import type { ReadingSuccessResponse, DrawnCardClientPayload, ClarifierCardPayload } from './api-types';
+import { READERS } from '@/data/tarot-cards';
 
 export interface ReadingFlowState {
   // Step 1: Reader Selection
@@ -27,8 +28,7 @@ export interface ReadingFlowState {
   clarifierCard: ClarifierCardPayload | null;
   activeQuoteIdx: 0 | 1 | 2;
 
-  // Actions
-  setSelectedReaderId: (id: ReaderId, accentColor: string) => void;
+  setSelectedReaderId: (id: ReaderId, accentColor?: string) => void;
   setContextForm: (data: Partial<{
     hasFilledProfile: boolean;
     nickname: string;
@@ -76,8 +76,10 @@ export const useReadingStore = create<ReadingFlowState>()(
       clarifierCard: null,
       activeQuoteIdx: 0,
 
-      setSelectedReaderId: (id, accentColor) =>
-        set({ selectedReaderId: id, readerAccentColor: accentColor }),
+      setSelectedReaderId: (id, accentColor) => {
+        const fallbackAccent = accentColor || READERS.find((r) => r.id === id)?.accent_color || '#E5624A';
+        set({ selectedReaderId: id, readerAccentColor: fallbackAccent });
+      },
 
       setContextForm: (data) =>
         set((state) => ({ ...state, ...data })),

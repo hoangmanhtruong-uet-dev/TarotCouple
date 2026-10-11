@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, Heart, ArrowRight, Shield, Zap, Star } from 'lucide-react';
-import { READERS } from '@/data/tarot-cards';
 
 // 5 Fan Cards with real RWS 1909 artwork
 const FAN_CARDS = [
@@ -187,39 +186,12 @@ export default function MarketingLandingPage() {
           </Link>
 
           <Link
-            href="/couple"
+            href="/reading/reader?mode=couple"
             className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border border-[#D9B36A]/50 text-[#F8F5F0] font-bold text-sm sm:text-base transition-all transform active:scale-95 cursor-pointer"
           >
             <Heart className="w-4 h-4 text-rose-400" />
             <span>Bói Đôi Cùng Người Ấy</span>
           </Link>
-        </motion.div>
-
-        {/* Reader Teaser Grid */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-left max-w-3xl mx-auto my-2 sm:my-3 shrink-0"
-        >
-          {READERS.map((reader) => (
-            <div
-              key={reader.id}
-              className="p-3 sm:p-3.5 rounded-2xl bg-[#14121F]/80 border border-[#262235] hover:border-[#D9B36A]/40 transition-colors"
-            >
-              <div
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-sm sm:text-base mb-2 shadow-inner"
-                style={{
-                  backgroundColor: `${reader.accent_color}25`,
-                  border: `1px solid ${reader.accent_color}60`,
-                }}
-              >
-                <span>{reader.avatar_symbol}</span>
-              </div>
-              <h3 className="text-xs sm:text-sm font-bold text-[#F8F5F0] mb-0.5">{reader.name}</h3>
-              <p className="text-[11px] text-[#9E96B0] line-clamp-2 leading-tight">{reader.tagline}</p>
-            </div>
-          ))}
         </motion.div>
 
         {/* Feature Highlights */}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useReadingStore } from '@/lib/reading-store';
 import { useQuotaSync } from '@/lib/use-quota';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { Download, Share2, Eye, EyeOff, Sparkles, ArrowLeft, Gift } from 'lucide-react';
 
 export default function StoryPage() {
@@ -260,6 +261,8 @@ export default function StoryPage() {
           </Link>
         </div>
       </div>
+
+      <CustomCursorFollower />
     </div>
   );
 }

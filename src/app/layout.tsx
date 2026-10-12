@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google";
 import PhoneFrameContainer from "@/components/PhoneFrameContainer";
 import "./globals.css";
@@ -106,11 +107,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const trackerServer =
+    process.env.NEXT_PUBLIC_TRACKER_SERVER || "http://localhost:4000";
+  const trackerScriptUrl = `${trackerServer.replace(/\/$/, "")}/tracker.js`;
+
   return (
     <html
       lang="vi"
       className={`${beVietnamPro.variable} ${playfair.variable} dark`}
     >
+      <head>
+        {/* PulseWatch Real-Time Analytics & Error Monitoring */}
+        <Script
+          src={trackerScriptUrl}
+          data-server={trackerServer}
+          strategy="afterInteractive"
+        />
+      </head>
       <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#C9A24A]/30 selection:text-[#E5C687]">
         <PhoneFrameContainer>{children}</PhoneFrameContainer>
       </body>

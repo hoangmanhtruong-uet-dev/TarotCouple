@@ -198,6 +198,21 @@ export function WalletPayOSModal({
           if (data.quota && onQuotaUpdated) {
             onQuotaUpdated(data.quota);
           }
+          // PulseWatch Real-Time Purchase Tracking
+          if (typeof window !== 'undefined' && (window as any).PulseWatch) {
+            try {
+              (window as any).PulseWatch.trackPurchase({
+                amount: data.order?.amountVnd || activeOrder?.amountVnd || 19000,
+                currency: 'VND',
+                customerName: 'Người Dùng TarotCouple',
+                planTier: data.order?.packageName || activeOrder?.packageName || 'Gói Sao',
+                gateway: 'PayOS',
+                orderCode: data.order?.orderCode || activeOrder?.orderCode,
+              });
+            } catch (e) {
+              console.warn('[PulseWatch Track Purchase Warning]:', e);
+            }
+          }
         }
       }
     } catch {
@@ -337,6 +352,22 @@ export function WalletPayOSModal({
       setSuccessBanner(
         `🎉 Thanh toán VietQR PayOS thành công! Đã cộng +${activeOrder.starsToCredit} Sao ⭐ vào ví của bạn (Số dư mới: ${updatedQuota.starsBalance ?? starsBalance + activeOrder.starsToCredit} ⭐).`
       );
+
+      // PulseWatch Real-Time Purchase Tracking
+      if (typeof window !== 'undefined' && (window as any).PulseWatch) {
+        try {
+          (window as any).PulseWatch.trackPurchase({
+            amount: activeOrder.amountVnd,
+            currency: 'VND',
+            customerName: 'Người Dùng TarotCouple',
+            planTier: activeOrder.packageName,
+            gateway: 'PayOS',
+            orderCode: activeOrder.orderCode,
+          });
+        } catch (e) {
+          console.warn('[PulseWatch Track Purchase Warning]:', e);
+        }
+      }
     } catch {
       const updatedQuota: QuotaStatusPayload = {
         ...quota,

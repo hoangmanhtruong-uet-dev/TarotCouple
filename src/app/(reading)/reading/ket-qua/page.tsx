@@ -42,6 +42,7 @@ import FollowupChatModal from '@/components/FollowupChatModal';
 import { ALL_TAROT_CARDS } from '@/data/tarot-cards';
 import { READERS } from '@/data/tarot-cards';
 import { getCardTopicInterpretation } from '@/data/topic-interpretations';
+import { useQuotaSync } from '@/lib/use-quota';
 import type { ClarifierCardPayload, DrawnCardClientPayload } from '@/lib/api-types';
 import type { ReadingOutput, CardAnalysis } from '@/lib/schemas';
 
@@ -946,6 +947,7 @@ export default function KetQuaPage() {
   const [isDrawingClarifier, setIsDrawingClarifier] = useState(false);
   const [followupQuestion, setFollowupQuestion] = useState('');
   const [isFollowupOpen, setIsFollowupOpen] = useState(false);
+  const { updateQuota } = useQuotaSync();
 
   // Set default followup question from cliffhanger when result loads
   useEffect(() => {
@@ -1009,6 +1011,7 @@ export default function KetQuaPage() {
       });
       const data = await res.json();
       if (data?.clarifier) {
+        if (data.quota) updateQuota(data.quota);
         setClarifierCard(data.clarifier);
       } else {
         // Fallback contextual

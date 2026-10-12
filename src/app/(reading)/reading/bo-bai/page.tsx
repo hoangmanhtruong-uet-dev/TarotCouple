@@ -28,6 +28,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+import { useQuotaSync } from '@/lib/use-quota';
 import {
   FREE_DAILY_READINGS,
   FREE_DAILY_FULL_DECK_READINGS,
@@ -110,20 +111,8 @@ export default function BoBaiSelectionPage() {
 
   const activeReader = READERS.find((r) => r.id === selectedReaderId) || READERS[0]!;
 
-  // Quota server-side state
-  const [quota, setQuota] = useState<QuotaStatusPayload>({
-    usedToday: 0,
-    dailyLimit: FREE_DAILY_READINGS,
-    bonusDraws: 0,
-    remainingToday: 3,
-    starsBalance: 10,
-    canUseFullDeck: true,
-    isFirstTurnFullDeckFree: true,
-    fullDeckUnlockCostStars: FULL_DECK_UNLOCK_STAR_COST,
-    fullDeckUnlockedDraws: 0,
-  });
-
-  const [isLoadingQuota, setIsLoadingQuota] = useState(true);
+  // Quota server-side state with synchronized hook
+  const { quota, updateQuota, isLoading: isLoadingQuota, refreshQuota } = useQuotaSync();
   const [isDissolving, setIsDissolving] = useState(false);
 
   // Bottom sheets & Modals state
@@ -138,30 +127,12 @@ export default function BoBaiSelectionPage() {
   const [isStreakOpen, setIsStreakOpen] = useState(false);
   const [isReferralOpen, setIsReferralOpen] = useState(false);
 
-  // Fetch real quota from server
-  const fetchQuota = async () => {
-    try {
-      const res = await fetch('/api/reading');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.quota) {
-          setQuota(data.quota);
-          // If server says full deck is locked and user is currently on full_78, fallback to major_22
-          if (!data.quota.canUseFullDeck && deckMode === 'full_78') {
-            setContextForm({ deckMode: 'major_22' });
-          }
-        }
-      }
-    } catch {
-      // Fallback gracefully to default state
-    } finally {
-      setIsLoadingQuota(false);
-    }
-  };
-
+  // If server says full deck is locked and user is currently on full_78, fallback to major_22
   useEffect(() => {
-    void fetchQuota();
-  }, []);
+    if (quota.canUseFullDeck === false && deckMode === 'full_78') {
+      setContextForm({ deckMode: 'major_22' });
+    }
+  }, [quota.canUseFullDeck, deckMode, setContextForm]);
 
   // Typewriter effect
   const readerPrompt =
@@ -208,7 +179,7 @@ export default function BoBaiSelectionPage() {
       });
       const data = await res.json();
       if (res.ok && data.status === 'ok') {
-        if (data.quota) setQuota(data.quota);
+        if (data.quota) updateQuota(data.quota);
         setContextForm({ deckMode: 'full_78' });
         setIsUnlockSheetOpen(false);
         setUnlockToast('🎉 Đã mở khóa thành công trọn bộ 78 lá cho lượt này!');
@@ -733,7 +704,7 @@ export default function BoBaiSelectionPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ action: 'share_bonus' }),
                     });
-                    await fetchQuota();
+                    await refreshQuota();
                     setIsOutOfTurnsSheetOpen(false);
                     setUnlockToast('🎉 Bạn được tặng +1 lượt bốc bài từ chia sẻ!');
                   }}
@@ -827,7 +798,7 @@ export default function BoBaiSelectionPage() {
         onClose={() => setIsWalletOpen(false)}
         birthYear={birthYear}
         quota={quota}
-        onQuotaUpdated={(q) => setQuota(q)}
+        onQuotaUpdated={(q) => updateQuota(q)}
         onOpenDailyModal={() => setIsStreakOpen(true)}
       />
 
@@ -838,7 +809,7 @@ export default function BoBaiSelectionPage() {
         birthYear={birthYear}
         readerId={selectedReaderId}
         quota={quota}
-        onQuotaUpdated={(q) => setQuota(q)}
+        onQuotaUpdated={(q) => updateQuota(q)}
       />
 
       <ReferralAndAdModal
@@ -846,7 +817,7 @@ export default function BoBaiSelectionPage() {
         onClose={() => setIsReferralOpen(false)}
         nickname={nickname}
         quota={quota}
-        onQuotaUpdated={(q) => setQuota(q)}
+        onQuotaUpdated={(q) => updateQuota(q)}
       />
     </motion.div>
   );

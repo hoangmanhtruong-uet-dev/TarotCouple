@@ -8,11 +8,13 @@ import { getSpreadPositionsForTopic } from '@/lib/safety';
 import { Sparkles, Wand2 } from 'lucide-react';
 import { TactileArcFan } from '@/components/TactileArcFan';
 import HamsterLoader from '@/components/HamsterLoader';
+import { useQuotaSync } from '@/lib/use-quota';
 import type { ReadingApiResponse } from '@/lib/api-types';
 
 export default function RutBaiPage() {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
+  const { updateQuota } = useQuotaSync();
 
   const {
     selectedReaderId,
@@ -138,6 +140,7 @@ export default function RutBaiPage() {
       }
 
       if (data.status === 'ok') {
+        if (data.quota) updateQuota(data.quota);
         setReadingSuccess(data);
         router.push('/reading/ket-qua');
       } else if (data.status === 'crisis') {

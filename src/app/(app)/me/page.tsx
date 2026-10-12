@@ -8,6 +8,7 @@ import { WalletPayOSModal } from '@/components/WalletPayOSModal';
 import { DailyStreakModal } from '@/components/DailyStreakModal';
 import { ReferralAndAdModal } from '@/components/ReferralAndAdModal';
 import { LegalPrivacyModal } from '@/components/LegalPrivacyModal';
+import { useQuotaSync } from '@/lib/use-quota';
 import type { QuotaStatusPayload } from '@/lib/api-types';
 
 export default function MeProfilePage() {
@@ -17,17 +18,7 @@ export default function MeProfilePage() {
   const [isReferralOpen, setIsReferralOpen] = useState(false);
   const [isLegalOpen, setIsLegalOpen] = useState(false);
 
-  const [quota, setQuota] = useState<QuotaStatusPayload>({
-    usedToday: 0,
-    dailyLimit: 3,
-    bonusDraws: 0,
-    remainingToday: 3,
-    starsBalance: 15,
-    streakDays: 1,
-    dailyPullCompletedToday: false,
-    dailySpendVnd: 0,
-    dailySpendCapVnd: 50000,
-  });
+  const { quota, updateQuota } = useQuotaSync();
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -204,7 +195,7 @@ export default function MeProfilePage() {
         onClose={() => setIsWalletOpen(false)}
         birthYear={2004}
         quota={quota}
-        onQuotaUpdated={(newQ) => setQuota(newQ)}
+        onQuotaUpdated={(newQ) => updateQuota(newQ)}
       />
 
       <DailyStreakModal
@@ -214,7 +205,7 @@ export default function MeProfilePage() {
         birthYear={2004}
         readerId="ba_co_mo_hon"
         quota={quota}
-        onQuotaUpdated={(newQ) => setQuota(newQ)}
+        onQuotaUpdated={(newQ) => updateQuota(newQ)}
       />
 
       <ReferralAndAdModal
@@ -222,7 +213,7 @@ export default function MeProfilePage() {
         onClose={() => setIsReferralOpen(false)}
         nickname="Linh"
         quota={quota}
-        onQuotaUpdated={(newQ) => setQuota(newQ)}
+        onQuotaUpdated={(newQ) => updateQuota(newQ)}
       />
 
       <LegalPrivacyModal

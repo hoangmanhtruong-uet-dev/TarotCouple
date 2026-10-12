@@ -64,7 +64,12 @@ export default function ReadingLayout({
 
             return (
               <React.Fragment key={s.step}>
-                <div className="flex items-center gap-1.5 sm:gap-2">
+                <Link
+                  href={s.path}
+                  className={`flex items-center gap-1.5 sm:gap-2 transition-transform active:scale-95 ${
+                    isCompleted || isCurrent ? 'cursor-pointer hover:opacity-90' : 'cursor-default pointer-events-none'
+                  }`}
+                >
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                       isCurrent
@@ -87,7 +92,7 @@ export default function ReadingLayout({
                   >
                     {s.label}
                   </span>
-                </div>
+                </Link>
 
                 {idx < STEPS.length - 1 && (
                   <div

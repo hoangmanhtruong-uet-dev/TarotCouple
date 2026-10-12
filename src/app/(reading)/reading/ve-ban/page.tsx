@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useReadingStore } from '@/lib/reading-store';
 import { READERS } from '@/data/tarot-cards';
-import { ArrowRight, ArrowLeft, Check, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Sparkles, ShieldCheck, Info, X } from 'lucide-react';
+import { CURRENT_REFERENCE_YEAR } from '@/lib/schemas';
+import { classifyAgeTier } from '@/lib/safety';
 
 const BIRTH_YEAR_OPTIONS = Array.from(
   { length: 2016 - 1970 + 1 },
@@ -45,6 +47,10 @@ export default function VeBanProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<'nickname' | 'birthYear' | 'zodiacSign' | null>(null);
   const [fromMe, setFromMe] = useState(false);
+  const [showAgeHelpModal, setShowAgeHelpModal] = useState(false);
+
+  const agePolicy = classifyAgeTier(birthYear, CURRENT_REFERENCE_YEAR, selectedReaderId);
+  const isKidTeenSafeMode = agePolicy.isKidTeenSafeMode;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -116,11 +122,21 @@ export default function VeBanProfilePage() {
           />
         </div>
 
-        {/* Birth Year (Bắt buộc kèm dòng giải thích rõ ràng) */}
+        {/* Birth Year (Bắt buộc kèm badge phân tầng lứa tuổi trực quan) */}
         <div>
-          <label className="block text-xs font-semibold text-[#D9B36A] mb-1.5 uppercase tracking-wider">
-            Năm Sinh Của Bạn *
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider">
+              Năm Sinh Của Bạn *
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowAgeHelpModal(true)}
+              className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] flex items-center gap-1 underline cursor-pointer"
+            >
+              <Info className="w-3 h-3" />
+              <span>Chính sách lứa tuổi</span>
+            </button>
+          </div>
           <select
             value={birthYear}
             onFocus={() => setFocusedField('birthYear')}
@@ -134,13 +150,38 @@ export default function VeBanProfilePage() {
           >
             {BIRTH_YEAR_OPTIONS.map((yr) => (
               <option key={yr} value={yr}>
-                Năm {yr} ({2026 - yr} tuổi)
+                Năm {yr} ({CURRENT_REFERENCE_YEAR - yr} tuổi)
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-[#9E96B0] mt-1.5 leading-relaxed">
-            * Dùng để chọn giọng Reader và chủ đề phù hợp theo độ tuổi của bạn (theo chính sách an toàn).
-          </p>
+
+          {/* Badge phân tầng lứa tuổi động */}
+          <div className="mt-2.5">
+            {isKidTeenSafeMode ? (
+              <div className="p-3 rounded-2xl bg-pink-500/10 border border-pink-500/30 flex items-start gap-2.5">
+                <span className="text-base shrink-0">🌸</span>
+                <div className="text-[11px] text-[#F8F5F0] leading-relaxed">
+                  <span className="font-bold text-pink-300">Chế độ Học Đường Trong Sáng (10–15 tuổi):</span>{' '}
+                  {selectedReaderId === 'ba_co_mo_hon' ? (
+                    <span>
+                      Reader <strong className="text-pink-300">Bà Ngoại Vui Tính</strong> sẽ đồng hành (xưng hô Bà Ngoại - cháu) cùng các chủ đề học tập, bạn bè và vận may.
+                    </span>
+                  ) : (
+                    <span>Chủ đề được điều chỉnh lành mạnh, phù hợp lứa tuổi học đường.</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-[#F8F5F0] leading-relaxed">
+                  <span className="font-bold text-emerald-300">Chế độ Trưởng Thành (16+ tuổi):</span>{' '}
+                  Mở khóa trọn vẹn phong cách xưng hô của{' '}
+                  <strong style={{ color: readerAccentColor }}>{activeReader.name}</strong>, bao gồm Bà Cố chém gắt, các chủ đề tình cảm người lớn, tài chính và phân tích sâu sắc.
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Cung Hoàng Đạo: Dropdown gọn, mặc định KHÔNG chọn, có nút Bỏ chọn */}
@@ -209,6 +250,69 @@ export default function VeBanProfilePage() {
           <ArrowRight className="w-4 h-4 shrink-0" />
         </button>
       </div>
+
+      {/* Modal giải thích chính sách an toàn lứa tuổi */}
+      {showAgeHelpModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowAgeHelpModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-[#14121F] border border-[#D9B36A]/40 rounded-3xl p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowAgeHelpModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-[#9E96B0] hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-3">
+              <ShieldCheck className="w-5 h-5 text-[#D9B36A]" />
+              <h3 className="font-display text-base font-bold text-[#F8F5F0]">
+                Chính Sách Phân Tầng Độ Tuổi
+              </h3>
+            </div>
+
+            <p className="text-xs text-[#9E96B0] leading-relaxed mb-4">
+              Tarot Couple xây dựng chính sách phân tầng nhằm bảo vệ tâm lý thanh thiếu niên và tuân thủ các quy định an toàn nội dung số (Nghị định 13/2023/NĐ-CP):
+            </p>
+
+            <div className="space-y-3 text-xs leading-relaxed">
+              <div className="p-3 rounded-2xl bg-pink-500/10 border border-pink-500/20">
+                <p className="font-bold text-pink-300 mb-1">
+                  🌸 Nhóm 10–15 tuổi (Học đường trong sáng)
+                </p>
+                <p className="text-[#F8F5F0]">
+                  • Giọng Reader chuyển thành <strong>Bà Ngoại Vui Tính</strong> (xưng hô Bà Ngoại - cháu, ấm áp, động viên).<br />
+                  • Chủ đề tập trung vào học tập, thi cử, tình bạn, crush trường lớp.<br />
+                  • Khóa hoàn toàn tính năng nạp tiền ngân hàng.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                <p className="font-bold text-emerald-300 mb-1">
+                  🔥 Nhóm 16+ tuổi (Chế độ Trưởng thành)
+                </p>
+                <p className="text-[#F8F5F0]">
+                  • Mở khóa trọn vẹn phong cách sắc sảo của <strong>Bà Cố Mỏ Hỗn</strong> (xưng Bà Cố - con), <strong>Tổng Tài Lý Trí</strong> và <strong>Pháp Sư Tối Cổ</strong>.<br />
+                  • Trọn bộ chủ đề tình duyên sâu sắc, công việc, sự nghiệp và tài chính.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAgeHelpModal(false)}
+              className="w-full mt-5 py-3 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-bold text-xs shadow-md transition-colors cursor-pointer"
+            >
+              Đã hiểu & Tiếp tục
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

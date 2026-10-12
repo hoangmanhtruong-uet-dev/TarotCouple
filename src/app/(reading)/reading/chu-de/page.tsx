@@ -463,14 +463,27 @@ export default function ChuDeSelectionPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <h2 className="font-display text-sm font-bold text-[#F8F5F0]">
-              {activeReader.name}
-            </h2>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h2 className="font-display text-sm font-bold text-[#F8F5F0] truncate">
+                {agePolicy.effectivePersona === 'ba_ngoai_vui_tinh'
+                  ? 'Bà Ngoại Vui Tính'
+                  : activeReader.name}
+              </h2>
+              {agePolicy.isKidTeenSafeMode ? (
+                <span className="text-[9px] font-semibold text-pink-300 bg-pink-500/15 border border-pink-500/30 px-1.5 py-0.5 rounded-full shrink-0">
+                  Học đường 10–15t
+                </span>
+              ) : (
+                <span className="text-[9px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full shrink-0">
+                  16+
+                </span>
+              )}
+            </div>
             <Link
               href="/reading/ve-ban"
-              className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] transition-colors truncate"
+              className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] transition-colors truncate shrink-0"
             >
-              Hồ sơ: <strong>{nickname || 'Bạn'}</strong> ({2026 - birthYear}t) &rarr;
+              <strong>{nickname || 'Bạn'}</strong> ({CURRENT_REFERENCE_YEAR - birthYear}t) &rarr;
             </Link>
           </div>
           <p className="text-xs text-[#E5C687] italic font-serif leading-relaxed min-h-[30px]">

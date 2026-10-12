@@ -758,26 +758,39 @@ export function WalletPayOSModal({
                       {/* Các nút hành động */}
                       {activeOrder.status !== 'paid' ? (
                         <div className="space-y-2">
+                          {activeOrder.checkoutUrl && (
+                            <a
+                              href={activeOrder.checkoutUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#C9A24A] via-[#E5C687] to-[#C9A24A] text-[#09080D] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md hover:brightness-110 text-center"
+                            >
+                              <span>Mở Cổng Thanh Toán PayOS Trực Tiếp &rarr;</span>
+                            </a>
+                          )}
+
                           <button
                             type="button"
                             disabled={isPolling}
                             onClick={() => void checkOrderStatus(activeOrder.orderCode, true)}
-                            className="w-full py-3 px-4 rounded-xl bg-[#14111C] hover:bg-[#1D1829] border border-[#C9A24A]/40 text-[#F3E5AB] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                            className="w-full py-2.5 px-4 rounded-xl bg-[#14111C] hover:bg-[#1D1829] border border-[#C9A24A]/40 text-[#F3E5AB] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isPolling ? 'animate-spin' : ''}`} />
                             <span>{isPolling ? 'Đang kiểm tra...' : 'Kiểm tra trạng thái ngay'}</span>
                           </button>
 
-                          <button
-                            type="button"
-                            disabled={isConfirmingWebhook}
-                            onClick={() => void handleConfirmWebhook()}
-                            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-[#09080D] font-bold text-xs shadow-md cursor-pointer transition-all disabled:opacity-60"
-                          >
-                            {isConfirmingWebhook
-                              ? 'Đang xác thực Webhook...'
-                              : '✅ Giả lập Xác nhận chuyển khoản (Sandbox Test)'}
-                          </button>
+                          {activeOrder.provider === 'payos_sandbox' && (
+                            <button
+                              type="button"
+                              disabled={isConfirmingWebhook}
+                              onClick={() => void handleConfirmWebhook()}
+                              className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 font-semibold text-xs cursor-pointer transition-all disabled:opacity-60"
+                            >
+                              {isConfirmingWebhook
+                                ? 'Đang xác thực Webhook...'
+                                : '✅ Giả lập Xác nhận chuyển khoản (Sandbox Test)'}
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <button

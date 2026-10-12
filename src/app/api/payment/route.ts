@@ -15,6 +15,7 @@ import {
   type StoredTransaction,
 } from '@/lib/quota-store';
 import { classifyAgeTier } from '@/lib/safety';
+import { createPayOsPaymentLink, isPayOsConfigured } from '@/lib/payos';
 import {
   CURRENT_REFERENCE_YEAR,
   MAX_BIRTH_YEAR,
@@ -224,15 +225,49 @@ export async function POST(request: Request) {
   }
 
   // Step 3: Create pending PayOS / VietQR order
-  const orderCode = generateOrderCode();
+  // PayOS orderCode must be a positive integer <= 9007199254740991
+  const numericOrderCode = Number(`${Date.now() % 1000000000}${Math.floor(Math.random() * 90) + 10}`);
+  const orderCode = `TC-${numericOrderCode}`;
   const createdAt = new Date().toISOString();
-  const addInfo = encodeURIComponent(`TAROTCOUPLE ${orderCode}`);
-  const vietQrImageUrl = `https://img.vietqr.io/image/MB-0000123456789-compact2.png?amount=${pkg.priceVnd}&addInfo=${addInfo}&accountName=TAROT%20COUPLE`;
-  const qrDataText = `00020101021238570010A00000072701270006970422011300001234567890208QRIBFTTA5303704540${String(pkg.priceVnd).length}${pkg.priceVnd}5802VN62${String(orderCode.length + 4).padStart(2, '0')}08${String(orderCode.length).padStart(2, '0')}${orderCode}6304`;
-  const provider: PaymentOrderPayload['provider'] = hasLivePayOsCredentials()
-    ? 'payos'
-    : 'payos_sandbox';
-  const checkoutUrl = `https://pay.payos.vn/web/${orderCode.toLowerCase()}`;
+
+  let vietQrImageUrl = `https://img.vietqr.io/image/MB-0000123456789-compact2.png?amount=${pkg.priceVnd}&addInfo=${encodeURIComponent(orderCode)}&accountName=TAROT%20COUPLE`;
+  let qrDataText = `00020101021238570010A00000072701270006970422011300001234567890208QRIBFTTA5303704540${String(pkg.priceVnd).length}${pkg.priceVnd}5802VN62${String(orderCode.length + 4).padStart(2, '0')}08${String(orderCode.length).padStart(2, '0')}${orderCode}6304`;
+  let checkoutUrl = `https://pay.payos.vn/web/${orderCode.toLowerCase()}`;
+  let provider: PaymentOrderPayload['provider'] = 'payos_sandbox';
+
+  if (isPayOsConfigured) {
+    try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://tarotcouple2007.vercel.app';
+      const payosResult = await createPayOsPaymentLink({
+        orderCode: numericOrderCode,
+        amount: pkg.priceVnd,
+        description: `TC ${numericOrderCode}`.slice(0, 25),
+        returnUrl: `${siteUrl}/me?orderCode=${orderCode}&status=success`,
+        cancelUrl: `${siteUrl}/me?orderCode=${orderCode}&status=cancelled`,
+        items: [
+          {
+            name: pkg.name.slice(0, 50),
+            quantity: 1,
+            price: pkg.priceVnd,
+          },
+        ],
+      });
+
+      if (!payosResult.isSandbox && payosResult.qrCode) {
+        provider = 'payos';
+        checkoutUrl = payosResult.checkoutUrl || checkoutUrl;
+        qrDataText = payosResult.qrCode;
+        // If qrCode is raw EMVCo string, encode to VietQR dynamic image URL
+        if (payosResult.qrCode.startsWith('000201')) {
+          vietQrImageUrl = `https://api.vietqr.io/image/970422-0000123456789-compact2.jpg?amount=${pkg.priceVnd}&addInfo=${encodeURIComponent(orderCode)}&accountName=TAROT%20COUPLE`;
+        } else if (payosResult.qrCode.startsWith('http')) {
+          vietQrImageUrl = payosResult.qrCode;
+        }
+      }
+    } catch (payosErr) {
+      console.warn('[PayOS Live Order Creation Fallback]:', payosErr);
+    }
+  }
 
   const storedTx: StoredTransaction = {
     orderCode,

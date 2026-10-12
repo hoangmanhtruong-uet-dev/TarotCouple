@@ -170,7 +170,7 @@ export function TactileArcFan({
       const totalMove = Math.abs(e.clientX - dragStartClientX);
       isDragging = false;
 
-      if (totalMove < 10 && !disabledRef.current && selectedRef.current.length < 3) {
+      if (totalMove < 10 && !disabledRef.current) {
         const rect = renderer!.domElement.getBoundingClientRect();
         pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -178,17 +178,17 @@ export function TactileArcFan({
         const hits = raycaster.intersectObjects(cardMeshes, false);
         const pickedIdx = hits[0]?.object?.userData?.cardIndex;
 
-        if (
-          typeof pickedIdx === 'number' &&
-          !selectedRef.current.includes(pickedIdx)
-        ) {
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try {
-              navigator.vibrate(25);
-            } catch {}
+        if (typeof pickedIdx === 'number') {
+          const alreadyPicked = selectedRef.current.includes(pickedIdx);
+          if (alreadyPicked || selectedRef.current.length < 3) {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try {
+                navigator.vibrate(25);
+              } catch {}
+            }
+            soundManager.playCardFlip();
+            onPickRef.current(pickedIdx);
           }
-          soundManager.playCardFlip();
-          onPickRef.current(pickedIdx);
         }
       }
     };
@@ -344,7 +344,7 @@ export function TactileArcFan({
                   : { scale: 0.94 }
               }
               onClick={() => {
-                if (!isSelected && !disabled && selectedIndices.length < 3) {
+                if (!disabled && (isSelected || selectedIndices.length < 3)) {
                   if (typeof navigator !== 'undefined' && navigator.vibrate) {
                     try {
                       navigator.vibrate(25);
@@ -356,7 +356,7 @@ export function TactileArcFan({
               }}
               className={`relative shrink-0 w-12 h-20 sm:w-14 sm:h-24 rounded-xl border transition-all cursor-pointer flex flex-col justify-between p-1.5 ${
                 isSelected
-                  ? 'bg-[#C9A24A] border-[#E8C872] opacity-25 cursor-not-allowed scale-90'
+                  ? 'bg-[#C9A24A]/30 border-2 border-[#E5C687] -translate-y-3 scale-95 shadow-[0_0_16px_rgba(201,162,74,0.6)]'
                   : 'bg-gradient-to-b from-[#1D1829] via-[#14111C] to-[#09080D] border-[#C9A24A]/40 hover:border-[#C9A24A] shadow-[0_4px_20px_rgba(0,0,0,0.8)]'
               }`}
               style={{

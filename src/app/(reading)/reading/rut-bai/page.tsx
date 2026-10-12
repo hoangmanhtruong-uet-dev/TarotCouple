@@ -6,7 +6,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useReadingStore } from '@/lib/reading-store';
 import { resolveReader } from '@/data/tarot-cards';
 import { getSpreadPositionsForTopic } from '@/lib/safety';
-import { Sparkles, Wand2, RefreshCw, Eye } from 'lucide-react';
+import { Sparkles, Wand2, RefreshCw, Eye, RotateCcw, X, CheckCircle2 } from 'lucide-react';
 import { TactileArcFan } from '@/components/TactileArcFan';
 import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useQuotaSync } from '@/lib/use-quota';
@@ -154,24 +154,43 @@ export default function RutBaiPage() {
     }, 40);
   };
 
-  // 2. CHỌN BÀI TỪ XÒE QUẠT
+  // 2. CHỌN HOẶC BỎ CHỌN BÀI TỪ XÒE QUẠT
   const handlePickCard = (idx: number) => {
-    if (stage !== 'fan' || selectedFanIndices.includes(idx) || selectedFanIndices.length >= 3) {
+    if (stage !== 'fan') return;
+
+    // Nếu lá bài này đã được chọn -> Bỏ chọn nó để chọn lại lá khác
+    if (selectedFanIndices.includes(idx)) {
+      soundManager.playCrispClick();
+      setSelectedFanIndices(selectedFanIndices.filter((item) => item !== idx));
+      return;
+    }
+
+    if (selectedFanIndices.length >= 3) {
       return;
     }
 
     const updated = [...selectedFanIndices, idx];
     setSelectedFanIndices(updated);
-
-    // Khi đã đủ 3 lá: Kích hoạt chuỗi lật bài 3D xen kẽ 350ms
-    if (updated.length === 3) {
-      startRevealSequence([updated[0]!, updated[1]!, updated[2]!]);
-    }
   };
 
-  // Vũ trụ chọn hộ 3 lá
+  // Bỏ chọn 1 ô cụ thể trong 3 slot phía trên
+  const handleRemoveSlotCard = (slotIndex: number) => {
+    if (stage !== 'fan') return;
+    soundManager.playCrispClick();
+    const updated = selectedFanIndices.filter((_, idx) => idx !== slotIndex);
+    setSelectedFanIndices(updated);
+  };
+
+  // Xóa toàn bộ 3 lá đã chọn để chọn lại từ đầu
+  const handleClearSelection = () => {
+    if (stage !== 'fan' || selectedFanIndices.length === 0) return;
+    soundManager.playCardSlide();
+    setSelectedFanIndices([]);
+  };
+
+  // Vũ trụ chọn hộ 3 lá (hoặc đổi 3 lá ngẫu nhiên khác)
   const handleQuickPickThree = () => {
-    if (stage !== 'fan' || selectedFanIndices.length === 3) return;
+    if (stage !== 'fan') return;
 
     soundManager.playCardSlide();
     const pool = Array.from({ length: totalDeckCards }, (_, idx) => idx);
@@ -181,7 +200,6 @@ export default function RutBaiPage() {
       picked.push(pool.splice(randIdx, 1)[0]!);
     }
     setSelectedFanIndices(picked);
-    startRevealSequence([picked[0]!, picked[1]!, picked[2]!]);
   };
 
   // 3. HIỆU ỨNG LẬT BÀI 3D XEN KẼ 350ms (0ms -> 350ms -> 700ms)
@@ -331,12 +349,12 @@ export default function RutBaiPage() {
               </AnimatePresence>
             </div>
 
-            {/* Thanh tiến trình huyền bí */}
-            <div className="w-48 h-1 bg-[#1D1829] rounded-full overflow-hidden mt-6 mb-2">
+            {/* Thanh tiến trình huyền bí & 3 Bước Giải Mã AI */}
+            <div className="w-56 h-1.5 bg-[#1D1829] rounded-full overflow-hidden mt-5 mb-4">
               <motion.div
                 animate={{ x: ['-100%', '100%'] }}
                 transition={{
-                  duration: 1.5,
+                  duration: 1.4,
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}
@@ -346,8 +364,42 @@ export default function RutBaiPage() {
                 }}
               />
             </div>
+
+            <div className="max-w-xs w-full space-y-2 text-left bg-[#14111C]/90 border border-[#262235] rounded-2xl p-3.5 mb-2">
+              {[
+                '1. Kết nối tần số năng lượng & câu hỏi',
+                '2. Phân tích chiều sâu 3 lá bài định mệnh',
+                '3. Đúc kết thông điệp & lời khuyên hành động',
+              ].map((stepLabel, sIdx) => {
+                const isDone = decodingQuoteIndex > sIdx;
+                const isActive = decodingQuoteIndex === sIdx || (sIdx === 2 && decodingQuoteIndex >= 2);
+                return (
+                  <div
+                    key={sIdx}
+                    className={`flex items-center gap-2 text-[11px] transition-colors ${
+                      isDone
+                        ? 'text-emerald-400 font-semibold'
+                        : isActive
+                        ? 'text-[#E5C687] font-bold'
+                        : 'text-[#6E6782]'
+                    }`}
+                  >
+                    <CheckCircle2
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isDone
+                          ? 'text-emerald-400'
+                          : isActive
+                          ? 'text-[#C9A24A] animate-pulse'
+                          : 'text-[#3A334F]'
+                      }`}
+                    />
+                    <span>{stepLabel}</span>
+                  </div>
+                );
+              })}
+            </div>
             <p className="text-[11px] text-[#9E96B0]">
-              Đang kết nối năng lượng trải bài 3 lá...
+              Vũ trụ đang giải mã trải bài 3 lá dành riêng cho bạn...
             </p>
           </motion.div>
         )}
@@ -368,7 +420,9 @@ export default function RutBaiPage() {
         <p className="text-xs sm:text-sm text-[#A9A1BC] mt-1.5 max-w-md mx-auto leading-relaxed">
           {stage === 'riffle'
             ? 'Hít một hơi thật sâu, nghĩ về điều bạn đang băn khoăn và chạm xáo để kích hoạt dòng năng lượng.'
-            : 'Lần lượt chạm chọn 3 lá bài theo trực giác mách bảo để chuẩn bị lật bài.'}
+            : selectedFanIndices.length === 3
+            ? 'Đã chọn đủ 3 lá! Bạn có thể chạm vào lá bài để đổi lá khác, hoặc bấm "Lật Mở 3 Lá" ngay.'
+            : 'Lần lượt chạm chọn 3 lá bài theo trực giác (chạm lại vào lá đã chọn nếu muốn đổi lá khác).'}
         </p>
       </motion.div>
 
@@ -472,8 +526,8 @@ export default function RutBaiPage() {
 
       {/* 2 & 3. GIAI ĐOẠN XÒE QUẠT & LẬT BÀI 3D XEN KẼ 350MS */}
       {(stage === 'fan' || stage === 'revealing') && (
-        <div className="space-y-6">
-          {/* 3 Slot Bài (Hỗ trợ lật bài 3D xen kẽ 350ms) */}
+        <div className="space-y-5">
+          {/* 3 Slot Bài (Hỗ trợ chạm để bỏ chọn từng lá & lật bài 3D xen kẽ 350ms) */}
           <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto">
             {spreadPositions.map((posLabel, idx) => {
               const pickedFanIdx = selectedFanIndices[idx];
@@ -483,12 +537,27 @@ export default function RutBaiPage() {
               return (
                 <div
                   key={idx}
-                  className={`p-3 rounded-2xl border text-center transition-all ${
+                  onClick={() => {
+                    if (isFilled && stage === 'fan') {
+                      handleRemoveSlotCard(idx);
+                    }
+                  }}
+                  title={isFilled && stage === 'fan' ? 'Chạm để bỏ chọn lá bài này' : undefined}
+                  className={`p-3 rounded-2xl border text-center transition-all relative ${
                     isFilled
-                      ? 'bg-[#1D1829] border-[#C9A24A] shadow-[0_0_20px_rgba(201,162,74,0.25)]'
+                      ? 'bg-[#1D1829] border-[#C9A24A] shadow-[0_0_20px_rgba(201,162,74,0.25)] cursor-pointer hover:border-rose-400/80 group'
                       : 'bg-[#14111C]/80 border-[#262235]'
                   }`}
                 >
+                  {isFilled && stage === 'fan' && (
+                    <span
+                      aria-label={`Bỏ chọn lá ${idx + 1}`}
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#262038] border border-[#C9A24A]/60 group-hover:bg-rose-500 group-hover:border-rose-400 text-[#E5C687] group-hover:text-white flex items-center justify-center shadow-md transition-colors z-20"
+                    >
+                      <X className="w-3 h-3" />
+                    </span>
+                  )}
+
                   <span className="text-[10px] font-bold text-[#C9A24A] block mb-1 uppercase tracking-wider">
                     LÁ {idx + 1}
                   </span>
@@ -521,7 +590,9 @@ export default function RutBaiPage() {
                             #{pickedFanIdx + 1}
                           </span>
                           <span className="text-xs text-[#C9A24A]/70 my-auto">✦</span>
-                          <span className="text-[8px] text-[#9E96B0] uppercase">RWS</span>
+                          <span className="text-[7px] text-[#9E96B0] group-hover:text-rose-300 uppercase transition-colors">
+                            {stage === 'fan' ? 'Chạm đổi lá' : 'RWS'}
+                          </span>
                         </div>
 
                         {/* Mặt Trước (Lật mở bừng sáng 3D) */}
@@ -552,18 +623,47 @@ export default function RutBaiPage() {
             })}
           </div>
 
-          {/* Nút Vũ Trụ Chọn Hộ */}
+          {/* Thanh Công Cụ: Vũ Trụ Chọn Hộ + Chọn Lại + Lật Mở 3 Lá */}
           {stage === 'fan' && (
-            <div className="text-center">
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
               <button
                 type="button"
                 onClick={handleQuickPickThree}
-                disabled={selectedFanIndices.length === 3}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14111C] hover:bg-[#1D1829] border border-[#C9A24A]/40 text-xs font-semibold text-[#C9A24A] transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Vũ Trụ Chọn Hộ 3 Lá</span>
+                <span>{selectedFanIndices.length === 3 ? 'Đổi 3 Lá Ngẫu Nhiên Khác' : 'Vũ Trụ Chọn Hộ 3 Lá'}</span>
               </button>
+
+              {selectedFanIndices.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearSelection}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#14111C] hover:bg-rose-950/40 border border-[#322B45] hover:border-rose-500/50 text-xs font-semibold text-[#A9A1BC] hover:text-rose-300 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Chọn Lại Từ Đầu ({selectedFanIndices.length}/3)</span>
+                </button>
+              )}
+
+              {selectedFanIndices.length === 3 && (
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  onClick={() =>
+                    startRevealSequence([
+                      selectedFanIndices[0]!,
+                      selectedFanIndices[1]!,
+                      selectedFanIndices[2]!,
+                    ])
+                  }
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A24A] via-[#E5C687] to-[#C9A24A] text-[#09080D] font-bold text-xs sm:text-sm shadow-[0_0_25px_rgba(201,162,74,0.5)] hover:brightness-110 transition-all cursor-pointer animate-pulse"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Xác Nhận & Lật Mở 3 Lá &rarr;</span>
+                </motion.button>
+              )}
             </div>
           )}
 
@@ -573,7 +673,7 @@ export default function RutBaiPage() {
               totalCards={totalDeckCards}
               selectedIndices={selectedFanIndices}
               onPickCard={handlePickCard}
-              disabled={stage !== 'fan' || selectedFanIndices.length >= 3}
+              disabled={stage !== 'fan'}
             />
           </div>
 
@@ -583,7 +683,7 @@ export default function RutBaiPage() {
           )}
 
           {/* Điều hướng dưới cùng */}
-          <div className="flex items-center justify-between max-w-md mx-auto pt-4">
+          <div className="flex items-center justify-between max-w-md mx-auto pt-2">
             <button
               type="button"
               onClick={() => router.push('/reading/bo-bai')}

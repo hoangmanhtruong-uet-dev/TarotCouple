@@ -1215,10 +1215,15 @@ export async function generateTarotReading(
   });
 
   const candidateModels = [
-    process.env.GEMINI_MODEL?.trim(),
-    'gemini-3.8-flash',
+    process.env.GEMINI_MODEL?.trim() === 'gemini-3.8-flash' ||
+    process.env.GEMINI_MODEL?.trim() === 'gemini-2.5-flash'
+      ? undefined
+      : process.env.GEMINI_MODEL?.trim(),
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-3-flash-preview',
     'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
   ].filter((m): m is string => Boolean(m && m.length > 0));
 
   const uniqueModels = Array.from(new Set(candidateModels));
@@ -1760,13 +1765,10 @@ export async function generateFollowupReading(
     )
     .join('\n');
 
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  const isKeyUsable = apiKey && !apiKey.startsWith('AIzaSy_fake') && apiKey.length > 20;
+  const availableKeys = getValidGeminiApiKeys();
 
-  if (isKeyUsable) {
-    try {
-      const ai = new GoogleGenAI({ apiKey });
-      const promptText = `
+  if (availableKeys.length > 0) {
+    const promptText = `
 ${profile.voiceInstructions}
 
 NGỮ CẢNH TRẢI BÀI TAROT HIỆN TẠI CỦA ${safeNick}:
@@ -1789,27 +1791,32 @@ NHIỆM VỤ CỦA BẠN:
 5. Chỉ trả về trực tiếp đoạn văn bản câu trả lời, KHÔNG thêm định dạng JSON hay tiêu đề thừa.
 `.trim();
 
-      const candidateFollowupModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
-      let responseText = '';
+    const candidateFollowupModels = [
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-3.6-flash',
+      'gemini-3-flash-preview',
+    ];
+    const startIdx = currentApiKeyIndex;
+    currentApiKeyIndex = (currentApiKeyIndex + 1) % availableKeys.length;
+
+    for (let k = 0; k < availableKeys.length; k++) {
+      const key = availableKeys[(startIdx + k) % availableKeys.length]!;
+      const ai = new GoogleGenAI({ apiKey: key });
       for (const m of candidateFollowupModels) {
         try {
           const res = await ai.models.generateContent({
             model: m,
             contents: promptText,
           });
-          responseText = res.text?.trim() || '';
-          if (responseText) break;
+          const text = res.text?.trim() || '';
+          if (text.length > 20) {
+            return text;
+          }
         } catch {
-          // try next model
+          // try next model or key
         }
       }
-
-      const text = responseText.trim();
-      if (text && text.length > 20) {
-        return text;
-      }
-    } catch {
-      // Graceful fallback to contextual engine
     }
   }
 

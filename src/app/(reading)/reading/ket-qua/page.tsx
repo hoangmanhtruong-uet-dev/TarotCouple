@@ -39,6 +39,8 @@ import {
   Lock,
   Eye,
   HelpCircle,
+  Copy,
+  Check,
 } from 'lucide-react';
 import FollowupChatModal from '@/components/FollowupChatModal';
 import OutOfStarsSheet from '@/components/OutOfStarsSheet';
@@ -434,6 +436,7 @@ function VerdictView({
   setActiveQuoteIdx,
   onContinue,
   onOpenFollowup,
+  onRedrawCards,
   questionText,
   nickname,
   usedFallback,
@@ -446,13 +449,36 @@ function VerdictView({
   setActiveQuoteIdx: (i: 0 | 1 | 2) => void;
   onContinue: () => void;
   onOpenFollowup: () => void;
+  onRedrawCards?: () => void;
   questionText?: string;
   nickname?: string;
   usedFallback?: boolean;
 }) {
   const shouldReduceMotion = useReducedMotion();
+  const [copiedVerdict, setCopiedVerdict] = useState(false);
   const quotes = result.shareable_card.savage_quotes;
   const selectedQuote = quotes[activeQuoteIdx] || quotes[0]!;
+
+  const finalVerdictText = usedFallback
+    ? result.overall_verdict.endsWith('( DTS)')
+      ? result.overall_verdict
+      : `${result.overall_verdict.trim()} ( DTS)`
+    : result.overall_verdict.replace(/\s*\( DTS\)$/, '');
+
+  const handleCopyVerdict = async () => {
+    soundManager.playCrispClick();
+    const cardsSummary = drawnCards
+      .map((d, i) => `Lá ${i + 1} (${d.position_label}): ${d.card.name_vi} (${d.reversed ? 'Ngược' : 'Xuôi'})`)
+      .join('\n');
+    const textToCopy = `🔮 Trải Bài Tarot với ${readerDisplayName}\n${cardsSummary}\n\n✨ Chốt hạ: ${finalVerdictText}\n🎯 Hành động: ${result.actionable_next_step}`;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedVerdict(true);
+      setTimeout(() => setCopiedVerdict(false), 2200);
+    } catch {
+      // ignore clipboard errors
+    }
+  };
 
   return (
     <motion.div
@@ -527,27 +553,55 @@ function VerdictView({
         className="p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-[#171326] via-[#120F1D] to-[#0B0A12] border border-[#E5C687]/40 space-y-4 mb-5 card-luxury-glow"
       >
         <div>
-          <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
             <span className="text-xs font-bold tracking-wider text-[#E5C687] uppercase text-gold-luxury font-serif">
               CHỐT HẠ TRỰC DIỆN TỔNG QUAN
             </span>
-            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-              Giải Tỏa Nghi Vấn
-            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleCopyVerdict}
+                className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-[#1D1829] hover:bg-[#2A233B] text-[#E5C687] border border-[#C9A24A]/40 transition-colors cursor-pointer"
+                title="Sao chép nhanh lời phán"
+              >
+                {copiedVerdict ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400">Đã chép</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Sao chép</span>
+                  </>
+                )}
+              </button>
+              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                Giải Tỏa Nghi Vấn
+              </span>
+            </div>
           </div>
           <p className="font-serif text-base sm:text-lg text-[#F8F5F0] leading-[1.75] whitespace-pre-line">
-            {usedFallback
-              ? (result.overall_verdict.endsWith('( DTS)')
-                  ? result.overall_verdict
-                  : `${result.overall_verdict.trim()} ( DTS)`)
-              : result.overall_verdict.replace(/\s*\( DTS\)$/, '')}
+            {finalVerdictText}
           </p>
         </div>
 
         <div className="border-t border-[#E5C687]/20 pt-4">
-          <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase block mb-2 font-serif">
-            HÀNH ĐỘNG NÊN LÀM NGAY
-          </span>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase font-serif">
+              HÀNH ĐỘNG NÊN LÀM NGAY
+            </span>
+            {onRedrawCards && (
+              <button
+                type="button"
+                onClick={onRedrawCards}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C9A24A] hover:text-[#F3E5AB] transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Chọn lại 3 lá khác</span>
+              </button>
+            )}
+          </div>
           <p className="text-sm sm:text-base text-[#D4CFE2] leading-[1.65]">{result.actionable_next_step}</p>
         </div>
       </motion.div>
@@ -985,8 +1039,18 @@ export default function KetQuaPage() {
     readerAccentColor,
     setActiveQuoteIdx,
     setClarifierCard,
+    setSelectedFanIndices,
+    setReadingSuccess,
     resetReadingFlow,
   } = useReadingStore();
+
+  const handleRedrawCards = () => {
+    soundManager.playCardSlide();
+    setSelectedFanIndices([]);
+    setClarifierCard(null);
+    setReadingSuccess(null);
+    router.push('/reading/rut-bai');
+  };
 
   // Stage machine state
   const [stage, setStage] = useState<Stage>('reveal_1');
@@ -1294,6 +1358,7 @@ export default function KetQuaPage() {
               void handleDrawClarifier();
             }}
             onOpenFollowup={() => setIsFollowupOpen(true)}
+            onRedrawCards={handleRedrawCards}
           />
         )}
 

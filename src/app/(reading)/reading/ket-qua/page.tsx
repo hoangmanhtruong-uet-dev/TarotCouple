@@ -43,6 +43,7 @@ import { ALL_TAROT_CARDS } from '@/data/tarot-cards';
 import { READERS } from '@/data/tarot-cards';
 import { getCardTopicInterpretation } from '@/data/topic-interpretations';
 import { useQuotaSync } from '@/lib/use-quota';
+import { saveJournalEntry } from '@/lib/journal-store';
 import type { ClarifierCardPayload, DrawnCardClientPayload } from '@/lib/api-types';
 import type { ReadingOutput, CardAnalysis } from '@/lib/schemas';
 
@@ -1013,6 +1014,10 @@ export default function KetQuaPage() {
       if (data?.clarifier) {
         if (data.quota) updateQuota(data.quota);
         setClarifierCard(data.clarifier);
+        saveJournalEntry({
+          ...readingSuccess,
+          clarifier: data.clarifier,
+        });
       } else {
         // Fallback contextual
         const usedIds = new Set(drawnCards.map((c) => c.card.id));
@@ -1028,6 +1033,10 @@ export default function KetQuaPage() {
           starsSpent: 5,
         };
         setClarifierCard(fallback);
+        saveJournalEntry({
+          ...readingSuccess,
+          clarifier: fallback,
+        });
       }
     } catch {
       const usedIds = new Set(drawnCards.map((c) => c.card.id));

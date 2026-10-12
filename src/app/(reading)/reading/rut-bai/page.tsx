@@ -9,6 +9,7 @@ import { Sparkles, Wand2 } from 'lucide-react';
 import { TactileArcFan } from '@/components/TactileArcFan';
 import HamsterLoader from '@/components/HamsterLoader';
 import { useQuotaSync } from '@/lib/use-quota';
+import { saveJournalEntry } from '@/lib/journal-store';
 import type { ReadingApiResponse } from '@/lib/api-types';
 
 export default function RutBaiPage() {
@@ -141,6 +142,7 @@ export default function RutBaiPage() {
 
       if (data.status === 'ok') {
         if (data.quota) updateQuota(data.quota);
+        saveJournalEntry(data);
         setReadingSuccess(data);
         router.push('/reading/ket-qua');
       } else if (data.status === 'crisis') {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GEMINI_MODEL_CHAIN, getValidGeminiApiKeys } from '@/lib/ai-provider';
 import { checkSupabaseHealth } from '@/lib/supabase-hybrid';
+import { getPayOsConfig } from '@/lib/payos';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,11 +19,19 @@ export interface HealthResponse {
     tablesReady: boolean;
     missingTables: string[];
   };
+  payos: {
+    configured: boolean;
+    hasClientId: boolean;
+    clientIdPrefix: string;
+    hasApiKey: boolean;
+    hasChecksumKey: boolean;
+  };
 }
 
 export async function GET() {
   const keys = getValidGeminiApiKeys();
   const supabaseHealth = await checkSupabaseHealth();
+  const payosConfig = getPayOsConfig();
 
   const responseBody: HealthResponse = {
     status: 'ok',
@@ -37,6 +46,13 @@ export async function GET() {
       connected: supabaseHealth.connected,
       tablesReady: supabaseHealth.tablesReady,
       missingTables: supabaseHealth.missingTables,
+    },
+    payos: {
+      configured: payosConfig.isConfigured,
+      hasClientId: Boolean(payosConfig.clientId),
+      clientIdPrefix: payosConfig.clientId ? `${payosConfig.clientId.slice(0, 4)}...` : '',
+      hasApiKey: Boolean(payosConfig.apiKey),
+      hasChecksumKey: Boolean(payosConfig.checksumKey),
     },
   };
 

@@ -15,7 +15,7 @@ import {
   type StoredTransaction,
 } from '@/lib/quota-store';
 import { classifyAgeTier } from '@/lib/safety';
-import { createPayOsPaymentLink, isPayOsConfigured } from '@/lib/payos';
+import { createPayOsPaymentLink, isPayOsConfigured, getPayOsConfig } from '@/lib/payos';
 import {
   CURRENT_REFERENCE_YEAR,
   MAX_BIRTH_YEAR,
@@ -235,7 +235,10 @@ export async function POST(request: Request) {
   let checkoutUrl = `https://pay.payos.vn/web/${orderCode.toLowerCase()}`;
   let provider: PaymentOrderPayload['provider'] = 'payos_sandbox';
 
-  if (isPayOsConfigured) {
+  const payosConfig = getPayOsConfig();
+  let payosErrorMessage: string | undefined;
+
+  if (payosConfig.isConfigured) {
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://tarotcouple2007.vercel.app';
       const payosResult = await createPayOsPaymentLink({
@@ -257,15 +260,20 @@ export async function POST(request: Request) {
         provider = 'payos';
         checkoutUrl = payosResult.checkoutUrl || checkoutUrl;
         qrDataText = payosResult.qrCode;
-        // If qrCode is raw EMVCo string, encode to VietQR dynamic image URL
-        if (payosResult.qrCode.startsWith('000201')) {
-          vietQrImageUrl = `https://api.vietqr.io/image/970422-0000123456789-compact2.jpg?amount=${pkg.priceVnd}&addInfo=${encodeURIComponent(orderCode)}&accountName=TAROT%20COUPLE`;
+        if (payosResult.vietQrImageUrl) {
+          vietQrImageUrl = payosResult.vietQrImageUrl;
         } else if (payosResult.qrCode.startsWith('http')) {
           vietQrImageUrl = payosResult.qrCode;
+        } else {
+          vietQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(payosResult.qrCode)}&size=360x360`;
         }
+      } else if (payosResult.errorMessage) {
+        payosErrorMessage = payosResult.errorMessage;
+        console.error('[PayOS Live Creation Failed]:', payosResult.errorMessage);
       }
-    } catch (payosErr) {
-      console.warn('[PayOS Live Order Creation Fallback]:', payosErr);
+    } catch (payosErr: any) {
+      payosErrorMessage = payosErr?.message || String(payosErr);
+      console.warn('[PayOS Live Order Creation Exception]:', payosErr);
     }
   }
 
@@ -296,6 +304,8 @@ export async function POST(request: Request) {
       orderStatus: orderPayload.status,
       order: orderPayload,
       quota,
+      isPayOsConfigured: payosConfig.isConfigured,
+      payosError: payosErrorMessage || null,
     },
     { status: 200 }
   );

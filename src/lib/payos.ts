@@ -1,31 +1,88 @@
 import { PayOS } from '@payos/node';
 
 /**
- * PayOS Client Initialization
- * Credentials from process.env:
- * - PAYOS_CLIENT_ID
- * - PAYOS_API_KEY
- * - PAYOS_CHECKSUM_KEY
+ * Robust PayOS Configuration Reader
+ * Resolves credentials from process.env with trim and quote removal:
+ * - PAYOS_CLIENT_ID (or NEXT_PUBLIC_PAYOS_CLIENT_ID / PAYOS_CLIENTID)
+ * - PAYOS_API_KEY (or PAYOS_APIKEY)
+ * - PAYOS_CHECKSUM_KEY (or PAYOS_CHECKSUMKEY / PAYOS_CHECKSUM)
  */
-const clientId = process.env.PAYOS_CLIENT_ID?.trim() || '';
-const apiKey = process.env.PAYOS_API_KEY?.trim() || '';
-const checksumKey = process.env.PAYOS_CHECKSUM_KEY?.trim() || '';
+export function getPayOsConfig() {
+  const clientId = (
+    process.env.PAYOS_CLIENT_ID ||
+    process.env.NEXT_PUBLIC_PAYOS_CLIENT_ID ||
+    process.env.PAYOS_CLIENTID ||
+    ''
+  )
+    .replace(/['"]/g, '')
+    .trim();
 
-export const isPayOsConfigured = Boolean(
-  clientId &&
-    apiKey &&
-    checksumKey &&
-    clientId !== 'your_payos_client_id' &&
-    apiKey !== 'your_payos_api_key'
-);
+  const apiKey = (
+    process.env.PAYOS_API_KEY ||
+    process.env.NEXT_PUBLIC_PAYOS_API_KEY ||
+    process.env.PAYOS_APIKEY ||
+    ''
+  )
+    .replace(/['"]/g, '')
+    .trim();
 
-export const payOSClient = isPayOsConfigured
-  ? new PayOS({
-      clientId,
-      apiKey,
-      checksumKey,
-    })
-  : null;
+  const checksumKey = (
+    process.env.PAYOS_CHECKSUM_KEY ||
+    process.env.NEXT_PUBLIC_PAYOS_CHECKSUM_KEY ||
+    process.env.PAYOS_CHECKSUMKEY ||
+    process.env.PAYOS_CHECKSUM ||
+    ''
+  )
+    .replace(/['"]/g, '')
+    .trim();
+
+  const isConfigured = Boolean(
+    clientId &&
+      apiKey &&
+      checksumKey &&
+      !clientId.toLowerCase().includes('your_payos') &&
+      !apiKey.toLowerCase().includes('your_payos') &&
+      clientId !== 'demo' &&
+      apiKey !== 'demo'
+  );
+
+  return {
+    clientId,
+    apiKey,
+    checksumKey,
+    isConfigured,
+  };
+}
+
+export const isPayOsConfigured = getPayOsConfig().isConfigured;
+
+let cachedClient: PayOS | null = null;
+let lastClientId = '';
+
+export function getPayOsClient(): PayOS | null {
+  const config = getPayOsConfig();
+  if (!config.isConfigured) {
+    return null;
+  }
+
+  if (!cachedClient || lastClientId !== config.clientId) {
+    try {
+      cachedClient = new PayOS({
+        clientId: config.clientId,
+        apiKey: config.apiKey,
+        checksumKey: config.checksumKey,
+      });
+      lastClientId = config.clientId;
+    } catch (initErr) {
+      console.error('[PayOS] Initialization error:', initErr);
+      return null;
+    }
+  }
+
+  return cachedClient;
+}
+
+export const payOSClient = getPayOsClient();
 
 export interface CreatePayOsOrderParams {
   orderCode: number;
@@ -44,9 +101,14 @@ export interface PayOsOrderResult {
   orderCode: number;
   checkoutUrl: string;
   qrCode: string;
+  vietQrImageUrl?: string;
   status: string;
   paymentLinkId?: string;
   isSandbox: boolean;
+  bin?: string;
+  accountNumber?: string;
+  accountName?: string;
+  errorMessage?: string;
 }
 
 /**
@@ -55,31 +117,65 @@ export interface PayOsOrderResult {
 export async function createPayOsPaymentLink(
   params: CreatePayOsOrderParams
 ): Promise<PayOsOrderResult> {
-  if (payOSClient) {
+  const client = getPayOsClient();
+
+  if (client) {
     try {
-      const response = await payOSClient.paymentRequests.create({
+      // PayOS description: max 25 chars, alphanumeric with spaces, no Vietnamese diacritics
+      const safeDescription = (params.description || `TC ${params.orderCode}`)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9 ]/g, '')
+        .trim()
+        .slice(0, 25);
+
+      const response = await client.paymentRequests.create({
         orderCode: params.orderCode,
         amount: params.amount,
-        description: params.description.slice(0, 25), // PayOS max 25 chars description
+        description: safeDescription || `TC ${params.orderCode}`.slice(0, 25),
         returnUrl: params.returnUrl,
         cancelUrl: params.cancelUrl,
         items: params.items,
       });
 
+      // Construct live VietQR image from real PayOS bank account credentials
+      let vietQrImageUrl = '';
+      if (response.bin && response.accountNumber) {
+        const addInfo = encodeURIComponent(safeDescription || `TC ${params.orderCode}`);
+        const accName = encodeURIComponent(response.accountName || 'TAROT COUPLE');
+        vietQrImageUrl = `https://img.vietqr.io/image/${response.bin}-${response.accountNumber}-compact2.png?amount=${params.amount}&addInfo=${addInfo}&accountName=${accName}`;
+      } else if (response.qrCode) {
+        vietQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(response.qrCode)}&size=360x360`;
+      }
+
       return {
         orderCode: response.orderCode,
         checkoutUrl: response.checkoutUrl,
         qrCode: response.qrCode,
+        vietQrImageUrl,
+        bin: response.bin,
+        accountNumber: response.accountNumber,
+        accountName: response.accountName,
         status: response.status || 'PENDING',
         paymentLinkId: response.paymentLinkId,
         isSandbox: false,
       };
-    } catch (err) {
-      console.error('[PayOS] createPaymentLink error, falling back to sandbox VietQR:', err);
+    } catch (err: any) {
+      const errMsg = err?.message || err?.desc || String(err);
+      console.error('[PayOS SDK] createPaymentLink live call failed:', errMsg);
+      // Return error metadata rather than silently fabricating fake account
+      return {
+        orderCode: params.orderCode,
+        checkoutUrl: `https://pay.payos.vn/web/${params.orderCode}`,
+        qrCode: '',
+        status: 'FAILED',
+        isSandbox: true,
+        errorMessage: errMsg,
+      };
     }
   }
 
-  // Resilient Sandbox & VietQR fallback
+  // Resilient Sandbox & VietQR fallback for local test environment
   const addInfo = encodeURIComponent(`TC ${params.orderCode}`);
   const vietQrImageUrl = `https://img.vietqr.io/image/MB-0000123456789-compact2.png?amount=${params.amount}&addInfo=${addInfo}&accountName=TAROT%20COUPLE`;
   const qrDataText = `00020101021238570010A00000072701270006970422011300001234567890208QRIBFTTA5303704540${String(params.amount).length}${params.amount}5802VN62${String(String(params.orderCode).length + 4).padStart(2, '0')}08${String(String(params.orderCode).length).padStart(2, '0')}${params.orderCode}6304`;
@@ -88,6 +184,7 @@ export async function createPayOsPaymentLink(
     orderCode: params.orderCode,
     checkoutUrl: `https://pay.payos.vn/web/${params.orderCode}`,
     qrCode: qrDataText || vietQrImageUrl,
+    vietQrImageUrl,
     status: 'PENDING',
     isSandbox: true,
   };
@@ -106,10 +203,12 @@ export async function verifyPayOsWebhookData(webhookBody: unknown): Promise<{
   }
 
   const payload = webhookBody as Record<string, unknown>;
+  const client = getPayOsClient();
+  const config = getPayOsConfig();
 
-  if (payOSClient && checksumKey) {
+  if (client && config.checksumKey) {
     try {
-      const verifiedData = await payOSClient.webhooks.verify(payload as any);
+      const verifiedData = await client.webhooks.verify(payload as any);
       return { verified: true, data: verifiedData as Record<string, unknown> };
     } catch (err: any) {
       return {

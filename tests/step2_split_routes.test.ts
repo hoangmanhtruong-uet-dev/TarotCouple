@@ -107,4 +107,29 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
     expect(teenPolicy.isKidTeenSafeMode).toBe(true);
     expect(teenPolicy.paymentEnabled).toBe(true);
   });
+
+  it('8. verifies Step 2 (/chu-de and /bo-bai) 3D perspective tilt, GSAP reveal, voice preview, and cursor integration', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const rootDir = process.cwd();
+
+    const chuDeContent = fs.readFileSync(path.join(rootDir, 'src/app/(reading)/reading/chu-de/page.tsx'), 'utf-8');
+    expect(chuDeContent).toContain('gsap');
+    expect(chuDeContent).toContain('CustomCursorFollower');
+    expect(chuDeContent).toContain('READER_TOPIC_PREVIEW');
+    expect(chuDeContent).toContain('data-topic-card');
+    expect(chuDeContent).toContain('ASTRAL_VORTEX_VERTEX_SHADER');
+    expect(chuDeContent).toContain('ASTRAL_VORTEX_FRAGMENT_SHADER');
+    expect(chuDeContent).toContain('InstancedMesh');
+    expect(chuDeContent).toContain('foilGlareRefsMap');
+    expect(chuDeContent).toContain('spreadSlots');
+    expect(chuDeContent).toContain('resonancePct');
+
+    const boBaiContent = fs.readFileSync(path.join(rootDir, 'src/app/(reading)/reading/bo-bai/page.tsx'), 'utf-8');
+    expect(boBaiContent).toContain('gsap');
+    expect(boBaiContent).toContain('CustomCursorFollower');
+    expect(boBaiContent).toContain('data-deck-card');
+    expect(boBaiContent).toContain('perspective(950px)');
+    expect(boBaiContent).not.toContain('backdrop-blur-md');
+  });
 });

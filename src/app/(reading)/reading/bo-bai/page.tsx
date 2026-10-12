@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { gsap } from 'gsap';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useReadingStore } from '@/lib/reading-store';
 import { READERS } from '@/data/tarot-cards';
 import type { DeckMode, ReaderId } from '@/lib/schemas';
@@ -135,6 +137,70 @@ export default function BoBaiSelectionPage() {
   const [isStreakOpen, setIsStreakOpen] = useState(false);
   const [isReferralOpen, setIsReferralOpen] = useState(false);
 
+  const deckCardRefsMap = useRef<Map<string, HTMLElement>>(new Map());
+  const deckIdleRafRef = useRef<number | null>(null);
+  const pointerBridgeRef = useRef({ x: 0, y: 0 });
+
+  // GSAP mount reveal
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (shouldReduceMotion) return;
+    gsap.fromTo(
+      '[data-deck-card]',
+      { opacity: 0, y: 18 },
+      { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }
+    );
+  }, [isHydrated, shouldReduceMotion]);
+
+  // Autonomous mobile idle sway
+  useEffect(() => {
+    const isTouchDevice =
+      typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+    if (!isTouchDevice || shouldReduceMotion) return;
+    const loop = () => {
+      const now = Date.now() / 1000;
+      let i = 0;
+      for (const [, el] of deckCardRefsMap.current) {
+        const rotX = Math.cos(now * 0.9 + i * 1.1) * 3;
+        const rotY = Math.sin(now * 1.2 + i * 0.8) * 4.5;
+        el.style.transform = `perspective(950px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+        i++;
+      }
+      deckIdleRafRef.current = requestAnimationFrame(loop);
+    };
+    deckIdleRafRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (deckIdleRafRef.current !== null) cancelAnimationFrame(deckIdleRafRef.current);
+    };
+  }, [shouldReduceMotion]);
+
+  const handleDeckPointerMove = (e: React.PointerEvent<HTMLElement>, deckId: string) => {
+    const el = deckCardRefsMap.current.get(deckId);
+    if (!el || shouldReduceMotion) return;
+    const rect = el.getBoundingClientRect();
+    const normX = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
+    const normY = Math.max(-1, Math.min(1, -((e.clientY - rect.top) / rect.height) * 2 + 1));
+    pointerBridgeRef.current = { x: normX, y: normY };
+    el.style.transform = `perspective(950px) rotateX(${(normY * 8).toFixed(2)}deg) rotateY(${(normX * 10).toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
+  };
+
+  const handleDeckPointerLeave = (deckId: string) => {
+    const el = deckCardRefsMap.current.get(deckId);
+    if (el) el.style.transform = '';
+    pointerBridgeRef.current = { x: 0, y: 0 };
+  };
+
+  const handleDeckTouchMove = (e: React.TouchEvent<HTMLElement>, deckId: string) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const el = deckCardRefsMap.current.get(deckId);
+    if (!el || shouldReduceMotion) return;
+    const rect = el.getBoundingClientRect();
+    const normX = Math.max(-1, Math.min(1, ((touch.clientX - rect.left) / rect.width) * 2 - 1));
+    const normY = Math.max(-1, Math.min(1, -((touch.clientY - rect.top) / rect.height) * 2 + 1));
+    el.style.transform = `perspective(950px) rotateX(${(normY * 8).toFixed(2)}deg) rotateY(${(normX * 10).toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
+  };
+
   // If server says full deck is locked and user is currently on full_78, fallback to major_22
   useEffect(() => {
     if (quota.canUseFullDeck === false && deckMode === 'full_78') {
@@ -175,6 +241,17 @@ export default function BoBaiSelectionPage() {
       return;
     }
     setContextForm({ deckMode: deckId });
+    // GSAP 3D card flip on select
+    if (!shouldReduceMotion) {
+      const el = deckCardRefsMap.current.get(deckId);
+      if (el) {
+        gsap.fromTo(
+          el,
+          { rotationY: -18, scale: 0.95 },
+          { rotationY: 0, scale: 1, duration: 0.38, ease: 'back.out(1.4)', overwrite: 'auto' }
+        );
+      }
+    }
   };
 
   const handleConfirmUnlock = async () => {
@@ -258,7 +335,7 @@ export default function BoBaiSelectionPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-[#0B0A12]/85 backdrop-blur-sm"
+            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-[#0B0A12]/85"
           >
             <div className="relative text-center">
               {[...Array(24)].map((_, i) => (
@@ -279,8 +356,17 @@ export default function BoBaiSelectionPage() {
                   }}
                 />
               ))}
+              <motion.span
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 }}
+                className="absolute inset-0 flex items-center justify-center font-serif text-sm tracking-widest uppercase animate-pulse"
+                style={{ color: readerAccentColor }}
+              >
+                Xáo Bài Nghi Lễ...
+              </motion.span>
               <span
-                className="text-base font-bold tracking-widest uppercase block animate-pulse"
+                className="text-base font-bold tracking-widest uppercase block animate-pulse opacity-0"
                 style={{ color: readerAccentColor }}
               >
                 Vũ Trụ Đang Xáo Bài...
@@ -351,6 +437,8 @@ export default function BoBaiSelectionPage() {
           return (
             <motion.div
               key={deck.id}
+              data-deck-card
+              ref={(el) => { if (el) deckCardRefsMap.current.set(deck.id, el); }}
               animate={isSelected && !isLocked ? { y: -2 } : { y: 0 }}
               whileHover={shouldReduceMotion ? {} : { scale: 1.015, y: -3 }}
               whileTap={
@@ -361,7 +449,10 @@ export default function BoBaiSelectionPage() {
                   : { scale: 0.985 }
               }
               onClick={() => handleSelectDeck(deck.id)}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
+              onPointerMove={(e) => handleDeckPointerMove(e, deck.id)}
+              onPointerLeave={() => handleDeckPointerLeave(deck.id)}
+              onTouchMove={(e) => handleDeckTouchMove(e, deck.id)}
+              className={`p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden will-change-transform ${
                 isSelected && !isLocked
                   ? 'bg-[#181429] shadow-xl ring-1'
                   : isLocked
@@ -478,7 +569,7 @@ export default function BoBaiSelectionPage() {
       )}
 
       {/* THANH ĐÁY CỐ ĐỊNH */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0D17]/95 border-t border-[#262235] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           {/* Nút phụ: Sửa Nỗi niềm */}
           <button
@@ -522,7 +613,7 @@ export default function BoBaiSelectionPage() {
       ========================================================================== */}
       <AnimatePresence>
         {isUnlockSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80">
             <motion.div
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -674,7 +765,7 @@ export default function BoBaiSelectionPage() {
       ========================================================================== */}
       <AnimatePresence>
         {isOutOfTurnsSheetOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80">
             <motion.div
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -827,6 +918,9 @@ export default function BoBaiSelectionPage() {
         quota={quota}
         onQuotaUpdated={(q) => updateQuota(q)}
       />
+
+      {/* CustomCursorFollower */}
+      <CustomCursorFollower />
     </motion.div>
   );
 }

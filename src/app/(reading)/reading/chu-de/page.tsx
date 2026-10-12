@@ -1,13 +1,27 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { gsap } from 'gsap';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useReadingStore } from '@/lib/reading-store';
 import { classifyAgeTier } from '@/lib/safety';
 import { CURRENT_REFERENCE_YEAR, type TopicId, type ReaderId } from '@/lib/schemas';
 import { READERS } from '@/data/tarot-cards';
+import * as THREE from 'three';
+import {
+  initThreeScene,
+  disposeThreeScene,
+  attachWebGLContextLostGuard,
+} from '@/lib/three/core';
+import {
+  ASTRAL_VORTEX_VERTEX_SHADER,
+  ASTRAL_VORTEX_FRAGMENT_SHADER,
+  createAstralVortexUniforms,
+} from '@/lib/three/shaders';
+import { soundManager } from '@/lib/sound-effects';
 import {
   ArrowLeft,
   Heart,
@@ -18,6 +32,8 @@ import {
   Sun,
   ShieldCheck,
   Check,
+  Flame,
+  Layers,
 } from 'lucide-react';
 
 // Mystical Tarot Card SVG Artworks for each topic (matches reference artwork style)
@@ -294,43 +310,64 @@ function MysticHealthCardArt() {
   );
 }
 
-// Map each TopicId to its Tarot Card display metadata & artwork
+// Map each TopicId to its Tarot Card display metadata, artwork, cosmic resonance & 3-card spread structure
 const TAROT_TOPIC_CONFIG: Record<
   TopicId,
   {
     titleVi: string;
+    roman: string;
     description: string;
+    resonancePct: number;
+    spreadSlots: [string, string, string];
     artwork: React.ComponentType;
   }
 > = {
   love: {
     titleVi: 'TÌNH CẢM',
+    roman: 'I • AMOR',
     description: 'Tình duyên, crush, mập mờ hoặc người thương hiện tại',
+    resonancePct: 96,
+    spreadSlots: ['Tâm Tình Hiện Tại', 'Nút Thắt Tiềm Ẩn', 'Gợi Mở Hướng Đi'],
     artwork: MysticLoveCardArt,
   },
   career: {
     titleVi: 'CÔNG VIỆC',
+    roman: 'II • FATUM',
     description: 'Định hướng sự nghiệp, công việc, tháo gỡ trì hoãn',
+    resonancePct: 92,
+    spreadSlots: ['Thực Trạng Năng Lượng', 'Điểm Mù Cần Tránh', 'Cơ Hội Bứt Phá'],
     artwork: MysticCareerCardArt,
   },
   finance: {
     titleVi: 'TÀI CHÍNH',
+    roman: 'III • OPULENTIA',
     description: 'Dòng tiền tài lộc, cơ hội sắp tới và tích lũy',
+    resonancePct: 89,
+    spreadSlots: ['Dòng Chảy Tiền Bạc', 'Lỗ Hổng Chi Tiêu', 'Tài Vận Sắp Tới'],
     artwork: MysticFinanceCardArt,
   },
   crush_school: {
     titleVi: 'TÌNH BẠN & CRUSH',
+    roman: 'I • AMICITIA',
     description: 'Chuyện bạn bè, crush trường lớp trong sáng',
+    resonancePct: 98,
+    spreadSlots: ['Ánh Nhìn Của Bạn Ấy', 'Hiểu Lầm Tiềm Ẩn', 'Bước Tiến Dễ Thương'],
     artwork: MysticLoveCardArt,
   },
   study: {
     titleVi: 'HỌC TẬP',
+    roman: 'II • DOCTRINA',
     description: 'Thi cử, bài vở, phương pháp học tập bứt phá',
+    resonancePct: 94,
+    spreadSlots: ['Trọng Tâm Bài Vở', 'Áp Lực Cần Tháo', 'Điểm Số Mục Tiêu'],
     artwork: MysticCareerCardArt,
   },
   daily_luck: {
     titleVi: 'VẬN MAY',
+    roman: 'III • FORTUNA',
     description: 'Năng lượng ngày mới, niềm vui và sự tích cực',
+    resonancePct: 95,
+    spreadSlots: ['Năng Lượng Ngày Mới', 'Điềm Lành Vũ Trụ', 'Lời Khuyên Tâm Hồn'],
     artwork: MysticFinanceCardArt,
   },
 };
@@ -361,6 +398,41 @@ const READER_GREETINGS: Record<ReaderId, string> = {
     'Xác định bài toán chính cần giải quyết. Hãy chọn một chủ đề trọng tâm để bắt đầu phân tích.',
   phap_su_toi_co:
     'Vũ trụ đang lắng nghe tần số của bạn. Hãy chọn cánh cổng chủ đề dẫn lối định mệnh...',
+};
+
+const READER_TOPIC_PREVIEW: Record<string, Record<string, string>> = {
+  ba_ngoai: {
+    love: 'Chuyện tình cảm không có đúng sai, bà nghe con nói hết nha.',
+    career: 'Công việc hay mệt lắm, nhưng cứ cố từng bước một đi con.',
+    finance: 'Tiền bạc quan trọng nhưng sức khỏe và niềm vui mới đáng quý.',
+    crush_school: 'Ối giời ơi, cái tuổi này dễ thương lắm! Kể bà nghe đi.',
+    study: 'Học giỏi là tốt, nhưng đừng quên ngủ đủ giấc nghen con.',
+    daily_luck: 'Hôm nay trời thương thì có phước, bà cầu cho con mọi điều tốt.',
+  },
+  chi_dai: {
+    love: 'Tình cảm mà mập mờ là đừng để lâu, chị giúp bóc tách ngay.',
+    career: 'Chị nói thẳng, thị trường không chờ ai cả. Phải ra tay thôi!',
+    finance: 'Tiền không tự nhiên đến, nhưng chị sẽ chỉ em chỗ cần chú ý.',
+    crush_school: 'Crush ở trường hả? Nếu không chủ động thì đừng trách muộn!',
+    study: 'Học không đều sẽ thiệt thòi. Chị mổ xẻ kế hoạch cho em nào.',
+    daily_luck: 'Mỗi ngày là một chiến trận. Đi thôi, chị dẫn đường!',
+  },
+  ban_than: {
+    love: 'Ôi trời, chuyện tình hay thế! Kể hết cho tao nghe với!',
+    career: 'Công việc căng à? Ngồi xuống đây, có tao ở đây rồi.',
+    finance: 'Tiền bạc này nọ bồ đừng lo, tao soi quẻ rồi mình cùng xử.',
+    crush_school: 'Heyyy, crush ở trường! Kể hết đi, tao không kể ai đâu!',
+    study: 'Ôn thi stress ghê ta, nhưng có tao bên cạnh là ổn hà.',
+    daily_luck: 'Tuần mới rồi! Lá bài nói gì hay ho lắm không chịu xem đi!',
+  },
+  thay_cu_meo: {
+    love: 'Tình cảm là bài toán năng lượng. Thầy sẽ phân tích nguyên nhân và kết quả.',
+    career: 'Sự nghiệp cần chiến lược dài hạn. Thầy sẽ chỉ ra điểm mù cần chú ý.',
+    finance: 'Tài chính phản ánh tư duy. Thầy sẽ giúp em nhìn rõ mô hình tiêu dùng.',
+    crush_school: 'Bạn bè và mối quan hệ là lưới xã hội quan trọng. Thầy cùng phân tích.',
+    study: 'Học tập là đầu tư dài hạn cho bản thân. Cùng xây lộ trình tối ưu nhé.',
+    daily_luck: 'Mỗi ngày là cơ hội tích lũy. Thầy sẽ đọc xu hướng năng lượng hôm nay.',
+  },
 };
 
 export default function ChuDeSelectionPage() {
@@ -401,6 +473,244 @@ export default function ChuDeSelectionPage() {
 
   const [tappedTopicId, setTappedTopicId] = useState<TopicId | null>(null);
 
+  const cardRefsMap = useRef<Map<string, HTMLElement>>(new Map());
+  const foilGlareRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const previewTooltipRef = useRef<HTMLDivElement | null>(null);
+  const webglMountRef = useRef<HTMLDivElement | null>(null);
+  const idleRafRef = useRef<number | null>(null);
+  const pointerBridgeRef = useRef({ x: 0, y: 0 });
+  const [transitioning, setTransitioning] = useState(false);
+
+  // Single-Instance Three.js Cosmic Astral Vortex Stage (60 FPS, 1 Single GPU draw call)
+  useEffect(() => {
+    if (shouldReduceMotion) return;
+    const container = webglMountRef.current;
+    if (!container) return;
+
+    const w = container.clientWidth || window.innerWidth || 800;
+    const h = container.clientHeight || window.innerHeight || 900;
+
+    const { scene, camera, renderer, cleanup: detachContextGuard } = initThreeScene(
+      container,
+      {
+        width: w,
+        height: h,
+        alpha: true,
+        antialias: false,
+        maxDpr: 1.25,
+      }
+    );
+
+    camera.position.set(0, 0, 4.2);
+
+    // GLSL Astral Vortex Plane
+    const vortexGeom = new THREE.PlaneGeometry(6.4, 6.4, 28, 28);
+    const vortexUniforms = createAstralVortexUniforms();
+    vortexUniforms.uColorGold.value.set(readerAccentColor);
+    vortexUniforms.uColorViolet.value.set(0x38195a);
+    vortexUniforms.uColorRose.value.set(0xd43f68);
+
+    const vortexMat = new THREE.ShaderMaterial({
+      vertexShader: ASTRAL_VORTEX_VERTEX_SHADER,
+      fragmentShader: ASTRAL_VORTEX_FRAGMENT_SHADER,
+      uniforms: vortexUniforms,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const vortexMesh = new THREE.Mesh(vortexGeom, vortexMat);
+    vortexMesh.position.set(0, 0, -1.2);
+    scene.add(vortexMesh);
+
+    // 64 Floating Sacred Crystals (1 Single GPU Draw Call)
+    const crystalCount = 64;
+    const crystalGeom = new THREE.OctahedronGeometry(0.045, 0);
+    const crystalMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf8f5f0,
+      emissive: new THREE.Color(readerAccentColor),
+      emissiveIntensity: 0.55,
+      metalness: 0.85,
+      roughness: 0.2,
+    });
+    const instancedCrystals = new THREE.InstancedMesh(
+      crystalGeom,
+      crystalMat,
+      crystalCount
+    );
+
+    const dummyObj = new THREE.Object3D();
+    const crystalSeeds = Array.from({ length: crystalCount }, (_, i) => ({
+      angle: (i / crystalCount) * Math.PI * 2,
+      radius: 1.2 + (i % 6) * 0.32,
+      yOffset: (Math.random() - 0.5) * 3.2,
+      speed: 0.25 + (i % 4) * 0.12,
+      scale: 0.45 + (i % 3) * 0.3,
+    }));
+    scene.add(instancedCrystals);
+
+    let isInViewport = true;
+    const observer =
+      typeof IntersectionObserver !== 'undefined'
+        ? new IntersectionObserver(
+            (entries) => {
+              isInViewport = entries[0]?.isIntersecting ?? true;
+            },
+            { threshold: 0.05 }
+          )
+        : null;
+    observer?.observe(container);
+
+    const handleResize = () => {
+      if (!renderer || !container) return;
+      const newW = container.clientWidth || window.innerWidth;
+      const newH = container.clientHeight || window.innerHeight;
+      camera.aspect = newW / newH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newW, newH);
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    let rafId: number | null = null;
+    const clock = new THREE.Clock();
+
+    const animate = () => {
+      rafId = requestAnimationFrame(animate);
+      if (!isInViewport || (typeof document !== 'undefined' && document.hidden)) {
+        return;
+      }
+
+      const elapsed = clock.getElapsedTime();
+      const ptr = pointerBridgeRef.current;
+
+      vortexUniforms.uTime.value = elapsed;
+      vortexUniforms.uMouse.value.lerp(new THREE.Vector2(ptr.x, ptr.y), 0.08);
+
+      for (let i = 0; i < crystalCount; i++) {
+        const seed = crystalSeeds[i]!;
+        const angle = seed.angle + elapsed * seed.speed * 0.35;
+        dummyObj.position.set(
+          Math.cos(angle) * seed.radius + ptr.x * 0.12,
+          seed.yOffset + Math.sin(elapsed * seed.speed + i) * 0.12,
+          Math.sin(angle) * seed.radius * 0.4 - 0.5
+        );
+        dummyObj.rotation.set(elapsed * seed.speed, elapsed * 0.45, angle);
+        dummyObj.scale.setScalar(seed.scale);
+        dummyObj.updateMatrix();
+        instancedCrystals.setMatrixAt(i, dummyObj.matrix);
+      }
+      instancedCrystals.instanceMatrix.needsUpdate = true;
+
+      renderer?.render(scene, camera);
+    };
+
+    animate();
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener('resize', handleResize);
+      detachContextGuard();
+      disposeThreeScene(scene, renderer);
+    };
+  }, [readerAccentColor, shouldReduceMotion]);
+
+  // GSAP mount stagger reveal
+  useEffect(() => {
+    if (shouldReduceMotion) return;
+    gsap.fromTo(
+      '[data-topic-card]',
+      { opacity: 0, y: 22 },
+      { opacity: 1, y: 0, duration: 0.42, stagger: 0.065, ease: 'power3.out' }
+    );
+  }, [shouldReduceMotion]);
+
+  // Autonomous mobile idle sway
+  useEffect(() => {
+    const isTouchDevice =
+      typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+    if (!isTouchDevice || shouldReduceMotion) return;
+    const loop = () => {
+      const now = Date.now();
+      let i = 0;
+      for (const [, el] of cardRefsMap.current) {
+        const rotX = Math.sin(now / 1500 + i * 0.9) * 3.5;
+        const rotY = Math.cos(now / 1200 + i * 0.7) * 4.5;
+        el.style.transform = `perspective(900px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+        i++;
+      }
+      idleRafRef.current = requestAnimationFrame(loop);
+    };
+    idleRafRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (idleRafRef.current !== null) cancelAnimationFrame(idleRafRef.current);
+    };
+  }, [shouldReduceMotion]);
+
+  const handleCardPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLButtonElement>, topId: string) => {
+      const el = cardRefsMap.current.get(topId);
+      if (!el || shouldReduceMotion) return;
+      const rect = el.getBoundingClientRect();
+      const normX = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
+      const normY = Math.max(-1, Math.min(1, -((e.clientY - rect.top) / rect.height) * 2 + 1));
+      pointerBridgeRef.current = { x: normX, y: normY };
+
+      el.style.transform = `perspective(900px) rotateX(${(normY * 11).toFixed(2)}deg) rotateY(${(normX * 13).toFixed(2)}deg) scale3d(1.035, 1.035, 1.035)`;
+
+      const glareEl = foilGlareRefsMap.current.get(topId);
+      if (glareEl) {
+        const pctX = ((normX + 1) * 50).toFixed(1);
+        const pctY = ((1 - normY) * 50).toFixed(1);
+        glareEl.style.opacity = '0.38';
+        glareEl.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${readerAccentColor}99 0%, transparent 65%)`;
+      }
+
+      const preview = READER_TOPIC_PREVIEW[selectedReaderId]?.[topId];
+      if (previewTooltipRef.current && preview) {
+        previewTooltipRef.current.textContent = `\u201c${preview}\u201d`;
+        previewTooltipRef.current.style.opacity = '1';
+        previewTooltipRef.current.style.transform = 'translateY(0px)';
+      }
+    },
+    [shouldReduceMotion, selectedReaderId, readerAccentColor]
+  );
+
+  const handleCardPointerLeave = useCallback((topId: string) => {
+    const el = cardRefsMap.current.get(topId);
+    if (el) el.style.transform = '';
+    const glareEl = foilGlareRefsMap.current.get(topId);
+    if (glareEl) glareEl.style.opacity = '0';
+    pointerBridgeRef.current = { x: 0, y: 0 };
+    if (previewTooltipRef.current) {
+      previewTooltipRef.current.style.opacity = '0';
+      previewTooltipRef.current.style.transform = 'translateY(6px)';
+    }
+  }, []);
+
+  const handleCardTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLButtonElement>, topId: string) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      const el = cardRefsMap.current.get(topId);
+      if (!el || shouldReduceMotion) return;
+      const rect = el.getBoundingClientRect();
+      const normX = Math.max(-1, Math.min(1, ((touch.clientX - rect.left) / rect.width) * 2 - 1));
+      const normY = Math.max(-1, Math.min(1, -((touch.clientY - rect.top) / rect.height) * 2 + 1));
+      pointerBridgeRef.current = { x: normX, y: normY };
+
+      el.style.transform = `perspective(900px) rotateX(${(normY * 11).toFixed(2)}deg) rotateY(${(normX * 13).toFixed(2)}deg) scale3d(1.035, 1.035, 1.035)`;
+
+      const glareEl = foilGlareRefsMap.current.get(topId);
+      if (glareEl) {
+        const pctX = ((normX + 1) * 50).toFixed(1);
+        const pctY = ((1 - normY) * 50).toFixed(1);
+        glareEl.style.opacity = '0.38';
+        glareEl.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${readerAccentColor}99 0%, transparent 65%)`;
+      }
+    },
+    [shouldReduceMotion, readerAccentColor]
+  );
+
   // Typewriter greeting
   const readerGreeting = READER_GREETINGS[selectedReaderId] || READER_GREETINGS.ba_ngoai;
   const [displayedGreeting, setDisplayedGreeting] = useState('');
@@ -439,10 +749,11 @@ export default function ChuDeSelectionPage() {
       }
     }
 
+    setTransitioning(true);
     // Sáng viền 250ms rồi tự động chuyển sang màn kế (2b: nỗi niềm)
     setTimeout(() => {
       router.push('/reading/noi-niem');
-    }, shouldReduceMotion ? 40 : 250);
+    }, shouldReduceMotion ? 40 : 380);
   };
 
   return (
@@ -522,12 +833,22 @@ export default function ChuDeSelectionPage() {
         )}
       </div>
 
+      {/* Single-Instance Three.js Cosmic Astral Vortex Stage (GLSL Shader + 64 InstancedMesh Crystals) */}
+      <div
+        ref={webglMountRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 w-full h-full z-0 opacity-75"
+      />
+
       {/* LƯỚI 2 CỘT: CÁC LÁ BÀI TAROT HUYỀN BÍ (CHUẨN THEO UI THAM KHẢO) */}
-      <div className="grid grid-cols-2 gap-3.5 sm:gap-5 mb-8">
+      <div className="relative z-10 grid grid-cols-2 gap-3.5 sm:gap-5 mb-8">
         {agePolicy.allowedTopics.map((top) => {
           const config = TAROT_TOPIC_CONFIG[top.id] || {
             titleVi: top.label.toUpperCase(),
+            roman: 'I • ARCANA',
             description: top.description,
+            resonancePct: 92,
+            spreadSlots: ['Hiện Tại', 'Trở Ngại', 'Tương Lai'] as [string, string, string],
             artwork: MysticLoveCardArt,
           };
           const ArtworkComp = config.artwork;
@@ -538,25 +859,38 @@ export default function ChuDeSelectionPage() {
             <motion.button
               key={top.id}
               type="button"
+              data-topic-card
+              data-cursor={`CHỌN ${config.titleVi}`}
+              ref={(el) => { if (el) cardRefsMap.current.set(top.id, el); }}
               animate={isTapped ? { scale: 1.03 } : isSelected ? { scale: 1.01 } : { scale: 1 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
               whileHover={shouldReduceMotion ? {} : { scale: 1.02, y: -3 }}
               whileTap={shouldReduceMotion ? {} : { scale: 0.97 }}
               onClick={() => handleSelectTopic(top.id)}
-              className={`group relative text-center rounded-2xl sm:rounded-3xl p-3 sm:p-4.5 border transition-all cursor-pointer flex flex-col justify-between aspect-[9/14] sm:aspect-[9/13.5] overflow-hidden select-none ${
+              onPointerMove={(e) => handleCardPointerMove(e, top.id)}
+              onPointerLeave={() => handleCardPointerLeave(top.id)}
+              onTouchMove={(e) => handleCardTouchMove(e, top.id)}
+              className={`group relative text-center rounded-2xl sm:rounded-3xl p-3 sm:p-4 border transition-all cursor-pointer flex flex-col justify-between aspect-[9/15] sm:aspect-[9/14] overflow-hidden select-none will-change-transform ${
                 isTapped || isSelected
-                  ? 'bg-[#12101E] ring-2'
-                  : 'bg-[#0E0D18] hover:bg-[#131120] border-[#2B263D]'
+                  ? 'bg-[#12101E]/95 ring-2'
+                  : 'bg-[#0E0D18]/90 hover:bg-[#131120] border-[#2B263D]'
               }`}
               style={{
                 borderColor:
                   isTapped || isSelected ? readerAccentColor : '#2B263D',
                 boxShadow:
                   isTapped || isSelected
-                    ? `0 0 30px ${readerAccentColor}40, inset 0 0 25px ${readerAccentColor}18`
-                    : '0 8px 24px rgba(0,0,0,0.45)',
+                    ? `0 0 32px ${readerAccentColor}50, inset 0 0 25px ${readerAccentColor}22`
+                    : '0 8px 24px rgba(0,0,0,0.55)',
               }}
             >
+              {/* Lớp Kim Tuyến Phản Xạ Theo Chuột & Chạm (Holographic Foil Glare) */}
+              <div
+                ref={(el) => { if (el) foilGlareRefsMap.current.set(top.id, el); }}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-30 opacity-0 transition-opacity duration-200"
+              />
+
               {/* Ornate Double Tarot Card Border */}
               <div className="absolute inset-1.5 sm:inset-2.5 rounded-[14px] sm:rounded-[20px] border border-[#C9A24A]/40 pointer-events-none transition-colors group-hover:border-[#C9A24A]/70" />
               <div className="absolute inset-2.5 sm:inset-3.5 rounded-[10px] sm:rounded-[16px] border border-[#C9A24A]/20 pointer-events-none" />
@@ -575,14 +909,26 @@ export default function ChuDeSelectionPage() {
                 ☽
               </div>
 
+              {/* Đầu Thẻ: Số La Mã Huyền Bí & Năng Lượng Vũ Trụ */}
+              <div className="relative z-10 flex items-center justify-between px-2 pt-1 text-[8px] sm:text-[9px] font-bold tracking-[0.16em] uppercase">
+                <span className="text-[#C9A24A]/90">{config.roman}</span>
+                <span
+                  style={{ color: readerAccentColor }}
+                  className="flex items-center gap-0.5"
+                >
+                  <Flame className="w-2.5 h-2.5" />
+                  <span>{config.resonancePct}%</span>
+                </span>
+              </div>
+
               {/* Card Centerpiece Artwork */}
-              <div className="flex-1 w-full flex items-center justify-center p-2 sm:p-3 relative z-10 transition-transform duration-300 group-hover:scale-105">
+              <div className="flex-1 w-full flex items-center justify-center p-2 sm:p-2.5 relative z-10 transition-transform duration-300 group-hover:scale-105">
                 <ArtworkComp />
               </div>
 
-              {/* Card Bottom Title Banner */}
-              <div className="relative z-10 pt-1 pb-1">
-                <div className="flex items-center justify-center gap-1 mb-1">
+              {/* Card Bottom: Tên Chủ Đề + Preview 3 Vị Trí Rút Bài */}
+              <div className="relative z-10 pt-1 pb-1 space-y-1.5">
+                <div className="flex items-center justify-center gap-1">
                   <span className="w-2 h-[1px] bg-[#C9A24A]/40" />
                   <span className="text-[7px] text-[#C9A24A]/60">✧</span>
                   <span className="w-2 h-[1px] bg-[#C9A24A]/40" />
@@ -590,6 +936,14 @@ export default function ChuDeSelectionPage() {
                 <h3 className="font-serif tracking-widest text-xs sm:text-sm md:text-base font-extrabold text-[#C9A24A] uppercase transition-colors group-hover:text-[#F3E5AB]">
                   {config.titleVi}
                 </h3>
+
+                {/* Preview 3 Vị Trí Lá Bài Sẽ Được Trải */}
+                <div className="hidden sm:flex items-center justify-center gap-1 pt-0.5 text-[8px] text-[#9E96B0]">
+                  <Layers className="w-2.5 h-2.5 text-[#C9A24A]" />
+                  <span className="truncate max-w-[130px]">
+                    Trải 3 lá: {config.spreadSlots[0]} &bull; {config.spreadSlots[1]} &bull; {config.spreadSlots[2]}
+                  </span>
+                </div>
               </div>
 
               {/* Active Selection Glow Ring Indicator */}
@@ -597,7 +951,7 @@ export default function ChuDeSelectionPage() {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="absolute top-3.5 right-3.5 z-20 w-5 h-5 rounded-full flex items-center justify-center text-[#0B0A12] font-bold shadow-md"
+                  className="absolute top-3.5 right-3.5 z-40 w-5 h-5 rounded-full flex items-center justify-center text-[#0B0A12] font-bold shadow-md"
                   style={{ backgroundColor: readerAccentColor }}
                 >
                   <Check className="w-3 h-3 stroke-[3]" />
@@ -623,6 +977,56 @@ export default function ChuDeSelectionPage() {
           ✦ Chạm lá bài để mở khóa tâm sự
         </span>
       </div>
+
+      {/* Reader Voice Preview Tooltip */}
+      <div
+        ref={previewTooltipRef}
+        aria-hidden="true"
+        className="fixed bottom-20 left-4 right-4 z-50 pointer-events-none text-center font-serif text-xs italic text-[#E5C687] opacity-0 transition-all duration-200"
+        style={{ transform: 'translateY(6px)' }}
+      />
+
+      {/* Page Transition Dissolve Overlay */}
+      <AnimatePresence>
+        {transitioning && !shouldReduceMotion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.28 }}
+            className="fixed inset-0 z-[9999] pointer-events-none flex items-center justify-center"
+            style={{ background: `radial-gradient(ellipse at center, ${readerAccentColor}15 0%, #0B0A12 72%)` }}
+          >
+            {Array.from({ length: 16 }).map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ x: 0, y: 0, scale: 1, opacity: 0.85 }}
+                animate={{
+                  x: (Math.random() - 0.5) * 280,
+                  y: (Math.random() - 0.5) * 280,
+                  scale: 0,
+                  opacity: 0,
+                }}
+                transition={{ duration: 0.38, ease: 'easeOut', delay: i * 0.014 }}
+                className="absolute w-2 h-2 rounded-full"
+                style={{ backgroundColor: readerAccentColor, boxShadow: `0 0 10px ${readerAccentColor}` }}
+              />
+            ))}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="font-serif text-sm tracking-widest uppercase"
+              style={{ color: readerAccentColor }}
+            >
+              Vũ Trụ Đang Lắng Nghe...
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CustomCursorFollower */}
+      <CustomCursorFollower />
     </motion.div>
   );
 }

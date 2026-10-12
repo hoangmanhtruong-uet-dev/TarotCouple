@@ -10,6 +10,7 @@ import { TactileArcFan } from '@/components/TactileArcFan';
 import HamsterLoader from '@/components/HamsterLoader';
 import { useQuotaSync } from '@/lib/use-quota';
 import { saveJournalEntry } from '@/lib/journal-store';
+import { soundManager } from '@/lib/sound-effects';
 import type { ReadingApiResponse } from '@/lib/api-types';
 
 export default function RutBaiPage() {
@@ -43,10 +44,11 @@ export default function RutBaiPage() {
 
   const chargeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Ritual 3A: Energy Charge with pulse and vibration
+  // Ritual 3A: Energy Charge with pulse, vibration and Web Audio
   const startEnergyCharge = () => {
     if (shuffleStage === 'fan' || isCharging) return;
     setIsCharging(true);
+    soundManager.playBellTone();
 
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate([40, 60, 40, 80, 120]);
@@ -61,6 +63,7 @@ export default function RutBaiPage() {
           if (chargeIntervalRef.current) clearInterval(chargeIntervalRef.current);
           setIsCharging(false);
           setShuffleStage('fan');
+          soundManager.playMysticChime();
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
             navigator.vibrate([90, 50, 140]);
           }

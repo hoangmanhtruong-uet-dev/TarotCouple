@@ -16,6 +16,8 @@ import {
   Compass,
   UserCheck,
   Link2,
+  QrCode,
+  Smartphone,
 } from 'lucide-react';
 import {
   ALL_TAROT_CARDS,
@@ -23,6 +25,7 @@ import {
   READERS,
   TAROT_CARDS_BY_ID,
 } from '@/data/tarot-cards';
+import { soundManager } from '@/lib/sound-effects';
 import {
   classifyAgeTier,
   COUPLE_SPREAD_POSITIONS,
@@ -387,6 +390,7 @@ export function CoupleModeView({
         data?.reading || (data?.drawnCards ? data : undefined);
 
       if (readingPayload) {
+        soundManager.playMysticChime();
         setCoupleReading(readingPayload);
         setFlippedCards([true, true, true]);
         if (data.quota && onQuotaUpdated) {
@@ -404,6 +408,7 @@ export function CoupleModeView({
           questionText: coupleQuestion.trim(),
           deckMode,
         });
+        soundManager.playMysticChime();
         setCoupleReading(fallback);
         setFlippedCards([true, true, true]);
       }
@@ -586,6 +591,7 @@ export function CoupleModeView({
         if (data?.room?.readingResult) {
           readingPayload.result = data.room.readingResult;
         }
+        soundManager.playMysticChime();
         setCoupleReading(readingPayload);
         setFlippedCards([true, true, true]);
         if (data?.quota && onQuotaUpdated) {
@@ -603,6 +609,7 @@ export function CoupleModeView({
             'Trải bài Bói Đôi đồng thuận (Câu hỏi riêng tư của người tạo phòng đã được bảo mật)',
           deckMode,
         });
+        soundManager.playMysticChime();
         setCoupleReading(fallback);
         setFlippedCards([true, true, true]);
       }
@@ -625,18 +632,35 @@ export function CoupleModeView({
     }
   };
 
-  const handleCopyInviteLink = () => {
+  const handleShareInvite = async () => {
     if (!activeRoom) return;
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
         : 'https://tarotcouple.vercel.app';
     const url = `${origin}/?coupleRoom=${activeRoom.roomCode}`;
+    const inviteText = `🔮 ${activeRoom.ownerNickname || 'Người ấy'} vừa mời bạn vào phòng Bói Đôi TarotCouple (${activeRoom.roomCode})! Vào rút 1 lá bài xem độ hợp cạ & giải mã tần số tình yêu giữa 2 đứa nhé 👉 ${url}`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Lời mời Bói Đôi TarotCouple',
+          text: inviteText,
+          url,
+        });
+        setCopiedInvite(true);
+        setTimeout(() => setCopiedInvite(false), 2000);
+        return;
+      } catch {
+        // user cancelled or share failed, fallback to clipboard
+      }
+    }
+
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(url);
+      void navigator.clipboard.writeText(inviteText);
     }
     setCopiedInvite(true);
-    setTimeout(() => setCopiedInvite(false), 2000);
+    setTimeout(() => setCopiedInvite(false), 2500);
   };
 
   if (crisisResponse) {
@@ -981,34 +1005,51 @@ export function CoupleModeView({
                         </h3>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleCopyInviteLink}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 border border-[#F3E5AB] text-xs font-bold text-[#F3E5AB] cursor-pointer"
-                      >
-                        {copiedInvite ? (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                            <span>Đã sao chép link mời!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            <span>
-                              Sao chép link (?coupleRoom={activeRoom.roomCode})
-                            </span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleShareInvite()}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] text-[#09080D] text-xs font-bold shadow-md cursor-pointer hover:brightness-110 transition-all"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          <span>{copiedInvite ? '✓ Đã sao chép lời mời!' : 'Gửi lời mời Zalo / Messenger'}</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-[#09080D]/80 border border-white/10 text-xs text-[#A39BB5] flex items-center gap-2">
+                    {/* QR Code Section: Quét nhanh khi ngồi cạnh nhau */}
+                    <div className="p-4 rounded-2xl bg-[#09080D]/90 border border-[#D4AF37]/40 flex flex-col sm:flex-row items-center gap-4">
+                      <div className="w-28 h-28 p-2 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-lg">
+                        {/* Quick dynamic SVG QR generator image or visual */}
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                            typeof window !== 'undefined'
+                              ? `${window.location.origin}/?coupleRoom=${activeRoom.roomCode}`
+                              : `https://tarotcouple.vercel.app/?coupleRoom=${activeRoom.roomCode}`
+                          )}&color=09080d&bgcolor=ffffff`}
+                          alt={`QR Code phòng ${activeRoom.roomCode}`}
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="space-y-1.5 text-center sm:text-left">
+                        <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-[#F3E5AB]">
+                          <QrCode className="w-4 h-4 text-[#D4AF37]" />
+                          <span>Quét mã QR trực tiếp từ Camera</span>
+                        </div>
+                        <p className="text-xs text-[#9E96B0] leading-relaxed">
+                          Nếu đang ngồi cạnh người ấy, hãy giơ màn hình này để người ấy mở camera quét thẳng vào phòng rút bài!
+                        </p>
+                        <p className="text-[11px] text-[#D4AF37] font-mono">
+                          Link phòng: ?coupleRoom={activeRoom.roomCode}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#09080D]/80 border border-white/10 text-xs text-[#A39BB5] flex items-center gap-2">
                       <Link2 className="w-4 h-4 text-[#D4AF37] shrink-0" />
                       <span>
-                        Link mời hết hạn sau 48 giờ:{' '}
-                        <code className="text-[#F3E5AB]">
-                          ?coupleRoom={activeRoom.roomCode}
-                        </code>
+                        Phòng bảo mật tự động đóng sau 48 giờ. Câu hỏi riêng của bạn không bao giờ hiển thị trên máy người ấy.
                       </span>
                     </div>
 
@@ -1138,47 +1179,79 @@ export function CoupleModeView({
             {/* Dual Meters: Độ Hợp Cạ (%) & Máy Đo Red Flag 🚩 (%) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Compatibility Score Gauge */}
-              <div className="p-5 rounded-2xl bg-[#09080D]/85 border border-emerald-400/40 space-y-2.5">
+              <div className="p-5 rounded-2xl bg-[#09080D]/85 border border-emerald-400/40 space-y-3 relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
                     <Heart className="w-4 h-4 text-emerald-400 fill-emerald-400" />
                     Độ Hợp Cạ Tần Số (Compatibility)
                   </span>
-                  <strong className="font-display text-2xl sm:text-3xl font-bold text-emerald-300">
+                  <motion.strong
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', damping: 12, delay: 0.2 }}
+                    className="font-display text-3xl font-black text-emerald-300 drop-shadow-[0_0_12px_rgba(52,211,153,0.4)]"
+                  >
                     {compatScore}%
-                  </strong>
+                  </motion.strong>
                 </div>
-                <div className="w-full h-3 rounded-full bg-[#171424] overflow-hidden">
+
+                {/* Dynamic Spring Progress Track & Needle Indicator */}
+                <div className="relative w-full h-4 rounded-full bg-[#171424] overflow-hidden p-0.5 border border-white/5">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${compatScore}%` }}
-                    transition={{ duration: 0.8 }}
-                    className="h-full bg-gradient-to-r from-emerald-500 to-[#D4AF37]"
-                  />
+                    transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-[#D4AF37] relative shadow-[0_0_15px_rgba(52,211,153,0.5)]"
+                  >
+                    <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full shadow-[0_0_8px_#ffffff]" />
+                  </motion.div>
                 </div>
+
+                <div className="flex justify-between items-center text-[10px] text-[#A39BB5] pt-0.5">
+                  <span>0% (Khác biệt)</span>
+                  <span className="text-[#F3E5AB] font-bold">50% (Hài hòa)</span>
+                  <span>100% (Tri kỷ)</span>
+                </div>
+
                 <p className="text-[11px] text-[#A39BB5]">
                   Đo độ tương thích năng lượng giữa 2 lá bài đại diện & lá kết nối ({entertainmentNote}).
                 </p>
               </div>
 
               {/* Red Flag Meter */}
-              <div className="p-5 rounded-2xl bg-[#09080D]/85 border border-rose-400/40 space-y-2.5">
+              <div className="p-5 rounded-2xl bg-[#09080D]/85 border border-rose-400/40 space-y-3 relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
                     <span>🚩 Máy Đo Red Flag (Cảnh báo lệch pha)</span>
                   </span>
-                  <strong className="font-display text-2xl sm:text-3xl font-bold text-rose-300">
+                  <motion.strong
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', damping: 12, delay: 0.3 }}
+                    className="font-display text-3xl font-black text-rose-300 drop-shadow-[0_0_12px_rgba(244,63,94,0.4)]"
+                  >
                     {redFlagLevel}%
-                  </strong>
+                  </motion.strong>
                 </div>
-                <div className="w-full h-3 rounded-full bg-[#171424] overflow-hidden">
+
+                {/* Dynamic Spring Progress Track & Needle Indicator */}
+                <div className="relative w-full h-4 rounded-full bg-[#171424] overflow-hidden p-0.5 border border-white/5">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${redFlagLevel}%` }}
-                    transition={{ duration: 0.8 }}
-                    className="h-full bg-gradient-to-r from-amber-400 to-rose-500"
-                  />
+                    transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
+                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-rose-500 to-red-600 relative shadow-[0_0_15px_rgba(244,63,94,0.5)]"
+                  >
+                    <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-full shadow-[0_0_8px_#ffffff]" />
+                  </motion.div>
                 </div>
+
+                <div className="flex justify-between items-center text-[10px] text-[#A39BB5] pt-0.5">
+                  <span className="text-emerald-400">0% (An toàn)</span>
+                  <span className="text-amber-400 font-bold">40% (Cần lưu tâm)</span>
+                  <span className="text-rose-400">100% (Báo động)</span>
+                </div>
+
                 <p className="text-[11px] text-[#A39BB5]">
                   Phản chiếu điểm mù giao tiếp hoặc kỳ vọng lệch nhau cần tháo gỡ ({entertainmentNote}).
                 </p>

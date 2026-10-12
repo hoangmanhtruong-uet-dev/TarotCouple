@@ -44,6 +44,7 @@ import { READERS } from '@/data/tarot-cards';
 import { getCardTopicInterpretation } from '@/data/topic-interpretations';
 import { useQuotaSync } from '@/lib/use-quota';
 import { saveJournalEntry } from '@/lib/journal-store';
+import { soundManager } from '@/lib/sound-effects';
 import type { ClarifierCardPayload, DrawnCardClientPayload } from '@/lib/api-types';
 import type { ReadingOutput, CardAnalysis } from '@/lib/schemas';
 
@@ -135,7 +136,10 @@ function CardSpotlightView({
   // Auto-flip sau 800ms để tạo nghi thức mở bài
   useEffect(() => {
     if (phase === 'intro') {
-      const t = setTimeout(() => setFlipped(true), shouldReduceMotion ? 100 : 800);
+      const t = setTimeout(() => {
+        soundManager.playCardFlip();
+        setFlipped(true);
+      }, shouldReduceMotion ? 100 : 800);
       return () => clearTimeout(t);
     }
   }, [phase, shouldReduceMotion]);
@@ -1013,6 +1017,7 @@ export default function KetQuaPage() {
       const data = await res.json();
       if (data?.clarifier) {
         if (data.quota) updateQuota(data.quota);
+        soundManager.playMysticChime();
         setClarifierCard(data.clarifier);
         saveJournalEntry({
           ...readingSuccess,
@@ -1032,6 +1037,7 @@ export default function KetQuaPage() {
           savageQuote: chosen.savage_hook_up,
           starsSpent: 5,
         };
+        soundManager.playMysticChime();
         setClarifierCard(fallback);
         saveJournalEntry({
           ...readingSuccess,

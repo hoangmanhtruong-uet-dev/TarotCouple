@@ -4,8 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, Star } from 'lucide-react';
+import { Sparkles, Star, Volume2, VolumeX } from 'lucide-react';
 import { useQuotaSync } from '@/lib/use-quota';
+import { soundManager } from '@/lib/sound-effects';
 
 interface CleanHeaderProps {
   starsBalance?: number;
@@ -25,6 +26,16 @@ export default function CleanHeader({
   // Flash highlight effect when stars balance increases/changes
   const [isStarGlowing, setIsStarGlowing] = useState(false);
   const [prevStars, setPrevStars] = useState(effectiveStars);
+  const [isSoundOn, setIsSoundOn] = useState(true);
+
+  useEffect(() => {
+    setIsSoundOn(soundManager.isEnabled());
+  }, []);
+
+  const handleToggleSound = () => {
+    const next = soundManager.toggle();
+    setIsSoundOn(next);
+  };
 
   useEffect(() => {
     if (effectiveStars !== prevStars) {
@@ -56,8 +67,23 @@ export default function CleanHeader({
           </div>
         </Link>
 
-        {/* 2 Chips: Ví Sao & Lượt (Clicks redirect to /me) */}
+        {/* Action Controls: Nút Âm thanh + Ví Sao & Lượt */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Sound Toggle Button */}
+          <button
+            type="button"
+            onClick={handleToggleSound}
+            aria-label={isSoundOn ? 'Tắt âm thanh nghi thức' : 'Bật âm thanh nghi thức'}
+            title={isSoundOn ? 'Âm thanh: Đang bật' : 'Âm thanh: Đang tắt'}
+            className="w-8 h-8 rounded-full bg-[#14121F] hover:bg-[#1D192C] border border-[#D9B36A]/30 text-[#D9B36A] flex items-center justify-center transition-all cursor-pointer hover:border-[#D9B36A]"
+          >
+            {isSoundOn ? (
+              <Volume2 className="w-4 h-4 text-[#D9B36A]" />
+            ) : (
+              <VolumeX className="w-4 h-4 text-[#9E96B0]" />
+            )}
+          </button>
+
           <Link
             href="/me"
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer shadow-sm ${

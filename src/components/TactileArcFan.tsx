@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import { soundManager } from '@/lib/sound-effects';
 
 interface TactileArcFanProps {
   totalCards: number;
@@ -41,6 +42,11 @@ export function TactileArcFan({
           return (
             <motion.div
               key={cardIndex}
+              onMouseEnter={() => {
+                if (!isSelected && !disabled) {
+                  soundManager.playCardSlide();
+                }
+              }}
               whileHover={
                 shouldReduceMotion || isSelected || disabled
                   ? {}
@@ -53,6 +59,7 @@ export function TactileArcFan({
               }
               onClick={() => {
                 if (!isSelected && !disabled && selectedIndices.length < 3) {
+                  soundManager.playCardFlip();
                   onPickCard(cardIndex);
                 }
               }}

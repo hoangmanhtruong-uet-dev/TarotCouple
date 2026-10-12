@@ -161,6 +161,7 @@ export interface StoredCoupleRoom {
   };
   ownerConsentedShare: boolean;
   partnerNickname?: string;
+  partnerBirthYear?: number;
   partnerCard?: {
     card: TarotCard;
     reversed: boolean;
@@ -677,10 +678,12 @@ export function saveCoupleRoom(room: StoredCoupleRoom): CoupleRoomPublicView {
     partnerBirthYear: room.partnerBirthYear,
     partnerCardId: room.partnerCard?.card?.id,
     partnerReversed: room.partnerCard?.reversed,
+    bridgeCardId: room.connectionCard?.card?.id,
+    bridgeReversed: room.connectionCard?.reversed,
     readerId: room.readerId,
     status: room.status,
-    compatibilityScore: room.readingResult?.couple_metrics?.compatibility_score,
-    redFlagLevel: room.readingResult?.couple_metrics?.red_flag_level,
+    compatibilityScore: room.readingResult?.metrics?.compatibility_score,
+    redFlagLevel: room.readingResult?.metrics?.red_flag_level,
     fullReading: room.fullReading ?? room.readingResult,
     expiresAt: room.expiresAt,
   });

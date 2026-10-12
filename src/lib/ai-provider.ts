@@ -1072,10 +1072,11 @@ function sanitizeRawModelOutput(raw: unknown): unknown {
       return item;
     });
 
+    const normalizedAnalyses = [...rawAnalyses];
     // If fewer than 3 cards, pad to 3
-    while (clone.cards_analysis.length < 3) {
-      const idx = clone.cards_analysis.length;
-      clone.cards_analysis.push({
+    while (normalizedAnalyses.length < 3) {
+      const idx = normalizedAnalyses.length;
+      normalizedAnalyses.push({
         position_index: idx,
         position_label: `Lá số ${idx + 1}`,
         card_id: idx,
@@ -1086,6 +1087,7 @@ function sanitizeRawModelOutput(raw: unknown): unknown {
         energy_keyword: `Thông điệp dẫn lối (${idx + 1})`,
       });
     }
+    clone.cards_analysis = normalizedAnalyses;
   }
 
   // Ensure overall strings satisfy schema lengths

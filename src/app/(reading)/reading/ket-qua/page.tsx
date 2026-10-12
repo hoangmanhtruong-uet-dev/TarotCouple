@@ -363,9 +363,14 @@ function CardSpotlightView({
           transition={{ duration: 0.4 }}
           className="p-5 sm:p-6 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
         >
-          <p className="text-xs font-bold text-[#C9A24A] uppercase tracking-wider mb-2">
-            Ý nghĩa lá bài
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-[#C9A24A] uppercase tracking-wider">
+              Ý nghĩa lá bài (Chủ đề {topic === 'love' || topic === 'crush_school' ? 'Tình Duyên' : topic === 'career' || topic === 'study' ? 'Công Việc & Học Tập' : 'Tài Chính & Vận May'})
+            </p>
+            <span className="text-[10px] font-bold text-[#E5C687] px-2 py-0.5 rounded-full bg-[#C9A24A]/10 border border-[#C9A24A]/30">
+              Chuẩn 100%
+            </span>
+          </div>
           <p className="text-base text-[#F8F5F0] leading-[1.6]">{coreMeaning}</p>
         </motion.div>
 
@@ -375,15 +380,20 @@ function CardSpotlightView({
           transition={{ duration: 0.4, delay: 0.1 }}
           className="p-5 sm:p-6 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
         >
-          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
-            Luận giải cho bạn
-          </p>
-          <p className="text-base text-[#9E96B0] leading-[1.6] mb-3">{cardAnalysis.interpretation}</p>
-          {specializedAdvice && (
-            <p className="text-sm text-[#E5C687] leading-[1.6] border-t border-[#262235] pt-3 flex items-start gap-2">
-              <span className="font-bold text-amber-400 shrink-0">✦ Lời khuyên:</span>
-              <span>{specializedAdvice}</span>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              Luận giải thấu suốt cho bạn
             </p>
+            <span className="text-[10px] font-semibold text-emerald-400/80">
+              Đối chiếu tâm sự ✦
+            </span>
+          </div>
+          <p className="text-base text-[#D4CEE0] leading-[1.65] mb-3 whitespace-pre-line">{cardAnalysis.interpretation}</p>
+          {specializedAdvice && (
+            <div className="text-sm text-[#E5C687] leading-[1.6] border-t border-[#262235] pt-3 flex items-start gap-2">
+              <span className="font-bold text-amber-400 shrink-0">✦ Lời khuyên hành động:</span>
+              <span>{specializedAdvice}</span>
+            </div>
           )}
         </motion.div>
 
@@ -399,7 +409,7 @@ function CardSpotlightView({
             }}
           >
             <p className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: accentColor }}>
-              {readerName} nói
+              {readerName} bắt vị bạn
             </p>
             <p className="text-sm italic font-serif text-[#E5C687] leading-relaxed">
               &ldquo;{hook}&rdquo;
@@ -422,6 +432,8 @@ function VerdictView({
   setActiveQuoteIdx,
   onContinue,
   onOpenFollowup,
+  questionText,
+  nickname,
 }: {
   drawnCards: [DrawnCardClientPayload, DrawnCardClientPayload, DrawnCardClientPayload];
   result: ReadingOutput;
@@ -431,6 +443,8 @@ function VerdictView({
   setActiveQuoteIdx: (i: 0 | 1 | 2) => void;
   onContinue: () => void;
   onOpenFollowup: () => void;
+  questionText?: string;
+  nickname?: string;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const quotes = result.shareable_card.savage_quotes;
@@ -460,6 +474,17 @@ function VerdictView({
         <p className="text-xs text-[#C9A24A] italic mt-1 font-serif">
           &ldquo;{result.greeting_hook}&rdquo;
         </p>
+
+        {questionText && questionText.trim().length > 3 && (
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#14121F] border border-[#262235] text-left max-w-md">
+            <span className="text-[10px] font-bold text-[#E5C687] shrink-0 uppercase tracking-wider">
+              Tâm sự của {nickname || 'bạn'}:
+            </span>
+            <span className="text-xs text-[#9E96B0] truncate italic">
+              &ldquo;{questionText.trim()}&rdquo;
+            </span>
+          </div>
+        )}
       </motion.div>
 
       {/* 3 mini cards recap */}
@@ -498,10 +523,15 @@ function VerdictView({
         className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#120F1D] border border-[#C9A24A]/40 space-y-4 mb-5 shadow-xl"
       >
         <div>
-          <span className="text-xs font-bold tracking-wider text-[#C9A24A] uppercase block mb-2">
-            CHỐT HẠ TỔNG QUAN
-          </span>
-          <p className="text-base text-[#F8F5F0] leading-[1.6]">{result.overall_verdict}</p>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold tracking-wider text-[#C9A24A] uppercase">
+              CHỐT HẠ TRỰC DIỆN TỔNG QUAN
+            </span>
+            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+              Giải Tỏa Nghi Vấn
+            </span>
+          </div>
+          <p className="text-base text-[#F8F5F0] leading-[1.65] whitespace-pre-line">{result.overall_verdict}</p>
         </div>
 
         <div className="border-t border-[#262235] pt-4">
@@ -1223,6 +1253,8 @@ export default function KetQuaPage() {
             accentColor={accentColor}
             activeQuoteIdx={activeQuoteIdx}
             setActiveQuoteIdx={setActiveQuoteIdx}
+            questionText={readingSuccess.questionText}
+            nickname={readingSuccess.nickname}
             onContinue={() => {
               if (clarifierCard) {
                 setStage('clarifier');

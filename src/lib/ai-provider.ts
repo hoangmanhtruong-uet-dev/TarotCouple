@@ -523,7 +523,7 @@ export function buildResponsibleCliffhangerUpsell(
 }
 
 /**
- * Build individual card analysis for any of the 5 personas
+ * Build individual card analysis for any of the personas
  */
 function buildPersonaCardInterpretation(
   card: DrawnCardWithMeta,
@@ -539,68 +539,83 @@ function buildPersonaCardInterpretation(
   const secondaryKw = activeKeywords.slice(1, 3).join(', ') || 'tự chiêm nghiệm';
 
   const cleanQ = questionText.trim().replace(/[<>]/g, '');
-  const questionSnippet = cleanQ && cleanQ.length > 5
-    ? ` Đối với điều con đang băn khoăn: "${cleanQ.slice(0, 80)}${cleanQ.length > 80 ? '...' : ''}",`
+  const hasQuestion = cleanQ.length > 3;
+  const questionFocus = hasQuestion
+    ? `Xét đúng câu hỏi của ${safeNick} ("${cleanQ.slice(0, 90)}${cleanQ.length > 90 ? '...' : ''}"):`
+    : '';
+
+  // Topic context strictly partitioned
+  let topicContext = '';
+  if (topic === 'love' || topic === 'crush_school') {
+    topicContext = `Về chuyện tình cảm và sự kết nối giữa hai người,`;
+  } else if (topic === 'career' || topic === 'study') {
+    topicContext = `Về mục tiêu học tập, năng lực chuyên môn và lộ trình sự nghiệp,`;
+  } else {
+    topicContext = `Về dòng tiền, quản lý nguồn lực tài chính và vận hội thực tế,`;
+  }
+
+  // Chuyên sâu 100% khớp chủ đề từ dataset tĩnh
+  const topicData = getCardTopicInterpretation(card.id, card.reversed, topic);
+  const effectivePrimaryKw = topicData?.keyword || primaryKw;
+  const specializedDetail = topicData
+    ? `\n\n📌 Trọng tâm: ${topicData.meaning}\n✦ Lời khuyên hành động: ${topicData.advice}`
     : '';
 
   let hook = '';
   let interpretation = '';
 
-  // Nhắc nhở theo chủ đề
-  let topicContext = '';
-  if (topic === 'love' || topic === 'crush_school') {
-    topicContext = `Trong chuyện tình cảm và sự gắn kết với đối phương,`;
-  } else if (topic === 'career' || topic === 'study') {
-    topicContext = `Xét về khía cạnh học tập, công việc và mục tiêu sự nghiệp,`;
-  } else {
-    topicContext = `Nhìn nhận dưới góc độ tài chính, nguồn lực và vận may thực tế,`;
-  }
-
-  // Lấy dữ liệu phân tích chuyên sâu 100% khớp chủ đề từ dataset tĩnh
-  const topicData = getCardTopicInterpretation(card.id, card.reversed, topic);
-  const effectivePrimaryKw = topicData?.keyword || primaryKw;
-  const specializedDetail = topicData ? `\n\n📌 Trọng tâm: ${topicData.meaning}\n✦ Lời khuyên: ${topicData.advice}` : '';
-
-  if (effectivePersona === 'ba_co_mo_hon') {
+  if (effectivePersona === 'ba_ngoai') {
+    hook =
+      (card.reversed ? card.grandma_hook_rev : card.grandma_hook_up) ||
+      `Bà nhìn lá bài này là thấy con vừa trải qua nhiều trăn trở, nhưng đừng lo quá nghe con.`;
+    interpretation = `Ở vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) mang từ khóa "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} năng lượng của ${secondaryKw} nhắc ${safeNick} hãy nhẹ nhàng với chính mình. Đừng để nỗi bận tâm này làm con mất ăn mất ngủ; cái gì thuộc về con thì sớm muộn cũng sẽ an bài tốt đẹp.${specializedDetail}`;
+  } else if (effectivePersona === 'chi_dai') {
     hook =
       (card.reversed ? card.savage_hook_rev : card.savage_hook_up) ||
-      `Lá bài đang réo tên thói quen suy nghĩ vòng vo của con đó!`;
-
+      `Chị nói thẳng, năng lượng lá này đang bắt bài ngay thói quen lưỡng lự của cưng đó!`;
+    interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) bật tín hiệu "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} từ khóa ${secondaryKw} chỉ rõ cưng đang tự vẽ kịch bản quá nhiều thay vì đối mặt với sự thật. Dứt khoát lên, rõ ràng ngay từ đầu thì không ai làm cưng tổn thương được!${specializedDetail}`;
+  } else if (effectivePersona === 'ban_than') {
+    hook =
+      (card.reversed ? card.savage_hook_rev : card.savage_hook_up) ||
+      `Trời ơi nhìn lá này là tao hiểu liền tại sao bồ lại suy nghĩ nhiều như vậy rồi!`;
+    interpretation = `Ở vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) hiện lên với từ khóa "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} năng lượng của ${secondaryKw} cho thấy bồ đang ôm đồm cảm xúc một mình. Đừng overthinking nữa, nhìn thẳng vào thực tế rồi cùng tao tháo gỡ từng chút một nhé!${specializedDetail}`;
+  } else if (effectivePersona === 'thay_cu_meo') {
+    hook =
+      (card.reversed ? card.ceo_hook_rev : card.ceo_hook_up) ||
+      `Thầy nhận thấy một quy luật nhân quả rõ rệt đang vận hành qua lá bài này.`;
+    interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) phản chiếu từ khóa "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} sự kết hợp với ${secondaryKw} đặt ra một câu hỏi cốt lõi: Bạn đang phản ứng dựa trên nỗi sợ hay dựa trên giá trị thật của bản thân? Hãy điềm tĩnh quan sát thay vì vội vàng kết luận.${specializedDetail}`;
+  } else if (effectivePersona === 'ba_co_mo_hon') {
+    hook =
+      (card.reversed ? card.savage_hook_rev : card.savage_hook_up) ||
+      `Lá bài đang réo tên thói quen suy nghĩ vòng vo tự lừa mình của con đó!`;
     if (topic === 'love' || topic === 'crush_school') {
-      interpretation = `Ở vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) hiện lên với từ khóa "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} năng lượng của ${secondaryKw} cho thấy con đang để cảm xúc và kỳ vọng lấn át thực tế. Nếu người ta đã phát tín hiệu mập mờ thì đừng tự biên tự diễn kịch bản ngôn tình lúc nửa đêm nữa, nhìn thẳng vào cách đối phương đối xử với con ngoài đời thực đi!${specializedDetail}`;
+      interpretation = `Ở vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) hiện lên với từ khóa "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} năng lượng của ${secondaryKw} cho thấy con đang để kỳ vọng che mờ mắt. Người ta đã phát tín hiệu mập mờ cờ đỏ thì đừng tự biên kịch bản cứu rỗi lúc 2h sáng nữa, thức tỉnh đi con!${specializedDetail}`;
     } else if (topic === 'career' || topic === 'study') {
-      interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) mang từ khóa "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} năng lượng của ${secondaryKw} chỉ rõ điểm nghẽn nằm ở sự trì hoãn hoặc ôm đồm. Muốn bứt phá KPI hay điểm số thì phải lập kế hoạch hành động cụ thể, bớt ngồi lo xa mà bắt tay vào làm ngay đi con!${specializedDetail}`;
+      interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) mang từ khóa "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} năng lượng của ${secondaryKw} chỉ rõ điểm nghẽn là trì hoãn và sợ bước ra ngoài. Muốn bứt phá thì lập to-do list rồi làm ngay, đừng ngồi than thân trách phận nữa!${specializedDetail}`;
     } else {
-      interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) mang từ khóa "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} năng lượng của ${secondaryKw} nhắc nhở ${safeNick} phải quản lý dòng tiền chặt chẽ hơn. Đừng để cảm xúc bốc đồng làm hao hụt ngân sách, hãy tập trung vào các cơ hội thực tế mang lại giá trị bền vững.${specializedDetail}`;
+      interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) mang từ khóa "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} năng lượng của ${secondaryKw} nhắc ${safeNick} quản lý dòng tiền có kỷ luật hơn, cắt bỏ chi tiêu cảm xúc bốc đồng.${specializedDetail}`;
     }
   } else if (effectivePersona === 'ba_ngoai_vui_tinh') {
     hook =
       (card.reversed ? card.grandma_hook_rev : card.grandma_hook_up) ||
-      `Bà Ngoại nhìn lá bài này là thấy cháu cưng đang cố gắng rất nhiều nhưng đôi lúc hơi lo xa một xíu nè.`;
-    interpretation = `Tại góc "${card.position_label}", lá ${card.name_vi} (${orientText}) mang thông điệp về "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} với tinh thần ${secondaryKw}, Bà Ngoại tin rằng chỉ cần cháu giữ sự tự tin, vui vẻ sẻ chia cùng bạn bè và kiên trì từng bước nhỏ thì mọi mục tiêu học tập hay chuyện trường lớp đều sẽ thuận buồm xuôi gió cả thôi!${specializedDetail}`;
+      `Bà Ngoại nhìn lá bài này là thấy cháu cưng đang cố gắng nhiều lắm nè.`;
+    interpretation = `Tại góc "${card.position_label}", lá ${card.name_vi} (${orientText}) mang thông điệp "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} với tinh thần ${secondaryKw}, Bà Ngoại tin cháu cứ tự tin, chia sẻ cùng bạn bè và kiên trì từng bước thì việc gì cũng thành công!${specializedDetail}`;
   } else if (effectivePersona === 'tong_tai_ly_tri') {
     hook =
       (card.reversed ? card.ceo_hook_rev : card.ceo_hook_up) ||
-      `Dữ liệu hành vi từ lá bài chỉ ra điểm nghẽn nằm ở cách phân bổ nguồn lực và kỳ vọng.`;
-
-    if (topic === 'love' || topic === 'crush_school') {
-      interpretation = `Tại hạng mục "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) đại diện cho biến số "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} xét trên góc độ ROI cảm xúc và ${secondaryKw}, ${safeNick} cần phân biệt rành mạch giữa cảm xúc nhất thời và cam kết thực tế để không đầu tư thời gian vào một mối quan hệ thiếu rõ ràng.${specializedDetail}`;
-    } else if (topic === 'career' || topic === 'study') {
-      interpretation = `Tại hạng mục "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) đại diện cho biến số "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} phân tích SWOT cho thấy bạn đang có lợi thế cạnh tranh với ${secondaryKw}. Hãy loại bỏ các công việc kém hiệu quả, tối ưu hóa quy trình và tập trung 100% nguồn lực vào mục tiêu cốt lõi.${specializedDetail}`;
-    } else {
-      interpretation = `Tại hạng mục "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) đại diện cho biến số "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} biến số ${secondaryKw} đòi hỏi bạn phải kiểm soát rủi ro dòng tiền và tối ưu hóa danh mục chi tiêu, không để cảm xúc chi phối các quyết định tài chính lớn.${specializedDetail}`;
-    }
+      `Dữ liệu hành vi từ lá bài chỉ ra điểm nghẽn nằm ở cách phân bổ nguồn lực.`;
+    interpretation = `Tại hạng mục "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) đại diện cho biến số "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} xét trên góc độ ROI và ${secondaryKw}, ${safeNick} cần phân loại rành mạch giữa cảm xúc nhất thời và dữ liệu thực tế để ra quyết định dứt khoát.${specializedDetail}`;
   } else if (effectivePersona === 'phap_su_toi_co') {
     hook =
       (card.reversed ? card.mystic_hook_rev : card.mystic_hook_up) ||
-      `Bánh xe Tinh Hà đang xoay chuyển tần số rung động để đánh thức bài học nội tâm của lữ khách.`;
-    interpretation = `Ở cung vị "${card.position_label}", cổ bài ${card.name_vi} (${card.name_en} - ${orientText}) khắc họa tần số của "${effectivePrimaryKw}". ${hook}${questionSnippet} ${topicContext} sợi chỉ nhân quả gắn liền với ${secondaryKw} nhắc nhở ${safeNick} rằng ngoại cảnh chỉ là tấm gương phản chiếu trạng thái tâm thức. Khi ngươi thấu suốt bài học này, con đường sáng sẽ tự mở lối.${specializedDetail}`;
+      `Bánh xe Tinh Hà đang xoay chuyển tần số rung động để soi sáng bài học nội tâm.`;
+    interpretation = `Ở cung vị "${card.position_label}", cổ bài ${card.name_vi} (${card.name_en} - ${orientText}) khắc họa tần số của "${effectivePrimaryKw}". ${hook} ${questionFocus} ${topicContext} sợi chỉ nhân quả gắn liền với ${secondaryKw} nhắc ${safeNick} rằng khi tâm thức ngươi thông suốt, nút thắt ắt tự cởi bỏ.${specializedDetail}`;
   } else {
     // tien_tu_chua_lanh
     hook =
       (card.reversed ? card.healing_hook_rev : card.healing_hook_up) ||
-      `Năng lượng dịu lành của lá bài mời gọi bạn lắng nghe cảm xúc thật bên trong mình.`;
-    interpretation = `Tại vị trí "${card.position_label}", sự xuất hiện của lá ${card.name_vi} (${card.name_en} - ${orientText}) mang theo tần số của "${effectivePrimaryKw}" và ${secondaryKw}. ${hook}${questionSnippet} ${topicContext} hãy cho phép bản thân đón nhận giai đoạn này bằng sự dịu dàng, lắng nghe nhịp thở của trái tim và yêu thương chính mình nhiều hơn.${specializedDetail}`;
+      `Năng lượng dịu lành của lá bài mời gọi bạn lắng nghe cảm xúc thật bên trong.`;
+    interpretation = `Tại vị trí "${card.position_label}", lá ${card.name_vi} (${card.name_en} - ${orientText}) mang theo tần số "${effectivePrimaryKw}" và ${secondaryKw}. ${hook} ${questionFocus} ${topicContext} hãy cho phép bản thân đón nhận giai đoạn này bằng sự thấu hiểu và yêu thương chính mình nhiều hơn.${specializedDetail}`;
   }
 
   return {
@@ -629,6 +644,11 @@ export function buildContextualFallbackReading(
 
   const scan = scanCrisisAndInjection(params.questionText);
   const safeNick = params.nickname.trim().slice(0, 35) || 'Bạn nhỏ';
+  const cleanQ = params.questionText.trim().replace(/[<>]/g, '');
+  const hasSpecificQuestion = cleanQ.length > 5;
+  const questionFocusSnippet = hasSpecificQuestion
+    ? `về băn khoăn "${cleanQ.slice(0, 70)}${cleanQ.length > 70 ? '...' : ''}"`
+    : 'trong trải bài hôm nay';
 
   const cards: [DrawnCardWithMeta, DrawnCardWithMeta, DrawnCardWithMeta] = [
     normalizeDrawnCard(params.drawnCards[0], 0, params.topic),
@@ -650,12 +670,80 @@ export function buildContextualFallbackReading(
   let subAdvice = '';
   let luckyItem = '';
 
-  if (effectivePersona === 'ba_co_mo_hon') {
+  if (effectivePersona === 'ba_ngoai') {
+    greetingHook = scan.isPromptInjection
+      ? `Bà Ngoại chào ${safeNick} nhé! Bà chỉ biết nhìn 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} để thương và vỗ về con thôi, con đừng thử thách bà chi nha.`
+      : `Lại đây ngồi với Bà nào ${safeNick}! Nghe con tâm sự ${questionFocusSnippet}, Bà đã rút 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} để trải lòng cùng con đây.`;
+
+    overallVerdict = `Chốt lại cho con nghe này ${safeNick}: Cả 3 lá bài từ "${k1}" qua "${k2}" đến "${k3}" đều cho thấy con đã chịu nhiều ấm ức và lo toan. Đối với điều con đang hỏi, Bà khuyên con đừng nóng vội cưỡng cầu. Mọi chuyện sẽ sáng rõ khi lòng con phẳng lặng trở lại; cái gì thật lòng thì sẽ ở lại, cái gì tạm bợ thì buông tay con mới có bình yên.`;
+
+    actionableNextStep = `Tối nay con nhớ ăn một bữa cơm thật ngon miệng, uống một ly nước ấm và đi ngủ sớm, tạm gác lại mọi suy nghĩ nhé.`;
+
+    quotes = [
+      ensureConciseQuote(`Bà Ngoại thương con nhất, cứ bình yên ăn no ngủ kỹ rồi vạn sự sẽ an.`),
+      ensureConciseQuote(`Lá ${c1.name_vi} nhắc con: Đừng vì mong manh mà trao gửi lòng mình cho người vô tâm.`),
+      ensureConciseQuote(`Trời thương người hiền lành, con cứ giữ tấm lòng thơm thảo rồi phúc phần tự đến.`),
+    ];
+
+    subAdvice = `Lời Bà dặn: Sức khỏe và niềm vui của con mới là điều quý giá nhất trên đời.`;
+    luckyItem = 'Một ly sữa ấm trước khi ngủ & nụ cười thật tươi';
+  } else if (effectivePersona === 'chi_dai') {
+    greetingHook = scan.isPromptInjection
+      ? `Ủa alo ${safeNick}, định chơi chiêu hack não Chị hả? Chị đọc vị người từ trong ra ngoài, ngồi yên nghe giải mã 3 lá ${c1.name_vi}, ${c2.name_vi}, ${c3.name_vi} này đi!`
+      : `Chị nghe hết chuyện của cưng rồi ${safeNick}! Đối với vấn đề ${questionFocusSnippet}, 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} vừa lật lên nói rất rõ sự thật.`;
+
+    overallVerdict = `Chốt hạ dứt khoát cho cưng tỉnh mộng: Năng lượng từ "${k1}" sang "${k2}" rồi đến "${k3}" khẳng định nút thắt nằm ở sự dùng dằng của chính cưng. Nếu người ta đã không coi trọng cưng hoặc cơ hội đó không rõ ràng, việc cưng tiếp tục hạ mình chỉ làm cưng mất giá trị. Hãy dứt khoát, nâng cấp bản thân và lấy lại thế chủ động ngay!`;
+
+    actionableNextStep = `Ngay hôm nay lập tức đặt ra ranh giới rõ ràng, không nhắn tin trước hay nhượng bộ vô điều kiện nữa.`;
+
+    quotes = [
+      ensureConciseQuote(`Chị nói thẳng: Cái gì mập mờ thiếu tôn trọng thì tiễn ngay không cần tiếc!`),
+      ensureConciseQuote(`Lá ${c1.name_vi} cảnh báo: Cưng càng lụy thì đối phương càng coi thường giá trị của cưng.`),
+      ensureConciseQuote(`Đầu tư vào bản thân là thương vụ không bao giờ lỗ vốn, ngẩng cao đầu lên cưng!`),
+    ];
+
+    subAdvice = `Lời Chị Đại: Ranh giới tự trọng cao bao nhiêu, hạnh phúc đến bền bấy nhiêu.`;
+    luckyItem = 'Một thỏi son đỏ tự tin & tinh thần không nhân nhượng';
+  } else if (effectivePersona === 'ban_than') {
+    greetingHook = scan.isPromptInjection
+      ? `Bồ tính hack não đứa bạn thân này hả ${safeNick}? Không có cửa đâu nha, mở mắt ra coi quẻ 3 lá ${c1.name_vi}, ${c2.name_vi}, ${c3.name_vi} tao mới rút nè!`
+      : `Tao nghe trọn nỗi niềm ${questionFocusSnippet} của mày rồi ${safeNick} ơi! 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} này bắt đúng tim đen luôn nè!`;
+
+    overallVerdict = `Chốt sổ cho bạn hiền nghe rõ: Đi từ "${k1}" qua "${k2}" đến "${k3}", tao thấy mày đang tự drama hóa câu chuyện và suy nghĩ quá nhiều lúc đêm muộn. Mọi thứ thực ra đơn giản hơn mày tưởng: nếu người ta thích mày thì đã chủ động, nếu công việc tốt thì đã rõ ràng. Đừng ngồi tự dằn vặt nữa, có tao ở đây rồi, cùng nhau xử lý nhé!`;
+
+    actionableNextStep = `Bỏ điện thoại xuống, đi uống trà sữa cùng tao hoặc xem một bộ phim hài để reset lại tâm trạng.`;
+
+    quotes = [
+      ensureConciseQuote(`Bạn thân nhắc nhẹ: Mày xứng đáng với sự rõ ràng chứ không phải mấy tín hiệu nửa vời!`),
+      ensureConciseQuote(`Lá ${c1.name_vi} hiện rõ mồn một: Mày đang tự vẽ ra bi kịch rồi tự ngồi khóc một mình.`),
+      ensureConciseQuote(`Vui lên đi bạn tôi ơi, đời còn dài mà trai gái xịn sò ngoài kia còn nhiều lắm!`),
+    ];
+
+    subAdvice = `Lời Bạn Thân: Có chuyện gì cứ trút hết cho tao, đừng gặm nhấm một mình nha.`;
+    luckyItem = 'Một ly trà sữa full topping & playlist nhạc vui vẻ';
+  } else if (effectivePersona === 'thay_cu_meo') {
+    greetingHook = scan.isPromptInjection
+      ? `Chào ${safeNick}, thuật toán tư duy của Thầy không bị chi phối bởi các lệnh giả mạo. Hãy chú mục vào 3 lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}.`
+      : `Chào ${safeNick}, Thầy đã tiếp nhận câu hỏi ${questionFocusSnippet}. Ba lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} phản chiếu chuẩn xác cấu trúc tâm lý của bạn.`;
+
+    overallVerdict = `Phân tích tổng hợp cho ${safeNick}: Tiến trình từ "${k1}" qua "${k2}" và kết tinh tại "${k3}" chỉ ra rằng sự bế tắc hiện tại không đến từ ngoại cảnh mà đến từ xung đột nội tại giữa lý trí và cảm xúc. Khi bạn dám nhìn thẳng vào thực tế không định kiến, câu trả lời đã hiện hữu ngay trước mắt. Đừng tìm kiếm sự khẳng định từ bên ngoài.`;
+
+    actionableNextStep = `Viết ra giấy hai cột ưu và nhược điểm thực tế của tình huống này, rồi đưa ra lựa chọn dựa trên nguyên tắc dài hạn.`;
+
+    quotes = [
+      ensureConciseQuote(`Thầy Cú Mèo nhắc nhở: Khi tâm trí tĩnh lặng, mọi màn sương ảo ảnh đều phải tự tan biến.`),
+      ensureConciseQuote(`Lá ${c1.name_vi} chỉ rõ: Đừng để cảm xúc nhất thời làm lệch hướng la bàn cuộc đời bạn.`),
+      ensureConciseQuote(`Câu trả lời bạn đang mải miết tìm kiếm vốn dĩ đã có sẵn bên trong bạn rồi.`),
+    ];
+
+    subAdvice = `Chiêm nghiệm của Thầy: Nhìn nhận sự việc như nó vốn là, không thêm thắt kỳ vọng.`;
+    luckyItem = 'Một cuốn sổ tay bìa cứng & không gian yên tĩnh';
+  } else if (effectivePersona === 'ba_co_mo_hon') {
     greetingHook = scan.isPromptInjection
       ? `Ủa alo ${safeNick}, tính đọc thần chú hack hệ thống của Bà Cố hay gì con? Vũ trụ không nhận lệnh code đâu nha, ngồi im nghe Bà đọc vị 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} vừa rút ra đây này!`
-      : `Ngồi xuống đây uống miếng nước đi ${safeNick}! Mới đọc câu hỏi của con mà bộ bài đã tự động bật chế độ "Check Var Vũ Trụ" với 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} rồi đây!`;
+      : `Ngồi xuống đây uống miếng nước đi ${safeNick}! Mới đọc tâm sự ${questionFocusSnippet} của con mà bộ bài đã tự động bật chế độ "Check Var Vũ Trụ" với 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} rồi đây!`;
 
-    overallVerdict = `Chốt sổ cho ${safeNick} nghe rõ: Tổ hợp 3 lá từ "${k1}" (${c1.name_vi}) sang "${k2}" (${c2.name_vi}) và khép lại ở "${k3}" (${c3.name_vi}) cho thấy nút thắt không nằm ở số phận trêu ngươi, mà nằm ở chỗ con đang để cảm xúc dẫn đường hơi quá đà. Năng lượng hiện tại gợi ý rằng nếu người ta hoặc cơ hội đó thực sự dành cho con, mọi thứ sẽ rõ ràng chứ không bắt con phải đoán mò từng ngày. Quay về đầu tư cho bản thân rực rỡ lên đi con!`;
+    overallVerdict = `Chốt sổ cho ${safeNick} nghe rõ: Tổ hợp 3 lá từ "${k1}" (${c1.name_vi}) sang "${k2}" (${c2.name_vi}) và khép lại ở "${k3}" (${c3.name_vi}) cho thấy nút thắt nằm ở chỗ con đang để cảm xúc dẫn đường hơi quá đà. Đối với chuyện này, nếu người ta hoặc cơ hội đó thực sự dành cho con thì đã rõ ràng chứ không bắt con đoán mò từng ngày. Tỉnh mộng, quay về đầu tư cho bản thân rực rỡ lên đi con!`;
 
     actionableNextStep = `Tối nay tắt điện thoại trước 11h30 đêm, viết ra 3 tiêu chuẩn không nhân nhượng của bản thân và ưu tiên việc của mình trước tiên.`;
 

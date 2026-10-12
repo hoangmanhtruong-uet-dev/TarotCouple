@@ -126,3 +126,149 @@ export async function syncStarTransactionHybrid(
     };
   }
 }
+
+const CANONICAL_DB_READERS = new Set(['ba_ngoai', 'chi_dai', 'ban_than', 'thay_cu_meo']);
+
+function toCanonicalDbReaderId(readerId: string): string {
+  if (CANONICAL_DB_READERS.has(readerId)) return readerId;
+  if (readerId === 'ba_co_mo_hon') return 'chi_dai';
+  if (readerId === 'ba_ngoai_vui_tinh') return 'ba_ngoai';
+  if (readerId === 'tong_tai_ly_tri' || readerId === 'phap_su_toi_co') return 'thay_cu_meo';
+  return 'ban_than';
+}
+
+/**
+ * Non-blocking upsert of user profile and completed reading to Supabase (`public.profiles` + `public.readings`).
+ */
+export async function syncReadingHybrid(params: {
+  readingId: string;
+  userId: string;
+  nickname: string;
+  birthYear: number;
+  ageTier: string;
+  readerId: string;
+  topic: string;
+  deckMode: string;
+  questionText: string;
+  drawnCards: unknown;
+  aiResult: unknown;
+  clarifier?: unknown;
+  followupMessages?: unknown;
+}): Promise<boolean> {
+  const config = getSupabaseConfigStatus();
+  if (!config.enabled || !config.supabaseUrl) return false;
+
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const baseUrl = config.supabaseUrl.replace(/\/$/, '');
+  const headers = {
+    'Content-Type': 'application/json',
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
+    Prefer: 'resolution=merge-duplicates,return=minimal',
+  };
+
+  try {
+    await fetch(`${baseUrl}/rest/v1/profiles`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        id: params.userId,
+        nickname: params.nickname || 'Bạn Ẩn Danh',
+        birth_year: Math.max(1940, Math.min(2026, params.birthYear || 2004)),
+        age_tier: ['kid_teen_10_15', 'youth_16_17', 'adult_18_plus'].includes(params.ageTier)
+          ? params.ageTier
+          : 'adult_18_plus',
+      }),
+    });
+
+    const res = await fetch(`${baseUrl}/rest/v1/readings`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        id: params.readingId,
+        user_id: params.userId,
+        reader_id: toCanonicalDbReaderId(params.readerId),
+        topic: params.topic,
+        deck_mode: params.deckMode === 'full_78' ? 'full_78' : 'major_22',
+        question_text: params.questionText || '',
+        drawn_cards: params.drawnCards ?? [],
+        ai_result: params.aiResult ?? {},
+        clarifier: params.clarifier ?? null,
+        followup_messages: params.followupMessages ?? [],
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Non-blocking upsert of a Couple Room to Supabase (`public.couple_rooms`).
+ */
+export async function syncCoupleRoomHybrid(params: {
+  roomCode: string;
+  ownerId: string;
+  ownerNickname: string;
+  ownerBirthYear: number;
+  ownerQuestionText: string;
+  ownerCardId: number;
+  ownerReversed: boolean;
+  partnerNickname?: string;
+  partnerBirthYear?: number;
+  partnerCardId?: number;
+  partnerReversed?: boolean;
+  bridgeCardId?: number;
+  bridgeReversed?: boolean;
+  readerId: string;
+  status: string;
+  compatibilityScore?: number;
+  redFlagLevel?: number;
+  fullReading?: unknown;
+  expiresAt?: string;
+}): Promise<boolean> {
+  const config = getSupabaseConfigStatus();
+  if (!config.enabled || !config.supabaseUrl) return false;
+
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const baseUrl = config.supabaseUrl.replace(/\/$/, '');
+
+  try {
+    const res = await fetch(`${baseUrl}/rest/v1/couple_rooms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        room_code: params.roomCode,
+        owner_id: params.ownerId,
+        owner_nickname: params.ownerNickname,
+        owner_birth_year: params.ownerBirthYear || 2004,
+        owner_question_text: params.ownerQuestionText || '',
+        owner_card_id: params.ownerCardId,
+        owner_reversed: params.ownerReversed,
+        partner_nickname: params.partnerNickname ?? null,
+        partner_birth_year: params.partnerBirthYear ?? null,
+        partner_card_id: params.partnerCardId ?? null,
+        partner_reversed: params.partnerReversed ?? null,
+        bridge_card_id: params.bridgeCardId ?? null,
+        bridge_reversed: params.bridgeReversed ?? null,
+        reader_id: toCanonicalDbReaderId(params.readerId),
+        status: ['waiting_partner', 'completed', 'expired'].includes(params.status)
+          ? params.status
+          : 'waiting_partner',
+        compatibility_score: params.compatibilityScore ?? null,
+        red_flag_level: params.redFlagLevel ?? null,
+        full_reading: params.fullReading ?? null,
+        ...(params.expiresAt ? { expires_at: params.expiresAt } : {}),
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+

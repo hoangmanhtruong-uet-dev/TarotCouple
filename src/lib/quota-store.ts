@@ -20,6 +20,11 @@ import {
   TAROT_CARDS_BY_ID,
   type TarotCard,
 } from '@/data/tarot-cards';
+import {
+  syncCoupleRoomHybrid,
+  syncReadingHybrid,
+  syncStarTransactionHybrid,
+} from './supabase-hybrid';
 
 export const DEFAULT_DAILY_LIMIT = 3;
 export const FREE_DAILY_READINGS = 3;
@@ -440,7 +445,16 @@ export function getStarsBalance(clientKey: string): number {
  */
 export function addStars(clientKey: string, starsToAdd: number): QuotaStatusPayload {
   const wallet = getOrCreateWalletRecord(clientKey);
-  wallet.starsBalance = Math.max(0, wallet.starsBalance + Math.max(0, Math.floor(starsToAdd)));
+  const delta = Math.max(0, Math.floor(starsToAdd));
+  wallet.starsBalance = Math.max(0, wallet.starsBalance + delta);
+  if (delta > 0) {
+    void syncStarTransactionHybrid({
+      userId: clientKey,
+      deltaStars: delta,
+      reason: 'credit_stars',
+      idempotencyKey: `credit_${clientKey}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    });
+  }
   return getQuotaStatus(clientKey);
 }
 
@@ -466,6 +480,14 @@ export function deductStars(
   }
 
   wallet.starsBalance -= cost;
+  if (cost > 0) {
+    void syncStarTransactionHybrid({
+      userId: clientKey,
+      deltaStars: -cost,
+      reason: 'deduct_stars',
+      idempotencyKey: `deduct_${clientKey}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    });
+  }
   return {
     allowed: true,
     starsBalance: wallet.starsBalance,
@@ -642,6 +664,27 @@ export function saveCoupleRoom(room: StoredCoupleRoom): CoupleRoomPublicView {
   const normalizedCode = room.roomCode.trim().toUpperCase();
   room.roomCode = normalizedCode;
   store.coupleRooms.set(normalizedCode, room);
+
+  void syncCoupleRoomHybrid({
+    roomCode: normalizedCode,
+    ownerId: room.ownerClientKey || 'anon_owner',
+    ownerNickname: room.ownerNickname,
+    ownerBirthYear: room.ownerBirthYear,
+    ownerQuestionText: room.ownerQuestionText,
+    ownerCardId: room.ownerCard?.card?.id ?? 0,
+    ownerReversed: Boolean(room.ownerCard?.reversed),
+    partnerNickname: room.partnerNickname,
+    partnerBirthYear: room.partnerBirthYear,
+    partnerCardId: room.partnerCard?.card?.id,
+    partnerReversed: room.partnerCard?.reversed,
+    readerId: room.readerId,
+    status: room.status,
+    compatibilityScore: room.readingResult?.couple_metrics?.compatibility_score,
+    redFlagLevel: room.readingResult?.couple_metrics?.red_flag_level,
+    fullReading: room.fullReading ?? room.readingResult,
+    expiresAt: room.expiresAt,
+  });
+
   return toPublicCoupleRoomView(room);
 }
 
@@ -980,6 +1023,21 @@ export function cacheReading(reading: ReadingSuccessResponse): void {
     }
   }
   store.readingsCache.set(reading.readingId, reading);
+
+  void syncReadingHybrid({
+    readingId: reading.readingId,
+    userId: `usr_${reading.nickname.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'anon'}_${reading.birthYear}`,
+    nickname: reading.nickname,
+    birthYear: reading.birthYear,
+    ageTier: reading.ageTier,
+    readerId: reading.readerId,
+    topic: reading.topic,
+    deckMode: reading.deckMode || 'major_22',
+    questionText: reading.questionText,
+    drawnCards: reading.drawnCards,
+    aiResult: reading.result,
+    clarifier: reading.clarifier,
+  });
 }
 
 /**

@@ -986,18 +986,25 @@ const GEMINI_RESPONSE_SCHEMA = {
  */
 export function getValidGeminiApiKeys(): string[] {
   const keys: string[] = [];
-  const primary = process.env.GEMINI_API_KEY?.trim();
-  if (primary && isValidKeyString(primary)) {
-    keys.push(primary);
+
+  const addIfValid = (candidate?: string) => {
+    if (!candidate) return;
+    // Support comma or newline separated keys in a single variable
+    const parts = candidate.split(/[\n,]/).map((p) => p.trim());
+    for (const part of parts) {
+      if (part && isValidKeyString(part) && !keys.includes(part)) {
+        keys.push(part);
+      }
+    }
+  };
+
+  addIfValid(process.env.GEMINI_API_KEY);
+  for (let i = 2; i <= 10; i++) {
+    addIfValid(process.env[`GEMINI_API_KEY_${i}`]);
   }
-  const secondary = process.env.GEMINI_API_KEY_2?.trim();
-  if (secondary && isValidKeyString(secondary) && !keys.includes(secondary)) {
-    keys.push(secondary);
-  }
-  const tertiary = process.env.GEMINI_API_KEY_3?.trim();
-  if (tertiary && isValidKeyString(tertiary) && !keys.includes(tertiary)) {
-    keys.push(tertiary);
-  }
+  // Also check GEMINI_API_KEYS (plural) if provided
+  addIfValid(process.env.GEMINI_API_KEYS);
+
   return keys;
 }
 
@@ -1209,6 +1216,7 @@ export async function generateTarotReading(
 
   const candidateModels = [
     process.env.GEMINI_MODEL?.trim(),
+    'gemini-3.8-flash',
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
   ].filter((m): m is string => Boolean(m && m.length > 0));
@@ -1781,12 +1789,22 @@ NHIỆM VỤ CỦA BẠN:
 5. Chỉ trả về trực tiếp đoạn văn bản câu trả lời, KHÔNG thêm định dạng JSON hay tiêu đề thừa.
 `.trim();
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: promptText,
-      });
+      const candidateFollowupModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+      let responseText = '';
+      for (const m of candidateFollowupModels) {
+        try {
+          const res = await ai.models.generateContent({
+            model: m,
+            contents: promptText,
+          });
+          responseText = res.text?.trim() || '';
+          if (responseText) break;
+        } catch {
+          // try next model
+        }
+      }
 
-      const text = response.text?.trim();
+      const text = responseText.trim();
       if (text && text.length > 20) {
         return text;
       }

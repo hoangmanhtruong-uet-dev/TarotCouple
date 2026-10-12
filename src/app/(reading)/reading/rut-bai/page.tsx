@@ -225,7 +225,7 @@ export default function RutBaiPage() {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 18000);
+      const timeoutId = setTimeout(() => controller.abort(), 28000);
 
       const res = await fetch('/api/reading', {
         method: 'POST',
@@ -262,9 +262,10 @@ export default function RutBaiPage() {
         router.push('/reading/ket-qua');
       }
     } catch {
-      setErrorMsg('Mất kết nối mạng tạm thời. Vui lòng bấm thử lại nhé!');
+      setErrorMsg('Mất kết nối mạng tạm thời. Vũ trụ đang lưu giữ lá bài, bạn hãy bấm tiếp tục nhé!');
       setStage('fan');
-      setSelectedFanIndices(selectedFanIndices.slice(0, 2));
+      // Giữ nguyên 3 lá để người dùng không phải chọn lại từ đầu nếu gặp lỗi mạng
+      setSelectedFanIndices(indices);
     }
   };
 

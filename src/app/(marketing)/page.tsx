@@ -168,6 +168,28 @@ export default function MarketingLandingPage() {
       }
     });
 
+    let lastScrollY = window.scrollY;
+    let lastScrollTime = performance.now();
+
+    const handleNativeScroll = () => {
+      const now = performance.now();
+      const dt = Math.max(16, now - lastScrollTime);
+      const currentY = window.scrollY;
+      const maxScroll = Math.max(
+        1,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+      const prog = Math.min(1, Math.max(0, currentY / maxScroll));
+      const vel = ((currentY - lastScrollY) / dt) * 12;
+
+      lastScrollY = currentY;
+      lastScrollTime = now;
+      scrollStateRef.current.progress = prog;
+      scrollStateRef.current.velocity = vel;
+    };
+
+    window.addEventListener('scroll', handleNativeScroll, { passive: true });
+
     const tickerCallback = (time: number) => {
       lenis.raf(time * 1000);
     };
@@ -197,6 +219,7 @@ export default function MarketingLandingPage() {
     }, rootContainerRef);
 
     return () => {
+      window.removeEventListener('scroll', handleNativeScroll);
       ctx.revert();
       gsap.ticker.remove(tickerCallback);
       lenis.destroy();

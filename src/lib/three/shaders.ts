@@ -250,18 +250,23 @@ export const PERSONA_AURA_FRAGMENT_SHADER = /* glsl */ `
     float theta = atan(centered.y, centered.x);
 
     float petals = 4.0 + uPersonaIndex * 2.0;
-    float ringOuter = smoothstep(0.024, 0.0, abs(r - 0.72 - 0.035 * sin(theta * petals + uTime * 0.8)));
-    float ringInner = smoothstep(0.02, 0.0, abs(r - 0.44 + 0.025 * cos(theta * petals - uTime * 0.6)));
+    float ringOuter = smoothstep(0.036, 0.0, abs(r - 0.78 - 0.045 * sin(theta * petals + uTime * 1.1)));
+    float ringMid = smoothstep(0.03, 0.0, abs(r - 0.58 + 0.035 * cos(theta * petals - uTime * 0.9)));
+    float ringInner = smoothstep(0.026, 0.0, abs(r - 0.36 + 0.025 * sin(theta * (petals * 2.0) + uTime * 1.3)));
+
+    // Radial starlight rays visible around card edges on Mobile
+    float starRays = pow(max(0.0, cos(theta * petals + uTime * 0.5)), 6.0) * smoothstep(0.98, 0.35, r) * 0.45;
 
     float mouseDist = length(centered - uMouse);
-    float mouseHalo = exp(-mouseDist * 3.2) * 0.45;
+    float mouseHalo = exp(-mouseDist * 2.8) * 0.62;
 
     float waveMix = smoothstep(-0.1, 0.12, vWave);
-    vec3 auraColor = mix(uSecondaryColor, uAccentColor, waveMix * 0.75 + ringOuter * 0.5);
-    vec3 finalColor = auraColor + uAccentColor * (ringOuter * 0.85 + ringInner * 0.65 + mouseHalo);
+    vec3 auraColor = mix(uSecondaryColor, uAccentColor, waveMix * 0.8 + ringOuter * 0.55);
+    vec3 finalColor = auraColor + uAccentColor * (ringOuter * 1.15 + ringMid * 0.9 + ringInner * 0.75 + starRays + mouseHalo);
 
-    float alpha = smoothstep(1.0, 0.12, r) * (0.26 + ringOuter * 0.48 + ringInner * 0.38 + mouseHalo * 0.45);
-    gl_FragColor = vec4(finalColor, clamp(alpha, 0.0, 0.86));
+    float alpha = smoothstep(1.02, 0.08, r) * (0.38 + ringOuter * 0.55 + ringMid * 0.45 + starRays * 0.5 + mouseHalo * 0.55);
+    gl_FragColor = vec4(finalColor, clamp(alpha, 0.0, 0.92));
   }
 `;
+
 

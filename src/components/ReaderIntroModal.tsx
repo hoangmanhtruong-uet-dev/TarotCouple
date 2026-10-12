@@ -294,20 +294,20 @@ export default function ReaderIntroModal({
     auraPlane.position.set(0, 0.05, -0.55);
     scene.add(auraPlane);
 
-    // 3D PBR Sacred Totem Group (positioned at top-right of the Tarot Portrait Stage)
+    // 3D PBR Sacred Totem Group (positioned prominently in the top pedestal zone above the card)
     const initialTotem = createReaderAltarTotemGroup('ba_ngoai');
-    initialTotem.position.set(0, 0.68, 0.25);
-    initialTotem.scale.setScalar(0.88);
+    initialTotem.position.set(0, 0.84, 0.32);
+    initialTotem.scale.setScalar(0.96);
     scene.add(initialTotem);
     totemGroupRef.current = initialTotem;
 
     // THREE.InstancedMesh: 40 Floating Persona Crystals (1 single GPU draw call)
     const crystalCount = 40;
-    const crystalGeom = new THREE.OctahedronGeometry(0.022, 0);
+    const crystalGeom = new THREE.OctahedronGeometry(0.025, 0);
     const crystalMat = new THREE.MeshPhysicalMaterial({
       color: 0xf8f5f0,
       emissive: 0xd4a853,
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.55,
       metalness: 0.85,
       roughness: 0.18,
     });
@@ -323,7 +323,7 @@ export default function ReaderIntroModal({
       radius: 0.65 + (i % 5) * 0.14,
       yOffset: (Math.random() - 0.5) * 1.5,
       speed: 0.35 + (i % 4) * 0.12,
-      scale: 0.6 + (i % 3) * 0.25,
+      scale: 0.65 + (i % 3) * 0.25,
     }));
     scene.add(instancedCrystals);
 
@@ -347,9 +347,28 @@ export default function ReaderIntroModal({
       const elapsed = clock.getElapsedTime();
       const ptr = pointerBridgeRef.current;
 
+      // Autonomous figure-8 harmonic motion when no mouse/finger is active (vital for Mobile!)
+      const isIdle = Math.abs(ptr.x) < 0.01 && Math.abs(ptr.y) < 0.01;
+      const effX = isIdle ? Math.sin(elapsed * 1.35) * 0.62 : ptr.x;
+      const effY = isIdle ? Math.cos(elapsed * 0.95) * 0.48 : ptr.y;
+
+      // Drive continuous 3D Card Tilt & Foil Glare on Mobile when idle
+      if (isIdle && portraitCardRef.current) {
+        const autoRotY = (effX * 8.5).toFixed(2);
+        const autoRotX = (effY * 6.5).toFixed(2);
+        portraitCardRef.current.style.transform = `perspective(900px) rotateX(${autoRotX}deg) rotateY(${autoRotY}deg)`;
+        if (foilGlareRef.current) {
+          const pctX = ((effX + 1) * 50).toFixed(1);
+          const pctY = ((1 - effY) * 50).toFixed(1);
+          const hexColor = `#${targetAccentColorRef.current.getHexString()}`;
+          foilGlareRef.current.style.opacity = '0.34';
+          foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${hexColor}88 0%, transparent 65%)`;
+        }
+      }
+
       // Smoothly interpolate GLSL shader uniforms & crystal emissive color toward active Reader
       auraUniforms.uTime.value = elapsed;
-      auraUniforms.uMouse.value.lerp(new THREE.Vector2(ptr.x, ptr.y), 0.12);
+      auraUniforms.uMouse.value.lerp(new THREE.Vector2(effX, effY), 0.12);
       auraUniforms.uAccentColor.value.lerp(targetAccentColorRef.current, 0.1);
       auraUniforms.uSecondaryColor.value.lerp(
         targetSecondaryColorRef.current,
@@ -361,19 +380,19 @@ export default function ReaderIntroModal({
       crystalMat.emissive.lerp(targetAccentColorRef.current, 0.1);
 
       if (totemGroupRef.current) {
-        totemGroupRef.current.rotation.y = elapsed * 0.85 + ptr.x * 0.45;
-        totemGroupRef.current.rotation.x = ptr.y * 0.25;
+        totemGroupRef.current.rotation.y = elapsed * 0.95 + effX * 0.55;
+        totemGroupRef.current.rotation.x = effY * 0.28;
         totemGroupRef.current.position.y =
-          0.68 + Math.sin(elapsed * 2.0) * 0.035;
+          0.84 + Math.sin(elapsed * 2.1) * 0.04;
       }
 
       for (let i = 0; i < crystalCount; i++) {
         const seed = crystalSeeds[i]!;
-        const angle = seed.angle + elapsed * seed.speed * 0.4;
+        const angle = seed.angle + elapsed * seed.speed * 0.45;
         dummyObj.position.set(
-          Math.cos(angle) * seed.radius + ptr.x * 0.08,
-          seed.yOffset + Math.sin(elapsed * seed.speed + i) * 0.08,
-          Math.sin(angle) * seed.radius * 0.45 - 0.15
+          Math.cos(angle) * seed.radius + effX * 0.09,
+          seed.yOffset + Math.sin(elapsed * seed.speed + i) * 0.09,
+          Math.sin(angle) * seed.radius * 0.45 - 0.12
         );
         dummyObj.rotation.set(elapsed * seed.speed, elapsed * 0.5, angle);
         dummyObj.scale.setScalar(seed.scale);
@@ -396,7 +415,7 @@ export default function ReaderIntroModal({
     };
   }, [isOpen, shouldReduceMotion]);
 
-  // 2. IN-PLACE READER TOTEM SWAP & GSAP KINETIC CHOREOGRAPHY (< 0.2ms, 0 WebGL Re-init)
+  // 2. IN-PLACE READER TOTEM SWAP & GSAP 3D KINETIC CHOREOGRAPHY (< 0.2ms, 0 WebGL Re-init)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -415,15 +434,30 @@ export default function ReaderIntroModal({
         scene.remove(totemGroupRef.current);
       }
       const nextTotem = createReaderAltarTotemGroup(canonicalId);
-      nextTotem.position.set(0, 0.68, 0.25);
-      nextTotem.scale.setScalar(0.88);
+      nextTotem.position.set(0, 0.84, 0.32);
+      nextTotem.scale.setScalar(0.96);
       scene.add(nextTotem);
       totemGroupRef.current = nextTotem;
     }
 
-    // GSAP Editorial Reveal + Progress Percentage Counter (GPU transform + opacity only)
+    // GSAP 3D Card-Flip + Editorial Reveal + Progress Percentage Counter
     if (!shouldReduceMotion && dossierContentRef.current) {
       const ctx = gsap.context(() => {
+        if (portraitCardRef.current) {
+          gsap.fromTo(
+            portraitCardRef.current,
+            { opacity: 0.35, scale: 0.88, rotationY: -28 },
+            {
+              opacity: 1,
+              scale: 1,
+              rotationY: 0,
+              duration: 0.48,
+              ease: 'back.out(1.4)',
+              overwrite: 'auto',
+            }
+          );
+        }
+
         gsap.fromTo(
           '[data-persona-reveal]',
           { opacity: 0, y: 14 },
@@ -514,42 +548,51 @@ export default function ReaderIntroModal({
     }
   };
 
-  // 5. DIRECT DOM 3D CARD TILT & FOIL GLARE (0 React Re-renders on mousemove)
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  // 5. DIRECT DOM 3D CARD TILT & FOIL GLARE FOR BOTH MOUSE & MOBILE TOUCH-DRAG (0 React Re-renders)
+  const applyTiltFromClientXY = (clientX: number, clientY: number) => {
     const cardEl = portraitCardRef.current;
     if (!cardEl || shouldReduceMotion) return;
 
     const rect = cardEl.getBoundingClientRect();
-    const normX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const normY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    const normX = Math.max(
+      -1,
+      Math.min(1, ((clientX - rect.left) / rect.width) * 2 - 1)
+    );
+    const normY = Math.max(
+      -1,
+      Math.min(1, -((clientY - rect.top) / rect.height) * 2 + 1)
+    );
 
-    pointerBridgeRef.current.x = Math.max(-1, Math.min(1, normX));
-    pointerBridgeRef.current.y = Math.max(-1, Math.min(1, normY));
+    pointerBridgeRef.current.x = normX;
+    pointerBridgeRef.current.y = normY;
 
-    const rotY = normX * 10;
-    const rotX = normY * 8;
+    const rotY = normX * 12;
+    const rotX = normY * 9;
     cardEl.style.transform = `perspective(900px) rotateX(${rotX.toFixed(
       2
-    )}deg) rotateY(${rotY.toFixed(2)}deg) scale3d(1.015, 1.015, 1.015)`;
+    )}deg) rotateY(${rotY.toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
 
     if (foilGlareRef.current) {
       const pctX = ((normX + 1) * 50).toFixed(1);
       const pctY = ((1 - normY) * 50).toFixed(1);
-      foilGlareRef.current.style.opacity = '0.32';
-      foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${reader.accent_color}88 0%, transparent 65%)`;
+      foilGlareRef.current.style.opacity = '0.42';
+      foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${reader.accent_color}99 0%, transparent 65%)`;
     }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    applyTiltFromClientXY(e.clientX, e.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    applyTiltFromClientXY(touch.clientX, touch.clientY);
   };
 
   const handlePointerLeave = () => {
     pointerBridgeRef.current.x = 0;
     pointerBridgeRef.current.y = 0;
-    if (portraitCardRef.current) {
-      portraitCardRef.current.style.transform =
-        'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-    }
-    if (foilGlareRef.current) {
-      foilGlareRef.current.style.opacity = '0';
-    }
   };
 
   if (!isOpen) return null;
@@ -563,7 +606,9 @@ export default function ReaderIntroModal({
       onTouchStart={(e) => {
         touchStartXRef.current = e.touches[0]?.clientX ?? null;
       }}
+      onTouchMove={handleTouchMove}
       onTouchEnd={(e) => {
+        handlePointerLeave();
         if (touchStartXRef.current === null) return;
         const diff =
           touchStartXRef.current -
@@ -669,8 +714,8 @@ export default function ReaderIntroModal({
           ref={dossierContentRef}
           className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center"
         >
-          {/* CỘT TRÁI (5/12): Sân Khấu Three.js Đơn Bản + Lá Bài Tarot Chân Dung 3D Tilt */}
-          <div className="lg:col-span-5 relative flex flex-col items-center justify-center min-h-[290px] sm:min-h-[340px]">
+          {/* CỘT TRÁI (5/12): Sân Khấu Three.js Đơn Bản + Vật Tổ 3D Lộ Rõ Phía Trên Lá Bài Tarot 3D */}
+          <div className="lg:col-span-5 relative flex flex-col items-center justify-end pt-14 sm:pt-16 pb-2 min-h-[330px] sm:min-h-[370px]">
             {/* Single-Instance Three.js WebGL Stage (GLSL Aura + PBR Totem + 40 InstancedMesh Crystals) */}
             <div
               ref={webglMountRef}
@@ -678,22 +723,33 @@ export default function ReaderIntroModal({
               className="pointer-events-none absolute inset-0 w-full h-full z-0"
             />
 
-            {/* Lá Bài Tarot Chân Dung 3D (Direct DOM Perspective Tilt, 0 React re-renders) */}
+            {/* Nhãn Vật Tổ 3D Nổi Phía Trên Đỉnh Sân Khấu (Giúp Mobile nhìn rõ Vật Tổ 3D đang xoay) */}
+            <div className="relative z-10 mb-2 px-3 py-0.5 rounded-full bg-[#09080D]/80 border border-white/15 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 shadow-md">
+              <Sparkles
+                style={{ color: reader.accent_color }}
+                className="w-3 h-3"
+              />
+              <span style={{ color: reader.accent_color }}>
+                {editorialMeta.totemLabel}
+              </span>
+            </div>
+
+            {/* Lá Bài Tarot Chân Dung 3D (Direct DOM Perspective Tilt + Autonomous Mobile Sway) */}
             <div
               ref={portraitCardRef}
               data-cursor="NGHIÊNG 3D"
               onClick={handleNextOrFinish}
               style={{
-                borderColor: `${reader.accent_color}85`,
-                boxShadow: `0 18px 45px rgba(0,0,0,0.75), 0 0 28px ${reader.accent_color}35`,
+                borderColor: `${reader.accent_color}90`,
+                boxShadow: `0 18px 45px rgba(0,0,0,0.75), 0 0 32px ${reader.accent_color}45`,
               }}
-              className="relative z-10 w-48 sm:w-56 aspect-[3/4] rounded-2xl border-2 bg-[#09080D]/90 p-2.5 flex flex-col justify-between overflow-hidden cursor-pointer transition-transform duration-150 ease-out will-change-transform"
+              className="relative z-10 w-44 sm:w-52 aspect-[3/4] rounded-2xl border-2 bg-[#09080D]/72 p-2.5 flex flex-col justify-between overflow-hidden cursor-pointer will-change-transform"
             >
-              {/* Lớp Kim Tuyến Phản Xạ Theo Chuột (Holographic Foil Glare) */}
+              {/* Lớp Kim Tuyến Phản Xạ Theo Chuột & Tự Động Quét Trên Mobile (Holographic Foil Glare) */}
               <div
                 ref={foilGlareRef}
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-20 opacity-0 transition-opacity duration-200"
+                className="pointer-events-none absolute inset-0 z-20 opacity-35 transition-opacity duration-200"
               />
 
               {/* Đầu Lá Bài: Số La Mã & Danh Xưng Arcana */}

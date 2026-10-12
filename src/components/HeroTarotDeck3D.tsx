@@ -424,16 +424,19 @@ export function HeroTarotDeck3D({
     let targetGroupRotY = 0;
     let lastRaycastTime = 0;
 
-    const handlePointerMove = (e: PointerEvent) => {
+    let isPointerActive = false;
+
+    const updateInteractionPoint = (clientX: number, clientY: number) => {
       const rect = renderer!.domElement.getBoundingClientRect();
-      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      isPointerActive = true;
 
       shaderUniforms.uMouse.value.set(pointer.x, pointer.y);
-      targetGroupRotY = pointer.x * 0.22;
-      targetGroupRotX = -pointer.y * 0.14;
+      targetGroupRotY = pointer.x * 0.26;
+      targetGroupRotX = -pointer.y * 0.16;
 
-      // Throttle raycasting to ~20Hz (every 50ms) so mousemove never blocks main thread
+      // Throttle raycasting to ~20Hz (every 50ms) so mouse/touch never blocks main thread
       const now = performance.now();
       if (now - lastRaycastTime < 50) return;
       lastRaycastTime = now;
@@ -453,11 +456,21 @@ export function HeroTarotDeck3D({
       }
     };
 
+    const handlePointerMove = (e: PointerEvent) => {
+      updateInteractionPoint(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      updateInteractionPoint(touch.clientX, touch.clientY);
+    };
+
     const handlePointerLeave = () => {
       hoveredIdx = null;
+      isPointerActive = false;
       targetGroupRotX = 0;
       targetGroupRotY = 0;
-      shaderUniforms.uMouse.value.set(0, 0);
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -478,6 +491,12 @@ export function HeroTarotDeck3D({
       passive: true,
     });
     renderer.domElement.addEventListener('pointerleave', handlePointerLeave, {
+      passive: true,
+    });
+    renderer.domElement.addEventListener('touchmove', handleTouchMove, {
+      passive: true,
+    });
+    renderer.domElement.addEventListener('touchend', handlePointerLeave, {
       passive: true,
     });
     renderer.domElement.addEventListener('click', handleClick);
@@ -531,6 +550,17 @@ export function HeroTarotDeck3D({
       shaderUniforms.uScrollProgress.value = sProg;
       shaderUniforms.uVelocity.value = sVel;
 
+      // Autonomous figure-8 harmonic sway when not actively touched (vital for Mobile!)
+      const autoOrbitX = isPointerActive ? targetGroupRotX : Math.cos(elapsed * 0.9) * 0.09;
+      const autoOrbitY = isPointerActive ? targetGroupRotY : Math.sin(elapsed * 1.15) * 0.18;
+
+      if (!isPointerActive) {
+        shaderUniforms.uMouse.value.set(
+          Math.sin(elapsed * 1.1) * 0.45,
+          Math.cos(elapsed * 0.85) * 0.35
+        );
+      }
+
       if (chromaticPass?.uniforms?.uChromaticIntensity) {
         chromaticPass.uniforms.uChromaticIntensity.value =
           0.002 + Math.min(Math.abs(sVel) * 0.001, 0.006);
@@ -567,9 +597,9 @@ export function HeroTarotDeck3D({
       }
       instancedCrystals.instanceMatrix.needsUpdate = true;
 
-      deckGroup.rotation.x += (targetGroupRotX - deckGroup.rotation.x) * 0.08;
+      deckGroup.rotation.x += (autoOrbitX - deckGroup.rotation.x) * 0.08;
       deckGroup.rotation.y +=
-        (targetGroupRotY +
+        (autoOrbitY +
           Math.sin(sProg * Math.PI * 2) * 0.18 -
           deckGroup.rotation.y) *
         0.08;
@@ -625,6 +655,8 @@ export function HeroTarotDeck3D({
         'pointerleave',
         handlePointerLeave
       );
+      renderer?.domElement.removeEventListener('touchmove', handleTouchMove);
+      renderer?.domElement.removeEventListener('touchend', handlePointerLeave);
       renderer?.domElement.removeEventListener('click', handleClick);
       detachContextGuard();
       composer?.dispose();

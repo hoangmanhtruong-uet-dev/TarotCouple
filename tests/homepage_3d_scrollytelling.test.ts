@@ -136,6 +136,32 @@ describe('Homepage 3D Scrollytelling, GLSL Shaders, Post-Processing & Audio Suit
     expect(profileContent).toContain('window.history.replaceState');
     expect(profileContent).not.toContain('backdrop-blur');
   });
+
+  it('9. verifies Mobile 3D & Touch Choreography enhancements (autonomous idle 3D card tilt + Foil Glare sweep, touchmove 3D tilt, mobile touch sparkle trail, and .agent/rules/mobile-3d-choreography.md)', () => {
+    const rulePath = path.join(ROOT_DIR, '.agent/rules/mobile-3d-choreography.md');
+    expect(fs.existsSync(rulePath)).toBe(true);
+
+    const cursorContent = fs.readFileSync(
+      path.join(ROOT_DIR, 'src/components/CustomCursorFollower.tsx'),
+      'utf-8'
+    );
+    expect(cursorContent).toContain('touchstart');
+    expect(cursorContent).toContain('touchmove');
+
+    const modalContent = fs.readFileSync(
+      path.join(ROOT_DIR, 'src/components/ReaderIntroModal.tsx'),
+      'utf-8'
+    );
+    expect(modalContent).toContain('handleTouchMove');
+    expect(modalContent).toContain('isIdle');
+
+    const profileContent = fs.readFileSync(
+      path.join(ROOT_DIR, 'src/components/ReaderProfileView.tsx'),
+      'utf-8'
+    );
+    expect(profileContent).toContain('handleCardTouchMove');
+    expect(profileContent).toContain('isIdle');
+  });
 });
 
 

@@ -385,10 +385,10 @@ export default function ReaderProfileView({
     auraPlane.position.set(0, 0.04, -0.55);
     scene.add(auraPlane);
 
-    // 3D PBR Sacred Totem Group
+    // 3D PBR Sacred Totem Group (Elevated above the card so it is clearly visible on Mobile & Desktop)
     const initialTotem = createReaderAltarTotemGroup(canonicalId);
-    initialTotem.position.set(0, 0.72, 0.25);
-    initialTotem.scale.setScalar(0.88);
+    initialTotem.position.set(0, 0.84, 0.28);
+    initialTotem.scale.setScalar(0.96);
     scene.add(initialTotem);
     totemGroupRef.current = initialTotem;
 
@@ -456,8 +456,13 @@ export default function ReaderProfileView({
       const elapsed = clock.getElapsedTime();
       const ptr = pointerBridgeRef.current;
 
+      // Mobile-First Autonomous 3D Choreography when finger/mouse is idle
+      const isIdle = Math.abs(ptr.x) < 0.02 && Math.abs(ptr.y) < 0.02;
+      const effX = isIdle ? Math.sin(elapsed * 1.35) * 0.62 : ptr.x;
+      const effY = isIdle ? Math.cos(elapsed * 0.95) * 0.48 : ptr.y;
+
       auraUniforms.uTime.value = elapsed;
-      auraUniforms.uMouse.value.lerp(new THREE.Vector2(ptr.x, ptr.y), 0.12);
+      auraUniforms.uMouse.value.lerp(new THREE.Vector2(effX, effY), 0.12);
       auraUniforms.uAccentColor.value.lerp(targetAccentColorRef.current, 0.1);
       auraUniforms.uSecondaryColor.value.lerp(
         targetSecondaryColorRef.current,
@@ -469,17 +474,34 @@ export default function ReaderProfileView({
       crystalMat.emissive.lerp(targetAccentColorRef.current, 0.1);
 
       if (totemGroupRef.current) {
-        totemGroupRef.current.rotation.y = elapsed * 0.8 + ptr.x * 0.45;
-        totemGroupRef.current.rotation.x = ptr.y * 0.25;
+        totemGroupRef.current.rotation.y = elapsed * 0.95 + effX * 0.6;
+        totemGroupRef.current.rotation.x = effY * 0.35;
         totemGroupRef.current.position.y =
-          0.72 + Math.sin(elapsed * 1.9) * 0.035;
+          0.84 + Math.sin(elapsed * 2.1) * 0.045;
+      }
+
+      // Autonomous 3D Tarot Card Tilt & Holographic Foil Glare Sweep on Mobile/Idle
+      if (isIdle && portraitCardRef.current) {
+        const autoRotY = effX * 9.5;
+        const autoRotX = effY * 7.5;
+        portraitCardRef.current.style.transform = `perspective(950px) rotateX(${autoRotX.toFixed(
+          2
+        )}deg) rotateY(${autoRotY.toFixed(2)}deg) scale3d(1.01, 1.01, 1.01)`;
+
+        if (foilGlareRef.current) {
+          const pctX = ((effX + 1) * 50).toFixed(1);
+          const pctY = ((1 - effY) * 50).toFixed(1);
+          const hexColor = `#${targetAccentColorRef.current.getHexString()}`;
+          foilGlareRef.current.style.opacity = '0.36';
+          foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${hexColor}95 0%, transparent 65%)`;
+        }
       }
 
       for (let i = 0; i < crystalCount; i++) {
         const seed = crystalSeeds[i]!;
         const angle = seed.angle + elapsed * seed.speed * 0.38;
         dummyObj.position.set(
-          Math.cos(angle) * seed.radius + ptr.x * 0.08,
+          Math.cos(angle) * seed.radius + effX * 0.08,
           seed.yOffset + Math.sin(elapsed * seed.speed + i) * 0.08,
           Math.sin(angle) * seed.radius * 0.45 - 0.15
         );
@@ -523,14 +545,28 @@ export default function ReaderProfileView({
         scene.remove(totemGroupRef.current);
       }
       const nextTotem = createReaderAltarTotemGroup(canonicalId);
-      nextTotem.position.set(0, 0.72, 0.25);
-      nextTotem.scale.setScalar(0.88);
+      nextTotem.position.set(0, 0.84, 0.28);
+      nextTotem.scale.setScalar(0.96);
       scene.add(nextTotem);
       totemGroupRef.current = nextTotem;
     }
 
     if (!shouldReduceMotion && dossierContainerRef.current) {
       const ctx = gsap.context(() => {
+        if (portraitCardRef.current) {
+          gsap.fromTo(
+            portraitCardRef.current,
+            { rotationY: -28, scale: 0.94 },
+            {
+              rotationY: 0,
+              scale: 1,
+              duration: 0.48,
+              ease: 'back.out(1.5)',
+              overwrite: 'auto',
+            }
+          );
+        }
+
         gsap.fromTo(
           '[data-sanctuary-reveal]',
           { opacity: 0, y: 14 },
@@ -597,42 +633,45 @@ export default function ReaderProfileView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNext, handlePrev]);
 
-  // 5. DIRECT DOM 3D CARD TILT & FOIL GLARE (0 React Re-renders on mousemove)
-  const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  // 5. DIRECT DOM 3D CARD TILT & FOIL GLARE (0 React Re-renders on mousemove & touchmove)
+  const apply3DCardTiltFromClientCoords = (clientX: number, clientY: number) => {
     const cardEl = portraitCardRef.current;
     if (!cardEl || shouldReduceMotion) return;
 
     const rect = cardEl.getBoundingClientRect();
-    const normX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const normY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    const normX = Math.max(-1, Math.min(1, ((clientX - rect.left) / rect.width) * 2 - 1));
+    const normY = Math.max(-1, Math.min(1, -((clientY - rect.top) / rect.height) * 2 + 1));
 
-    pointerBridgeRef.current.x = Math.max(-1, Math.min(1, normX));
-    pointerBridgeRef.current.y = Math.max(-1, Math.min(1, normY));
+    pointerBridgeRef.current.x = normX;
+    pointerBridgeRef.current.y = normY;
 
-    const rotY = normX * 10;
-    const rotX = normY * 8;
+    const rotY = normX * 13;
+    const rotX = normY * 10;
     cardEl.style.transform = `perspective(950px) rotateX(${rotX.toFixed(
       2
-    )}deg) rotateY(${rotY.toFixed(2)}deg) scale3d(1.015, 1.015, 1.015)`;
+    )}deg) rotateY(${rotY.toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`;
 
     if (foilGlareRef.current) {
       const pctX = ((normX + 1) * 50).toFixed(1);
       const pctY = ((1 - normY) * 50).toFixed(1);
-      foilGlareRef.current.style.opacity = '0.32';
-      foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${reader.accent_color}88 0%, transparent 65%)`;
+      foilGlareRef.current.style.opacity = '0.42';
+      foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${reader.accent_color}99 0%, transparent 65%)`;
     }
+  };
+
+  const handleCardPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    apply3DCardTiltFromClientCoords(e.clientX, e.clientY);
+  };
+
+  const handleCardTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    apply3DCardTiltFromClientCoords(touch.clientX, touch.clientY);
   };
 
   const handleCardPointerLeave = () => {
     pointerBridgeRef.current.x = 0;
     pointerBridgeRef.current.y = 0;
-    if (portraitCardRef.current) {
-      portraitCardRef.current.style.transform =
-        'perspective(950px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-    }
-    if (foilGlareRef.current) {
-      foilGlareRef.current.style.opacity = '0';
-    }
   };
 
   // Horizontal Wheel / Trackpad Scrub on the Dossier Card
@@ -652,6 +691,8 @@ export default function ReaderProfileView({
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
+    pointerBridgeRef.current.x = 0;
+    pointerBridgeRef.current.y = 0;
     if (touchStartX === null) return;
     const touchEndX = e.changedTouches[0]?.clientX ?? 0;
     const diff = touchStartX - touchEndX;
@@ -868,7 +909,8 @@ export default function ReaderProfileView({
             <div
               onPointerMove={handleCardPointerMove}
               onPointerLeave={handleCardPointerLeave}
-              className="lg:col-span-5 relative flex flex-col items-center justify-center min-h-[340px] sm:min-h-[390px]"
+              onTouchMove={handleCardTouchMove}
+              className="lg:col-span-5 relative flex flex-col items-center justify-center pt-14 sm:pt-16 pb-3 min-h-[380px] sm:min-h-[430px]"
             >
               {/* Single-Instance Three.js WebGL Stage (GLSL Aura + PBR Totem + 48 InstancedMesh Crystals) */}
               <div
@@ -885,10 +927,10 @@ export default function ReaderProfileView({
                 }
                 onClick={handleToggleSampleCard}
                 style={{
-                  borderColor: `${reader.accent_color}85`,
-                  boxShadow: `0 20px 50px rgba(0,0,0,0.8), 0 0 30px ${reader.accent_color}35`,
+                  borderColor: `${reader.accent_color}95`,
+                  boxShadow: `0 20px 50px rgba(0,0,0,0.8), 0 0 38px ${reader.accent_color}55`,
                 }}
-                className="relative z-10 w-52 sm:w-60 aspect-[3/4] rounded-2xl border-2 bg-[#09080D]/95 p-3 flex flex-col justify-between overflow-hidden cursor-pointer transition-transform duration-150 ease-out will-change-transform select-none"
+                className="relative z-10 w-48 sm:w-56 aspect-[3/4] rounded-2xl border-2 bg-[#09080D]/72 p-3 flex flex-col justify-between overflow-hidden cursor-pointer transition-transform duration-150 ease-out will-change-transform select-none"
               >
                 {/* Lớp Kim Tuyến Phản Xạ Theo Chuột (Holographic Foil Glare) */}
                 <div

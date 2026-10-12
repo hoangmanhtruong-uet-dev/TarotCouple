@@ -1180,8 +1180,8 @@ export async function generateTarotReading(
 
   const candidateModels = [
     process.env.GEMINI_MODEL?.trim(),
-    'gemini-2.5-flash-lite',
     'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
   ].filter((m): m is string => Boolean(m && m.length > 0));
 
   const uniqueModels = Array.from(new Set(candidateModels));
@@ -1192,9 +1192,9 @@ export async function generateTarotReading(
 
   for (const modelToTry of uniqueModels) {
     try {
-      // 12-second timeout per model
+      // 20-second timeout per model
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 12000)
+        setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 20000)
       );
 
       const generatePromise = ai.models.generateContent({

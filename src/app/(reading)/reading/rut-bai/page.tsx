@@ -358,13 +358,13 @@ export default function RutBaiPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-6"
       >
-        <span className="text-[11px] font-bold tracking-[0.2em] text-[#C9A24A] uppercase block mb-1">
+        <span className="text-[11px] font-bold tracking-[0.25em] text-[#E5C687] uppercase block mb-1.5 text-gold-luxury">
           BƯỚC 3 / 4 • NGHI THỨC RÚT BÀI
         </span>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
-          {stage === 'riffle' ? 'Nghi Thức Xáo Bài Riffle 3D' : 'Rút 3 Lá Bài Định Mệnh'}
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#F8F5F0] text-gold-luxury tracking-wide">
+          {stage === 'riffle' ? 'Nghi Thức Xáo Bài 3D' : 'Rút 3 Lá Bài Định Mệnh'}
         </h1>
-        <p className="text-xs sm:text-sm text-[#9E96B0] mt-1 max-w-md mx-auto">
+        <p className="text-xs sm:text-sm text-[#A9A1BC] mt-1.5 max-w-md mx-auto leading-relaxed">
           {stage === 'riffle'
             ? 'Hít một hơi thật sâu, nghĩ về điều bạn đang băn khoăn và chạm xáo để kích hoạt dòng năng lượng.'
             : 'Lần lượt chạm chọn 3 lá bài theo trực giác mách bảo để chuẩn bị lật bài.'}

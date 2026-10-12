@@ -457,32 +457,33 @@ export default function NoiNiemPage() {
         data-noi-niem-reveal
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 flex items-start gap-3.5 p-4 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-5 shadow-xl"
+        className="relative z-10 flex items-start gap-3.5 p-4 sm:p-5 rounded-3xl bg-[#14111C]/92 border border-[#E5C687]/30 mb-5 card-luxury-glow"
       >
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 shadow-inner"
           style={{
             backgroundColor: `${readerAccentColor}25`,
-            border: `1.5px solid ${readerAccentColor}60`,
+            border: `1.5px solid ${readerAccentColor}80`,
             color: readerAccentColor,
+            boxShadow: `0 0 16px ${readerAccentColor}35`,
           }}
         >
           {activeReader.avatar_symbol}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <h2 className="font-display text-sm font-bold text-[#F8F5F0] truncate">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="font-serif text-base sm:text-lg font-bold text-[#F8F5F0] tracking-wide truncate">
                 {agePolicy.effectivePersona === 'ba_ngoai_vui_tinh'
                   ? 'Bà Ngoại Vui Tính'
                   : activeReader.name}
               </h2>
               {agePolicy.isKidTeenSafeMode ? (
-                <span className="text-[9px] font-semibold text-pink-300 bg-pink-500/15 border border-pink-500/30 px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="text-[9px] font-semibold text-pink-300 bg-pink-500/15 border border-pink-500/30 px-2 py-0.5 rounded-full shrink-0">
                   Học đường 10–15t
                 </span>
               ) : (
-                <span className="text-[9px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="text-[9px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
                   16+
                 </span>
               )}
@@ -490,15 +491,15 @@ export default function NoiNiemPage() {
             <Link
               href="/reading/chu-de"
               data-cursor="ĐỔI CHỦ ĐỀ"
-              className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] transition-colors truncate shrink-0"
+              className="text-[11px] text-[#A9A1BC] hover:text-[#E5C687] transition-colors truncate shrink-0"
             >
-              Chủ đề: <strong>{TOPIC_LABELS[selectedTopic] || selectedTopic}</strong> &rarr;
+              Chủ đề: <strong className="text-[#E5C687]">{TOPIC_LABELS[selectedTopic] || selectedTopic}</strong> &rarr;
             </Link>
           </div>
-          <p className="text-xs text-[#E5C687] italic font-serif leading-relaxed min-h-[30px]">
+          <p className="text-xs sm:text-sm text-[#E5C687] italic font-serif leading-relaxed min-h-[30px] text-gold-luxury">
             &ldquo;{displayedPrompt}&rdquo;
             {displayedPrompt.length < readerPrompt.length && (
-              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#C9A24A] animate-pulse align-middle" />
+              <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-[#E5C687] animate-pulse align-middle" />
             )}
           </p>
         </div>
@@ -511,12 +512,12 @@ export default function NoiNiemPage() {
         onPointerMove={handleAltarPointerMove}
         onPointerLeave={handleAltarPointerLeave}
         onTouchMove={handleAltarTouchMove}
-        className="relative z-10 p-4 sm:p-5 rounded-2xl border transition-all mb-3 bg-[#0B0A12]/92 shadow-2xl overflow-hidden will-change-transform select-none"
+        className="relative z-10 p-5 sm:p-6 rounded-3xl border transition-all mb-4 bg-[#0B0A12]/95 card-luxury-glow overflow-hidden will-change-transform select-none"
         style={{
-          borderColor: isFocusedTextarea ? readerAccentColor : `${readerAccentColor}60`,
+          borderColor: isFocusedTextarea ? '#E5C687' : `${readerAccentColor}60`,
           boxShadow: isFocusedTextarea
-            ? `0 0 35px ${readerAccentColor}40, 0 16px 40px rgba(0,0,0,0.85)`
-            : `0 0 20px ${readerAccentColor}20, 0 12px 30px rgba(0,0,0,0.75)`,
+            ? `0 0 38px ${readerAccentColor}45, 0 18px 45px rgba(0,0,0,0.9)`
+            : `0 0 22px ${readerAccentColor}22, 0 12px 30px rgba(0,0,0,0.8)`,
         }}
       >
         {/* Lớp Kim Tuyến Phản Xạ Theo Chuột & Chạm (Holographic Foil Glare) */}

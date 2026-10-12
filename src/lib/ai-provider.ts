@@ -980,10 +980,26 @@ const GEMINI_RESPONSE_SCHEMA = {
 };
 
 /**
- * Check if a valid non-placeholder GEMINI_API_KEY is configured
+ * Retrieve all configured valid GEMINI_API_KEYs (GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, etc.)
  */
-export function hasValidGeminiApiKey(): boolean {
-  const key = process.env.GEMINI_API_KEY?.trim();
+export function getValidGeminiApiKeys(): string[] {
+  const keys: string[] = [];
+  const primary = process.env.GEMINI_API_KEY?.trim();
+  if (primary && isValidKeyString(primary)) {
+    keys.push(primary);
+  }
+  const secondary = process.env.GEMINI_API_KEY_2?.trim();
+  if (secondary && isValidKeyString(secondary) && !keys.includes(secondary)) {
+    keys.push(secondary);
+  }
+  const tertiary = process.env.GEMINI_API_KEY_3?.trim();
+  if (tertiary && isValidKeyString(tertiary) && !keys.includes(tertiary)) {
+    keys.push(tertiary);
+  }
+  return keys;
+}
+
+function isValidKeyString(key: string): boolean {
   if (!key) return false;
   if (
     key === 'your_gemini_api_key_here' ||
@@ -993,6 +1009,15 @@ export function hasValidGeminiApiKey(): boolean {
     return false;
   }
   return key.length >= 15;
+}
+
+let currentApiKeyIndex = 0;
+
+/**
+ * Check if at least one valid GEMINI_API_KEY is configured
+ */
+export function hasValidGeminiApiKey(): boolean {
+  return getValidGeminiApiKeys().length > 0;
 }
 
 /**
@@ -1187,17 +1212,26 @@ export async function generateTarotReading(
   ].filter((m): m is string => Boolean(m && m.length > 0));
 
   const uniqueModels = Array.from(new Set(candidateModels));
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const availableKeys = getValidGeminiApiKeys();
 
   let totalTokensIn = 0;
   let totalTokensOut = 0;
 
-  for (const modelToTry of uniqueModels) {
-    try {
-      // 20-second timeout per model
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 20000)
-      );
+  // Round-robin index selection: start with current key, rotate to next key on subsequent request
+  const startKeyIndex = currentApiKeyIndex;
+  currentApiKeyIndex = (currentApiKeyIndex + 1) % (availableKeys.length || 1);
+
+  // Loop through available keys first, then candidate models
+  for (let keyAttempt = 0; keyAttempt < Math.max(1, availableKeys.length); keyAttempt++) {
+    const activeKey = availableKeys[(startKeyIndex + keyAttempt) % availableKeys.length] || process.env.GEMINI_API_KEY;
+    const ai = new GoogleGenAI({ apiKey: activeKey });
+
+    for (const modelToTry of uniqueModels) {
+      try {
+        // 20-second timeout per model
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 20000)
+        );
 
       const generatePromise = ai.models.generateContent({
         model: modelToTry,
@@ -1268,6 +1302,7 @@ export async function generateTarotReading(
       // Try next model or fallback
     }
   }
+}
 
   // Fallback if all retries fail validation or network error occurs
   const fallbackReading = buildContextualFallbackReading({

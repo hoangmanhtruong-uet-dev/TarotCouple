@@ -522,25 +522,25 @@ function VerdictView({
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#120F1D] border border-[#C9A24A]/40 space-y-4 mb-5 shadow-xl"
+        className="p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-[#171326] via-[#120F1D] to-[#0B0A12] border border-[#E5C687]/40 space-y-4 mb-5 card-luxury-glow"
       >
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold tracking-wider text-[#C9A24A] uppercase">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-xs font-bold tracking-wider text-[#E5C687] uppercase text-gold-luxury font-serif">
               CHỐT HẠ TRỰC DIỆN TỔNG QUAN
             </span>
-            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
               Giải Tỏa Nghi Vấn
             </span>
           </div>
-          <p className="text-base text-[#F8F5F0] leading-[1.65] whitespace-pre-line">{result.overall_verdict}</p>
+          <p className="font-serif text-base sm:text-lg text-[#F8F5F0] leading-[1.75] whitespace-pre-line">{result.overall_verdict}</p>
         </div>
 
-        <div className="border-t border-[#262235] pt-4">
-          <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase block mb-2">
+        <div className="border-t border-[#E5C687]/20 pt-4">
+          <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase block mb-2 font-serif">
             HÀNH ĐỘNG NÊN LÀM NGAY
           </span>
-          <p className="text-base text-[#9E96B0] leading-[1.6]">{result.actionable_next_step}</p>
+          <p className="text-sm sm:text-base text-[#D4CFE2] leading-[1.65]">{result.actionable_next_step}</p>
         </div>
       </motion.div>
 

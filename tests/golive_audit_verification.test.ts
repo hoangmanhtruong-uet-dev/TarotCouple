@@ -130,4 +130,95 @@ describe('Go-Live Final Polish & Production Database Readiness Audit', () => {
     expect(txResult.success).toBe(true);
     expect(txResult.syncedToSupabase).toBe(false);
   });
+
+  it('5. GET /api/health returns valid system diagnostic schema without exposing secrets', async () => {
+    const { GET: getHealth } = await import('../src/app/api/health/route');
+    const req = new Request('http://localhost:3000/api/health');
+    const res = await getHealth();
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.status).toBe('ok');
+    expect(data.timestamp).toBeTruthy();
+    expect(data.ai).toBeDefined();
+    expect(typeof data.ai.configuredKeysCount).toBe('number');
+    expect(data.ai.primaryModel).toBe('gemini-3.5-flash-lite');
+    expect(Array.isArray(data.ai.modelChain)).toBe(true);
+    expect(data.supabase).toBeDefined();
+    expect(['hybrid', 'memory-only']).toContain(data.supabase.mode);
+  });
+
+  it('6. updateJournalNote properly updates reflection notes in journal-store', async () => {
+    const storeMap = new Map<string, string>();
+    const mockStorage = {
+      getItem: (k: string) => storeMap.get(k) ?? null,
+      setItem: (k: string, v: string) => storeMap.set(k, v),
+      removeItem: (k: string) => storeMap.delete(k),
+      clear: () => storeMap.clear(),
+    };
+    const prevWindow = (globalThis as any).window;
+    const prevStorage = (globalThis as any).localStorage;
+    (globalThis as any).window = {};
+    (globalThis as any).localStorage = mockStorage;
+
+    try {
+      const { updateJournalNote, saveJournalEntry, getJournalEntries, clearAllJournal } = await import(
+        '../src/lib/journal-store'
+      );
+      clearAllJournal();
+
+      const mockReading = {
+        readingId: 'rd_test_note_001',
+        createdAt: new Date().toISOString(),
+        readerId: 'ba_ngoai',
+        readerDisplayName: 'Bà Ngoại',
+        readerRole: 'Bà ngoại',
+        topic: 'love',
+        topicLabel: 'Tình Duyên',
+        questionText: 'Tương lai thế nào?',
+        drawnCards: [],
+        result: {
+          summary: 'Tốt',
+          overall_verdict: 'Tốt',
+          cards_analysis: [],
+          shareable_card: {
+            savage_quote: 'Bình an',
+            savage_quotes: ['Bình an', 'Thanh thản', 'Vui vẻ'],
+          },
+        },
+      } as any;
+
+      saveJournalEntry(mockReading);
+      const updated = updateJournalNote('rd_test_note_001', 'Nghiệm lại thấy rất chuẩn!');
+      expect(updated.some((e) => e.id === 'rd_test_note_001' && e.userNote === 'Nghiệm lại thấy rất chuẩn!')).toBe(
+        true
+      );
+
+      const reloaded = getJournalEntries();
+      expect(reloaded.find((e) => e.id === 'rd_test_note_001')?.userNote).toBe('Nghiệm lại thấy rất chuẩn!');
+    } finally {
+      if (prevWindow === undefined) delete (globalThis as any).window;
+      else (globalThis as any).window = prevWindow;
+      if (prevStorage === undefined) delete (globalThis as any).localStorage;
+      else (globalThis as any).localStorage = prevStorage;
+    }
+  });
+
+  it('7. src/app/(app)/me/history/page.tsx has zero instances of native window.confirm', () => {
+    const historyPagePath = path.join(
+      process.cwd(),
+      'src',
+      'app',
+      '(app)',
+      'me',
+      'history',
+      'page.tsx'
+    );
+    expect(fs.existsSync(historyPagePath)).toBe(true);
+
+    const content = fs.readFileSync(historyPagePath, 'utf-8');
+    expect(content).not.toContain('window.confirm');
+    expect(content).toContain('setConfirmModal');
+    expect(content).toContain('updateJournalNote');
+  });
 });

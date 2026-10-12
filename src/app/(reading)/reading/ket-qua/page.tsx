@@ -436,6 +436,7 @@ function VerdictView({
   onOpenFollowup,
   questionText,
   nickname,
+  usedFallback,
 }: {
   drawnCards: [DrawnCardClientPayload, DrawnCardClientPayload, DrawnCardClientPayload];
   result: ReadingOutput;
@@ -447,6 +448,7 @@ function VerdictView({
   onOpenFollowup: () => void;
   questionText?: string;
   nickname?: string;
+  usedFallback?: boolean;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const quotes = result.shareable_card.savage_quotes;
@@ -533,7 +535,13 @@ function VerdictView({
               Giải Tỏa Nghi Vấn
             </span>
           </div>
-          <p className="font-serif text-base sm:text-lg text-[#F8F5F0] leading-[1.75] whitespace-pre-line">{result.overall_verdict}</p>
+          <p className="font-serif text-base sm:text-lg text-[#F8F5F0] leading-[1.75] whitespace-pre-line">
+            {usedFallback
+              ? (result.overall_verdict.endsWith('( DTS)')
+                  ? result.overall_verdict
+                  : `${result.overall_verdict.trim()} ( DTS)`)
+              : result.overall_verdict.replace(/\s*\( DTS\)$/, '')}
+          </p>
         </div>
 
         <div className="border-t border-[#E5C687]/20 pt-4">
@@ -1257,6 +1265,7 @@ export default function KetQuaPage() {
             setActiveQuoteIdx={setActiveQuoteIdx}
             questionText={readingSuccess.questionText}
             nickname={readingSuccess.nickname}
+            usedFallback={readingSuccess.aiMeta?.usedFallback}
             onContinue={() => {
               if (clarifierCard) {
                 setStage('clarifier');

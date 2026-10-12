@@ -870,7 +870,9 @@ export function buildContextualFallbackReading(
       buildPersonaCardInterpretation(c2, 1, effectivePersona, safeNick, params.topic, params.questionText),
       buildPersonaCardInterpretation(c3, 2, effectivePersona, safeNick, params.topic, params.questionText),
     ],
-    overall_verdict: overallVerdict,
+    overall_verdict: overallVerdict.endsWith('( DTS)')
+      ? overallVerdict
+      : `${overallVerdict.trim()} ( DTS)`,
     actionable_next_step: actionableNextStep,
     shareable_card: {
       headline_badge: profile.badgeTitle,

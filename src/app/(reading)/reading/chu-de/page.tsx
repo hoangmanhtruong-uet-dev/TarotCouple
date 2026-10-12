@@ -12,7 +12,7 @@ import { CURRENT_REFERENCE_YEAR, type TopicId, type ReaderId } from '@/lib/schem
 import { READERS } from '@/data/tarot-cards';
 import * as THREE from 'three';
 import {
-  initThreeScene,
+  detectHardwareTier,
   disposeThreeScene,
   attachWebGLContextLostGuard,
 } from '@/lib/three/core';
@@ -487,20 +487,35 @@ export default function ChuDeSelectionPage() {
     const container = webglMountRef.current;
     if (!container) return;
 
+    const tierConfig = detectHardwareTier();
+    if (!tierConfig.enableWebGL) return;
+
+    let renderer: THREE.WebGLRenderer | null = null;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: tierConfig.tier === 'tier1',
+        powerPreference: 'high-performance',
+        stencil: false,
+      });
+    } catch {
+      return;
+    }
+
     const w = container.clientWidth || window.innerWidth || 800;
     const h = container.clientHeight || window.innerHeight || 900;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+    renderer.setSize(w, h);
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
 
-    const { scene, camera, renderer, cleanup: detachContextGuard } = initThreeScene(
-      container,
-      {
-        width: w,
-        height: h,
-        alpha: true,
-        antialias: false,
-        maxDpr: 1.25,
-      }
+    const detachContextGuard = attachWebGLContextLostGuard(
+      renderer.domElement,
+      () => {}
     );
 
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 20);
     camera.position.set(0, 0, 4.2);
 
     // GLSL Astral Vortex Plane

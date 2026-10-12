@@ -953,7 +953,9 @@ export function grantBonusDraw(
 
   if (action === 'reset_demo_quota') {
     record.usedToday = 0;
-    record.bonusDraws = Math.max(record.bonusDraws, 1);
+    record.bonusDraws = 20;
+    const wallet = getOrCreateWalletRecord(clientKey);
+    wallet.starsBalance = Math.max(wallet.starsBalance, 50);
   } else {
     record.bonusDraws = Math.min(MAX_BONUS_DRAWS_PER_DAY, record.bonusDraws + 1);
   }

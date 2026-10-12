@@ -22,6 +22,8 @@ import {
   useTransform,
   animate,
 } from 'framer-motion';
+import { gsap } from 'gsap';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useReadingStore } from '@/lib/reading-store';
 import { TarotCardVisual } from '@/components/TarotCardVisual';
 import {
@@ -1311,6 +1313,9 @@ export default function KetQuaPage() {
         currentStars={quota?.starsBalance ?? 0}
         reasonText="Bạn cần 5 Sao để mở khóa Lá Bài Làm Rõ Thứ 4."
       />
+
+      {/* CustomCursorFollower */}
+      <CustomCursorFollower />
     </div>
   );
 }

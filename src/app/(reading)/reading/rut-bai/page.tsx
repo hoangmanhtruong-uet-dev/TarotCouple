@@ -8,6 +8,7 @@ import { resolveReader } from '@/data/tarot-cards';
 import { getSpreadPositionsForTopic } from '@/lib/safety';
 import { Sparkles, Wand2, RefreshCw, Eye } from 'lucide-react';
 import { TactileArcFan } from '@/components/TactileArcFan';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useQuotaSync } from '@/lib/use-quota';
 import { saveJournalEntry } from '@/lib/journal-store';
 import { soundManager } from '@/lib/sound-effects';
@@ -610,6 +611,9 @@ export default function RutBaiPage() {
           </div>
         </div>
       )}
+
+      {/* CustomCursorFollower */}
+      <CustomCursorFollower />
     </div>
   );
 }

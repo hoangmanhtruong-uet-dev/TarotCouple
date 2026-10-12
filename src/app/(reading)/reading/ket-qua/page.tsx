@@ -111,6 +111,7 @@ function CardSpotlightView({
   cardNumber,
   accentColor,
   readerName,
+  readerId,
   onTapDetail,   // Chạm lần 2 → chuyển sang detail
   phase,
   topic,
@@ -120,6 +121,7 @@ function CardSpotlightView({
   cardNumber: 1 | 2 | 3;
   accentColor: string;
   readerName: string;
+  readerId?: string;
   onTapDetail: () => void;
   phase: SpotlightPhase;
   topic?: string;
@@ -146,7 +148,18 @@ function CardSpotlightView({
   }, [flipped, shouldReduceMotion]);
 
   const keywords = drawn.reversed ? drawn.card.keywords_rev : drawn.card.keywords_up;
-  const hook = drawn.reversed ? drawn.card.savage_hook_rev : drawn.card.savage_hook_up;
+  
+  // Lấy câu hook đặc trưng đúng theo Reader đã chọn thay vì chỉ lấy savage_hook
+  let hook = drawn.reversed ? drawn.card.savage_hook_rev : drawn.card.savage_hook_up;
+  if (readerId === 'tien_tu_chua_lanh') {
+    hook = (drawn.reversed ? drawn.card.healing_hook_rev : drawn.card.healing_hook_up) || hook;
+  } else if (readerId === 'ba_ngoai_vui_tinh') {
+    hook = (drawn.reversed ? drawn.card.teen_hook_rev : drawn.card.teen_hook_up) || hook;
+  } else if (readerId === 'tong_tai_ly_tri') {
+    hook = (drawn.reversed ? (drawn.card as any).ceo_hook_rev : (drawn.card as any).ceo_hook_up) || hook;
+  } else if (readerId === 'phap_su_toi_co') {
+    hook = (drawn.reversed ? (drawn.card as any).mystic_hook_rev : (drawn.card as any).mystic_hook_up) || hook;
+  }
 
   if (phase === 'intro') {
     return (
@@ -1116,6 +1129,7 @@ export default function KetQuaPage() {
                 cardNumber={(currentCardIdx + 1) as 1 | 2 | 3}
                 accentColor={accentColor}
                 readerName={readerDisplayName}
+                readerId={readingSuccess.readerId}
                 onTapDetail={handleTapDetail}
                 phase="intro"
                 topic={readingSuccess.topic}
@@ -1128,6 +1142,7 @@ export default function KetQuaPage() {
                   cardNumber={(currentCardIdx + 1) as 1 | 2 | 3}
                   accentColor={accentColor}
                   readerName={readerDisplayName}
+                  readerId={readingSuccess.readerId}
                   onTapDetail={handleTapDetail}
                   phase="detail"
                   topic={readingSuccess.topic}

@@ -332,7 +332,8 @@ export async function POST(request: Request) {
       birthYear: room.ownerBirthYear,
       readerId: room.readerId,
       relationshipStatus: room.relationshipStatus,
-      questionText: room.ownerQuestionText,
+      // Khi Người B vào phòng, giải bài dựa trên tình trạng mối quan hệ chung để bảo mật câu hỏi riêng tư của Người A
+      questionText: `Soi tần số kết nối giữa ${room.ownerNickname} và ${partnerNickname} (${room.relationshipLabel}).`,
       ageTier: agePolicy.tier,
       effectivePersona: agePolicy.effectivePersona,
       drawnCards: [

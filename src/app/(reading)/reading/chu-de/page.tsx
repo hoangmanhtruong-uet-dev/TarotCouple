@@ -630,6 +630,7 @@ export default function ChuDeSelectionPage() {
       window.removeEventListener('resize', handleResize);
       detachContextGuard();
       disposeThreeScene(scene, renderer);
+      soundManager.cleanupRouteAudio();
     };
   }, [readerAccentColor, shouldReduceMotion]);
 

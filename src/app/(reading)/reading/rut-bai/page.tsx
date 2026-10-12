@@ -107,10 +107,11 @@ export default function RutBaiPage() {
     };
   }, [stage, decodingQuotes.length]);
 
-  // Dọn dẹp timer riffle khi unmount
+  // Dọn dẹp timer riffle & route audio khi unmount
   useEffect(() => {
     return () => {
       if (riffleIntervalRef.current) clearInterval(riffleIntervalRef.current);
+      soundManager.cleanupRouteAudio();
     };
   }, []);
 

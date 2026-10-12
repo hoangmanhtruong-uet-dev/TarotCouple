@@ -168,9 +168,19 @@ export function getReaderAtmospherePalette(
   return READER_ATMOSPHERE_PALETTES.ba_ngoai;
 }
 
+/**
+ * Fully disposes a material and any attached textures, including shader uniforms.
+ */
 export function disposeMaterial(material: THREE.Material): void {
-  material.dispose();
+  try {
+    material.dispose();
+  } catch {
+    // Ignore dispose errors on already disposed materials
+  }
+
   const record = material as unknown as Record<string, unknown>;
+
+  // 1. Dispose standard texture properties
   for (const key of Object.keys(record)) {
     const val = record[key];
     if (
@@ -186,32 +196,340 @@ export function disposeMaterial(material: THREE.Material): void {
       }
     }
   }
+
+  // 2. Dispose textures bound in ShaderMaterial uniforms
+  if ('uniforms' in record && record.uniforms && typeof record.uniforms === 'object') {
+    const uniforms = record.uniforms as Record<string, { value?: unknown }>;
+    for (const uKey of Object.keys(uniforms)) {
+      const uVal = uniforms[uKey]?.value;
+      if (
+        uVal &&
+        typeof uVal === 'object' &&
+        'dispose' in uVal &&
+        typeof (uVal as { dispose?: unknown }).dispose === 'function'
+      ) {
+        try {
+          (uVal as { dispose: () => void }).dispose();
+        } catch {
+          // Ignore
+        }
+      }
+    }
+  }
 }
 
+export interface ThreeInstanceToCleanup {
+  renderer?: THREE.WebGLRenderer | null;
+  scene?: THREE.Scene | null;
+  camera?: THREE.Camera | null;
+  animationFrameId?: number | null;
+  composer?: {
+    dispose?: () => void;
+    passes?: Array<{ dispose?: () => void }>;
+    renderTarget1?: { dispose?: () => void };
+    renderTarget2?: { dispose?: () => void };
+  } | null;
+}
+
+/**
+ * Comprehensive Three.js lifecycle cleanup engine.
+ * Walks the scene graph, disposes geometries, materials, texture maps, composer passes,
+ * cancels animation frame, detaches canvas, and invokes renderer.forceContextLoss()
+ * to prevent browser WebGL context limits (8-16 contexts).
+ */
+export function cleanupThreeInstance(instance: ThreeInstanceToCleanup): void {
+  // 1. Stop RequestAnimationFrame loop
+  if (
+    typeof instance.animationFrameId === 'number' &&
+    typeof cancelAnimationFrame !== 'undefined'
+  ) {
+    try {
+      cancelAnimationFrame(instance.animationFrameId);
+    } catch {
+      // Ignore
+    }
+  }
+
+  // 2. Dispose Post-Processing Composer and all passes (e.g. UnrealBloomPass render targets)
+  if (instance.composer) {
+    if (Array.isArray(instance.composer.passes)) {
+      for (const pass of instance.composer.passes) {
+        if (pass && typeof pass.dispose === 'function') {
+          try {
+            pass.dispose();
+          } catch {
+            // Ignore
+          }
+        }
+      }
+    }
+    if (typeof instance.composer.dispose === 'function') {
+      try {
+        instance.composer.dispose();
+      } catch {
+        // Ignore
+      }
+    }
+  }
+
+  // 3. Walk scene graph and dispose geometries, materials, shadow maps, instanced buffers
+  if (instance.scene) {
+    instance.scene.traverse((obj) => {
+      // Meshes, Points, Lines
+      const renderable = obj as THREE.Mesh | THREE.Points | THREE.Line;
+      if (renderable.geometry && typeof renderable.geometry.dispose === 'function') {
+        try {
+          renderable.geometry.dispose();
+        } catch {
+          // Ignore
+        }
+      }
+      if (renderable.material) {
+        if (Array.isArray(renderable.material)) {
+          renderable.material.forEach((mat) => disposeMaterial(mat));
+        } else {
+          disposeMaterial(renderable.material);
+        }
+      }
+
+      // InstancedMesh
+      const instanced = obj as THREE.InstancedMesh;
+      if (
+        instanced.instanceMatrix &&
+        typeof instanced.instanceMatrix.dispose === 'function'
+      ) {
+        try {
+          instanced.instanceMatrix.dispose();
+        } catch {
+          // Ignore
+        }
+      }
+      if (
+        instanced.instanceColor &&
+        typeof instanced.instanceColor.dispose === 'function'
+      ) {
+        try {
+          instanced.instanceColor.dispose();
+        } catch {
+          // Ignore
+        }
+      }
+
+      // Light shadow maps
+      const light = obj as THREE.Light & { shadow?: THREE.LightShadow };
+      if (light.shadow && light.shadow.map && typeof light.shadow.map.dispose === 'function') {
+        try {
+          light.shadow.map.dispose();
+        } catch {
+          // Ignore
+        }
+      }
+    });
+
+    // 4. Dispose Scene Environment & Background textures
+    if (
+      instance.scene.environment &&
+      typeof (instance.scene.environment as { dispose?: () => void }).dispose === 'function'
+    ) {
+      try {
+        (instance.scene.environment as { dispose: () => void }).dispose();
+      } catch {
+        // Ignore
+      }
+    }
+    if (
+      instance.scene.background &&
+      typeof (instance.scene.background as { dispose?: () => void }).dispose === 'function'
+    ) {
+      try {
+        (instance.scene.background as { dispose: () => void }).dispose();
+      } catch {
+        // Ignore
+      }
+    }
+    instance.scene.environment = null;
+    instance.scene.background = null;
+
+    // 5. Clear Scene hierarchy
+    if (typeof instance.scene.clear === 'function') {
+      try {
+        instance.scene.clear();
+      } catch {
+        // Ignore
+      }
+    }
+  }
+
+  // 6. Detach canvas and dispose WebGLRenderer
+  if (instance.renderer) {
+    // Detach canvas from DOM
+    try {
+      const canvas = instance.renderer.domElement;
+      if (canvas && canvas.parentElement) {
+        canvas.parentElement.removeChild(canvas);
+      }
+    } catch {
+      // Ignore DOM detach errors
+    }
+
+    // Force hardware WebGL context loss to free browser GPU context slot
+    if (typeof instance.renderer.forceContextLoss === 'function') {
+      try {
+        instance.renderer.forceContextLoss();
+      } catch {
+        // Ignore in environments where WEBGL_lose_context is unavailable
+      }
+    }
+
+    // Clear render list caches and dispose renderer
+    try {
+      if (instance.renderer.renderLists && typeof instance.renderer.renderLists.dispose === 'function') {
+        instance.renderer.renderLists.dispose();
+      }
+      instance.renderer.dispose();
+    } catch {
+      // Ignore
+    }
+  }
+}
+
+/**
+ * Backward compatibility wrapper.
+ * Delegates to cleanupThreeInstance to provide full context loss and deep disposal.
+ */
 export function disposeThreeScene(
   scene: THREE.Scene,
   renderer?: THREE.WebGLRenderer | null
 ): void {
-  scene.traverse((obj) => {
-    const renderable = obj as THREE.Mesh | THREE.Points | THREE.Line;
-    if (renderable.geometry) {
-      renderable.geometry.dispose();
-    }
-    if (renderable.material) {
-      if (Array.isArray(renderable.material)) {
-        renderable.material.forEach((m) => disposeMaterial(m));
-      } else {
-        disposeMaterial(renderable.material);
-      }
-    }
-  });
+  cleanupThreeInstance({ scene, renderer });
+}
 
-  if (renderer) {
-    renderer.dispose();
-    if (renderer.domElement && renderer.domElement.parentElement) {
-      renderer.domElement.parentElement.removeChild(renderer.domElement);
-    }
+export interface TierRenderSettings {
+  tier: HardwareTier;
+  usePostProcessing: boolean;
+  usePhysicalMaterial: boolean;
+  maxDpr: number;
+  antialias: boolean;
+  powerPreference: WebGLPowerPreference;
+  toneMapping: THREE.ToneMapping;
+  toneMappingExposure: number;
+}
+
+/**
+ * Returns calibrated rendering parameters for the detected hardware tier.
+ */
+export function getTierRenderSettings(
+  tierConfig?: HardwareTierConfig
+): TierRenderSettings {
+  const config = tierConfig ?? detectHardwareTier();
+
+  if (config.tier === 'tier1') {
+    return {
+      tier: 'tier1',
+      usePostProcessing: true,
+      usePhysicalMaterial: true,
+      maxDpr: Math.min(config.maxDpr, 1.5),
+      antialias: true,
+      powerPreference: 'high-performance',
+      toneMapping: THREE.ACESFilmicToneMapping,
+      toneMappingExposure: 1.1,
+    };
   }
+
+  if (config.tier === 'tier2') {
+    return {
+      tier: 'tier2',
+      usePostProcessing: false,
+      usePhysicalMaterial: false,
+      maxDpr: Math.min(config.maxDpr, 1.25),
+      antialias: false,
+      powerPreference: 'high-performance',
+      toneMapping: THREE.ACESFilmicToneMapping,
+      toneMappingExposure: 1.15,
+    };
+  }
+
+  return {
+    tier: 'tier3',
+    usePostProcessing: false,
+    usePhysicalMaterial: false,
+    maxDpr: 1.0,
+    antialias: false,
+    powerPreference: 'default',
+    toneMapping: THREE.NoToneMapping,
+    toneMappingExposure: 1.0,
+  };
+}
+
+export interface TierAdaptiveRendererOptions {
+  tierConfig?: HardwareTierConfig;
+  alpha?: boolean;
+  stencil?: boolean;
+  depth?: boolean;
+  onFallback?: () => void;
+}
+
+export interface TierAdaptiveRendererResult {
+  renderer: THREE.WebGLRenderer;
+  settings: TierRenderSettings;
+  detachContextGuard: () => void;
+}
+
+/**
+ * Initializes and mounts a Tier-Adaptive WebGLRenderer into a DOM container
+ * with automatically calibrated DPR, tone mapping, antialiasing, and context lost guards.
+ */
+export function createTierAdaptiveRenderer(
+  container: HTMLElement,
+  options: TierAdaptiveRendererOptions = {}
+): TierAdaptiveRendererResult | null {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+
+  const tierConfig = options.tierConfig ?? detectHardwareTier();
+  if (!tierConfig.enableWebGL) {
+    options.onFallback?.();
+    return null;
+  }
+
+  const settings = getTierRenderSettings(tierConfig);
+
+  let renderer: THREE.WebGLRenderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      alpha: options.alpha ?? true,
+      antialias: settings.antialias,
+      powerPreference: settings.powerPreference,
+      stencil: options.stencil ?? false,
+      depth: options.depth ?? true,
+    });
+  } catch {
+    options.onFallback?.();
+    return null;
+  }
+
+  const width = container.clientWidth || 360;
+  const height = container.clientHeight || 240;
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, settings.maxDpr));
+  renderer.setSize(width, height);
+  renderer.toneMapping = settings.toneMapping;
+  renderer.toneMappingExposure = settings.toneMappingExposure;
+
+  container.innerHTML = '';
+  container.appendChild(renderer.domElement);
+
+  const detachContextGuard = attachWebGLContextLostGuard(
+    renderer.domElement,
+    () => {
+      options.onFallback?.();
+    }
+  );
+
+  return {
+    renderer,
+    settings,
+    detachContextGuard,
+  };
 }
 
 export function attachWebGLContextLostGuard(

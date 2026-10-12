@@ -104,6 +104,373 @@ export const ASTRAL_VORTEX_FRAGMENT_SHADER = /* glsl */ `
 `;
 
 /**
+ * Custom GLSL Vertex Shader for Mystical Ritual Mist.
+ * Gentle fluid undulation on vertex plane for subtle 3D depth and parallax.
+ */
+export const MYSTICAL_MIST_VERTEX_SHADER = /* glsl */ `
+  uniform float uTime;
+  uniform vec2 uMouse;
+
+  varying vec2 vUv;
+  varying vec2 vCenteredUv;
+  varying float vElevation;
+
+  void main() {
+    vUv = uv;
+    vec2 centered = (uv - 0.5) * 2.0;
+    vCenteredUv = centered;
+    vec3 pos = position;
+
+    // Subtle fluid wave undulation on vertex plane for 3D depth
+    float wave1 = sin(pos.x * 1.8 + uTime * 0.45) * cos(pos.y * 1.8 - uTime * 0.35) * 0.08;
+    float wave2 = sin((pos.x + pos.y) * 2.5 + uTime * 0.65) * 0.04;
+    float elevation = wave1 + wave2;
+    pos.z += elevation;
+    vElevation = elevation;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+/**
+ * Custom GLSL Fragment Shader for Mystical Ritual Mist.
+ * 2-Octave FBM procedural smoke tendrils, interactive cursor vortex,
+ * Reader accent color blending, and soft edge fade.
+ */
+export const MYSTICAL_MIST_FRAGMENT_SHADER = /* glsl */ `
+  uniform float uTime;
+  uniform vec2 uMouse;
+  uniform vec3 uColorBase;
+  uniform vec3 uColorAccent;
+  uniform float uMistDensity;
+
+  varying vec2 vUv;
+  varying vec2 vCenteredUv;
+  varying float vElevation;
+
+  // Ultra-fast trigonometric-free 2D hash (safe on low-precision mobile GPUs)
+  float hash21(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+
+  // 2D Value Noise with smooth Hermite interpolation (zero texture lookups)
+  float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+  }
+
+  // 2-Octave Fractional Brownian Motion (unrolled for zero branch/loop overhead)
+  float fbm2(vec2 p) {
+    float v = 0.65 * valueNoise(p);
+    p = p * 2.18 + vec2(2.39, 1.47);
+    v += 0.35 * valueNoise(p);
+    return v;
+  }
+
+  void main() {
+    vec2 centered = vCenteredUv;
+    float dist = length(centered);
+
+    // Time-based dual-layer drift for advective mystical fog movement
+    vec2 drift1 = vec2(uTime * 0.035, uTime * 0.018);
+    vec2 drift2 = vec2(-uTime * 0.022, uTime * 0.028);
+
+    // Interactive mouse vortex deflection
+    vec2 mouseDelta = centered - uMouse;
+    float mouseDist = length(mouseDelta);
+    float mouseFalloff = exp(-mouseDist * 2.5);
+    vec2 vortexSwirl = vec2(-mouseDelta.y, mouseDelta.x) * 0.45;
+    vec2 vortexPush = normalize(mouseDelta + 0.001) * 0.2;
+    vec2 mouseDeflection = (vortexSwirl + vortexPush) * mouseFalloff;
+
+    // Domain warping with 2-octave FBM for wispy ethereal smoke tendrils
+    vec2 coord = centered * 2.2 + mouseDeflection;
+    float warpA = fbm2(coord + drift1);
+    float warpB = fbm2(coord + drift2 + vec2(warpA * 0.8));
+    vec2 warpedCoord = coord + vec2(warpA, warpB) * 0.65;
+
+    float mist = fbm2(warpedCoord);
+    mist = smoothstep(0.18, 0.82, mist) * uMistDensity;
+
+    // Reader accent color blending:
+    // Base dark background -> Reader accent -> Luminous celestial highlights
+    vec3 mistHighlight = mix(uColorAccent, vec3(1.0, 0.95, 0.88), 0.4);
+    vec3 color = mix(uColorBase, uColorAccent, mist * 0.85);
+    color = mix(color, mistHighlight, pow(mist, 2.5) * 0.7);
+
+    // Add subtle cursor proximity luminous aura
+    float cursorAura = mouseFalloff * 0.35;
+    color += uColorAccent * cursorAura;
+
+    // Soft edge radial fade using smoothstep (seamless integration with sanctuary background)
+    float edgeFade = smoothstep(1.05, 0.25, dist);
+    float alpha = clamp(mist * edgeFade * (0.55 + cursorAura * 0.4), 0.0, 0.88);
+
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+/**
+ * Custom GLSL Vertex Shader for Interactive Energy Ripple Waves.
+ * Displaces surface vertices in 3D along Z-axis on card click / touch.
+ */
+export const ENERGY_WAVE_VERTEX_SHADER = /* glsl */ `
+  uniform float uTime;
+  uniform vec2 uTouchOrigin;
+  uniform float uTouchStartTime;
+  uniform float uWaveSpeed;
+  uniform float uWaveFrequency;
+  uniform float uDecayRate;
+  uniform float uTemporalDecay;
+  uniform float uWaveIntensity;
+
+  varying vec2 vUv;
+  varying vec2 vCenteredUv;
+  varying float vDistToOrigin;
+  varying float vWaveDisplacement;
+  varying float vElapsed;
+
+  void main() {
+    vUv = uv;
+    vec2 centered = (uv - 0.5) * 2.0;
+    vCenteredUv = centered;
+    vec3 pos = position;
+
+    float dt = max(0.0, uTime - uTouchStartTime);
+    vElapsed = dt;
+
+    float dist = length(centered - uTouchOrigin);
+    vDistToOrigin = dist;
+
+    float waveFront = dt * uWaveSpeed;
+    float distFromFront = dist - waveFront;
+
+    float packet = exp(-pow(distFromFront * 4.0, 2.0));
+    float sineWave = sin(dist * uWaveFrequency - dt * (uWaveSpeed * uWaveFrequency));
+    float attenuation = exp(-dist * uDecayRate) * exp(-dt * uTemporalDecay);
+
+    float displacement = sineWave * packet * attenuation * uWaveIntensity;
+    pos.z += displacement;
+    vWaveDisplacement = displacement;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+/**
+ * Custom GLSL Fragment Shader for Interactive Energy Ripple Waves.
+ * Renders glowing wavefront packet, leading edge rim, and chromatic dissipation.
+ */
+export const ENERGY_WAVE_FRAGMENT_SHADER = /* glsl */ `
+  uniform float uTime;
+  uniform vec2 uTouchOrigin;
+  uniform float uTouchStartTime;
+  uniform float uWaveSpeed;
+  uniform float uWaveFrequency;
+  uniform float uDecayRate;
+  uniform float uTemporalDecay;
+  uniform vec3 uColorBase;
+  uniform vec3 uColorWave;
+  uniform vec3 uColorCrest;
+  uniform float uWaveIntensity;
+
+  varying vec2 vUv;
+  varying vec2 vCenteredUv;
+  varying float vDistToOrigin;
+  varying float vWaveDisplacement;
+  varying float vElapsed;
+
+  void main() {
+    float dt = vElapsed;
+    float dist = vDistToOrigin;
+
+    // Wavefront position and leading rim
+    float waveFront = dt * uWaveSpeed;
+    float distFromFront = dist - waveFront;
+    float ringPacket = exp(-pow(distFromFront * 4.5, 2.0));
+
+    // Temporal and spatial damping
+    float attenuation = exp(-dist * uDecayRate) * exp(-dt * uTemporalDecay);
+
+    // High-frequency harmonic energy rings
+    float rings = (0.5 + 0.5 * sin(dist * uWaveFrequency - dt * (uWaveSpeed * uWaveFrequency))) * ringPacket;
+
+    // Physical displacement energy visualization
+    float displacementGlow = abs(vWaveDisplacement) * 14.0;
+
+    // Leading edge sharp crest
+    float leadRim = smoothstep(0.06, 0.0, abs(distFromFront)) * exp(-dt * uTemporalDecay * 0.7);
+
+    // Chromatic energy color mixing
+    vec3 waveColor = mix(uColorWave, uColorCrest, clamp(rings * 0.7 + leadRim * 0.9, 0.0, 1.0));
+    vec3 finalColor = mix(uColorBase, waveColor, clamp(attenuation * 1.5, 0.0, 1.0));
+    finalColor += uColorCrest * (leadRim * 0.8 + displacementGlow * 0.6);
+
+    // Soft edge radial fade around outer perimeter
+    float edgeFade = smoothstep(1.05, 0.25, length(vCenteredUv));
+    float alpha = clamp((rings * 0.85 + leadRim * 0.95 + displacementGlow * 0.5) * attenuation * edgeFade, 0.0, 0.92);
+
+    gl_FragColor = vec4(finalColor, alpha);
+  }
+`;
+
+/**
+ * Custom GLSL Vertex Shader for Luminescent Point Particles.
+ */
+export const LUMINESCENT_PARTICLES_VERTEX_SHADER = /* glsl */ `
+  attribute float aScale;
+  attribute float aPhase;
+  attribute vec3 aColor;
+  attribute float aSpeed;
+
+  uniform float uTime;
+  uniform vec2 uMouse;
+  uniform float uPixelRatio;
+  uniform float uBaseSize;
+
+  varying vec3 vColor;
+  varying float vTwinkle;
+
+  void main() {
+    vColor = aColor;
+    vec3 pos = position;
+
+    // Subtle natural celestial drift
+    pos.x += sin(uTime * aSpeed * 0.7 + aPhase) * 0.12;
+    pos.y += cos(uTime * aSpeed * 0.9 + aPhase * 1.4) * 0.12;
+
+    // Interactive mouse vortex/repulsion
+    vec2 mouseDelta = pos.xy - (uMouse * 3.5);
+    float mouseDist = length(mouseDelta);
+    float mouseInfluence = exp(-mouseDist * 1.8);
+    vec2 mouseRepel = normalize(mouseDelta + 0.0001) * mouseInfluence * 0.35;
+    pos.xy += mouseRepel;
+
+    // Twinkle pulsation factor
+    float twinkle = 0.75 + 0.25 * sin(uTime * 2.5 + aPhase * 3.1415);
+    vTwinkle = twinkle;
+
+    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = (uBaseSize * aScale * twinkle * uPixelRatio) / (-mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+/**
+ * Custom GLSL Fragment Shader for Luminescent Point Particles.
+ * Dual-lobe radial glow: intense luminous core + soft celestial halo.
+ */
+export const LUMINESCENT_PARTICLES_FRAGMENT_SHADER = /* glsl */ `
+  varying vec3 vColor;
+  varying float vTwinkle;
+
+  void main() {
+    vec2 coord = gl_PointCoord - vec2(0.5);
+    float dist = length(coord);
+
+    // Branchless soft circular cutoff (mobile TBDR friendly)
+    float circleMask = smoothstep(0.5, 0.44, dist);
+
+    float core = smoothstep(0.12, 0.0, dist);
+    float halo = exp(-dist * 5.5) * smoothstep(0.5, 0.0, dist);
+
+    vec3 finalColor = mix(vColor, vec3(1.0, 0.98, 0.94), core * 0.85);
+    float alpha = clamp((core * 1.1 + halo * 0.75) * vTwinkle * circleMask, 0.0, 1.0);
+
+    gl_FragColor = vec4(finalColor, alpha);
+  }
+`;
+
+export interface MysticalMistUniforms {
+  uTime: { value: number };
+  uMouse: { value: THREE.Vector2 };
+  uColorBase: { value: THREE.Color };
+  uColorAccent: { value: THREE.Color };
+  uMistDensity: { value: number };
+}
+
+export function createMysticalMistUniforms(options?: {
+  accentHex?: string | number;
+  baseHex?: string | number;
+  density?: number;
+}): MysticalMistUniforms {
+  return {
+    uTime: { value: 0 },
+    uMouse: { value: new THREE.Vector2(0, 0) },
+    uColorBase: { value: new THREE.Color(options?.baseHex ?? 0x09080d) },
+    uColorAccent: { value: new THREE.Color(options?.accentHex ?? 0xc9a24a) },
+    uMistDensity: { value: options?.density ?? 1.0 },
+  };
+}
+
+export interface EnergyWaveUniforms {
+  uTime: { value: number };
+  uTouchOrigin: { value: THREE.Vector2 };
+  uTouchStartTime: { value: number };
+  uWaveSpeed: { value: number };
+  uWaveFrequency: { value: number };
+  uDecayRate: { value: number };
+  uTemporalDecay: { value: number };
+  uColorBase: { value: THREE.Color };
+  uColorWave: { value: THREE.Color };
+  uColorCrest: { value: THREE.Color };
+  uWaveIntensity: { value: number };
+}
+
+export function createEnergyWaveUniforms(options?: {
+  waveColorHex?: string | number;
+  crestColorHex?: string | number;
+  baseHex?: string | number;
+  speed?: number;
+  frequency?: number;
+  decayRate?: number;
+  intensity?: number;
+}): EnergyWaveUniforms {
+  return {
+    uTime: { value: 0 },
+    uTouchOrigin: { value: new THREE.Vector2(0, 0) },
+    uTouchStartTime: { value: -100.0 }, // Inactive initially
+    uWaveSpeed: { value: options?.speed ?? 2.4 },
+    uWaveFrequency: { value: options?.frequency ?? 16.0 },
+    uDecayRate: { value: options?.decayRate ?? 2.8 },
+    uTemporalDecay: { value: 1.8 },
+    uColorBase: { value: new THREE.Color(options?.baseHex ?? 0x09080d) },
+    uColorWave: { value: new THREE.Color(options?.waveColorHex ?? 0xc9a24a) },
+    uColorCrest: { value: new THREE.Color(options?.crestColorHex ?? 0xf3e5ab) },
+    uWaveIntensity: { value: options?.intensity ?? 0.12 },
+  };
+}
+
+export interface LuminescentParticlesUniforms {
+  uTime: { value: number };
+  uMouse: { value: THREE.Vector2 };
+  uPixelRatio: { value: number };
+  uBaseSize: { value: number };
+}
+
+export function createLuminescentParticlesUniforms(options?: {
+  baseSize?: number;
+  pixelRatio?: number;
+}): LuminescentParticlesUniforms {
+  return {
+    uTime: { value: 0 },
+    uMouse: { value: new THREE.Vector2(0, 0) },
+    uPixelRatio: { value: options?.pixelRatio ?? 1.0 },
+    uBaseSize: { value: options?.baseSize ?? 24.0 },
+  };
+}
+
+/**
  * Post-Processing ShaderPass: Chromatic Aberration (Lens RGB Split) + Cinematic Vignette.
  */
 export const CHROMATIC_VIGNETTE_SHADER = {
@@ -166,32 +533,38 @@ export function createProceduralSanctuaryEnvMap(
   envScene.background = new THREE.Color(0x09080d);
 
   // Warm Gold Top Dome Light
-  const goldPanel = new THREE.Mesh(
-    new THREE.SphereGeometry(4, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0xf3e5ab, side: THREE.BackSide })
-  );
+  const goldGeom = new THREE.SphereGeometry(4, 16, 16);
+  const goldMat = new THREE.MeshBasicMaterial({ color: 0xf3e5ab, side: THREE.BackSide });
+  const goldPanel = new THREE.Mesh(goldGeom, goldMat);
   goldPanel.position.set(0, 6, 3);
   goldPanel.scale.set(1.5, 0.3, 1.5);
   envScene.add(goldPanel);
 
   // Mystic Violet Left Rim Light
-  const violetPanel = new THREE.Mesh(
-    new THREE.SphereGeometry(3, 12, 12),
-    new THREE.MeshBasicMaterial({ color: 0x8b5cf6, side: THREE.BackSide })
-  );
+  const violetGeom = new THREE.SphereGeometry(3, 12, 12);
+  const violetMat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6, side: THREE.BackSide });
+  const violetPanel = new THREE.Mesh(violetGeom, violetMat);
   violetPanel.position.set(-6, 1, -2);
   envScene.add(violetPanel);
 
   // Rose Quartz Right Rim Light
-  const rosePanel = new THREE.Mesh(
-    new THREE.SphereGeometry(3, 12, 12),
-    new THREE.MeshBasicMaterial({ color: 0xe879a8, side: THREE.BackSide })
-  );
+  const roseGeom = new THREE.SphereGeometry(3, 12, 12);
+  const roseMat = new THREE.MeshBasicMaterial({ color: 0xe879a8, side: THREE.BackSide });
+  const rosePanel = new THREE.Mesh(roseGeom, roseMat);
   rosePanel.position.set(6, -1, 2);
   envScene.add(rosePanel);
 
   const renderTarget = pmremGenerator.fromScene(envScene, 0.04);
   pmremGenerator.dispose();
+
+  // Dispose temporary geometry & materials
+  goldGeom.dispose();
+  goldMat.dispose();
+  violetGeom.dispose();
+  violetMat.dispose();
+  roseGeom.dispose();
+  roseMat.dispose();
+  envScene.clear();
 
   return renderTarget.texture;
 }
@@ -268,5 +641,3 @@ export const PERSONA_AURA_FRAGMENT_SHADER = /* glsl */ `
     gl_FragColor = vec4(finalColor, clamp(alpha, 0.0, 0.92));
   }
 `;
-
-

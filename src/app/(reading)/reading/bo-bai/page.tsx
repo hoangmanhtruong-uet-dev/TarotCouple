@@ -13,6 +13,7 @@ import type { QuotaStatusPayload } from '@/lib/api-types';
 import { WalletPayOSModal } from '@/components/WalletPayOSModal';
 import { DailyStreakModal } from '@/components/DailyStreakModal';
 import { ReferralAndAdModal } from '@/components/ReferralAndAdModal';
+import { soundManager } from '@/lib/sound-effects';
 import {
   ArrowRight,
   ArrowLeft,
@@ -232,7 +233,14 @@ export default function BoBaiSelectionPage() {
   const isFullDeckLocked = !quota.canUseFullDeck;
   const isUnder18 = birthYear ? 2026 - birthYear < 18 : false;
 
+  useEffect(() => {
+    return () => {
+      soundManager.cleanupRouteAudio();
+    };
+  }, []);
+
   const handleSelectDeck = (deckId: DeckMode) => {
+    soundManager.playCrispClick();
     if (deckId === 'full_78' && isFullDeckLocked) {
       // Bấm vào ổ khóa -> Rung ổ khóa và hiện bottom sheet xác nhận trừ Sao
       setIsLockShaking(true);
@@ -240,6 +248,7 @@ export default function BoBaiSelectionPage() {
       setIsUnlockSheetOpen(true);
       return;
     }
+    soundManager.playOrganicCardFlip();
     setContextForm({ deckMode: deckId });
     // GSAP 3D card flip on select
     if (!shouldReduceMotion) {

@@ -1,7 +1,25 @@
 // Web Audio API Native Synthesizer for Tarot Rituals & Spatial Micro-Audio
 // Không phụ thuộc vào asset mp3/wav ngoài, không tốn dung lượng băng thông, hoàn toàn bảo mật & tức thời.
 
-class SoundManager {
+export interface SoundManagerInterface {
+  playTibetanSingingBowl(): void;
+  playCrispClick(): void;
+  playOrganicCardFlip(): void;
+  playCardSlide(): void;
+  playMysticChime(): void;
+  playMagneticHover(): void;
+  toggle(): boolean;
+  isEnabled(): boolean;
+  cleanupRouteAudio(): void;
+}
+
+interface ActiveVoice {
+  sources: (AudioScheduledSourceNode | OscillatorNode | AudioBufferSourceNode)[];
+  gainNodes: GainNode[];
+  timerId?: ReturnType<typeof setTimeout>;
+}
+
+export class SoundManager implements SoundManagerInterface {
   private ctx: AudioContext | null = null;
   private soundEnabled: boolean = true;
   private ambientNodes: {
@@ -10,6 +28,7 @@ class SoundManager {
     gain: GainNode;
   } | null = null;
   private lastScrollHarmonicAt: number = 0;
+  private activeVoices: Set<ActiveVoice> = new Set();
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -30,8 +49,8 @@ class SoundManager {
 
   public setEnabled(enabled: boolean): void {
     this.soundEnabled = enabled;
-    if (!enabled && this.ambientNodes) {
-      this.toggleAmbientDrone(false);
+    if (!enabled) {
+      this.cleanupRouteAudio();
     }
     if (typeof window !== 'undefined') {
       try {
@@ -48,6 +67,77 @@ class SoundManager {
       this.playBellTone();
     }
     return this.soundEnabled;
+  }
+
+  private registerVoice(
+    sources: (AudioScheduledSourceNode | OscillatorNode | AudioBufferSourceNode)[],
+    gainNodes: GainNode[],
+    durationMs: number
+  ): void {
+    const voice: ActiveVoice = { sources, gainNodes };
+    voice.timerId = setTimeout(() => {
+      this.activeVoices.delete(voice);
+    }, Math.max(10, durationMs + 100));
+
+    this.activeVoices.add(voice);
+  }
+
+  /**
+   * Giải phóng tài nguyên âm thanh khi chuyển trang (cleanupRouteAudio):
+   * Tự động dừng tất cả các voice đang phát dở (như chuông xoay 7.2s hoặc tiếng lật bài),
+   * ngắt kết nối các audio node và suspend AudioContext để tránh rò rỉ bộ nhớ (memory/context leak)
+   * hoặc lãng phí CPU giữa các route trong Next.js App Router.
+   */
+  public cleanupRouteAudio(): void {
+    // 1. Dừng Ambient Drone nếu đang phát
+    if (this.ambientNodes) {
+      try {
+        this.ambientNodes.osc1.stop();
+        this.ambientNodes.osc2.stop();
+        this.ambientNodes.osc1.disconnect();
+        this.ambientNodes.osc2.disconnect();
+        this.ambientNodes.gain.disconnect();
+      } catch {
+        // Safe fallback
+      }
+      this.ambientNodes = null;
+    }
+
+    // 2. Dừng và giải phóng toàn bộ transient voices đang hoạt động
+    this.activeVoices.forEach((voice) => {
+      if (voice.timerId) {
+        clearTimeout(voice.timerId);
+      }
+      for (const src of voice.sources) {
+        try {
+          src.stop();
+        } catch {
+          // Safe fallback
+        }
+        try {
+          src.disconnect();
+        } catch {
+          // Safe fallback
+        }
+      }
+      for (const g of voice.gainNodes) {
+        try {
+          g.disconnect();
+        } catch {
+          // Safe fallback
+        }
+      }
+    });
+    this.activeVoices.clear();
+
+    // 3. Tạm dừng AudioContext để giải phóng phần cứng âm thanh
+    if (this.ctx && this.ctx.state === 'running') {
+      try {
+        void this.ctx.suspend();
+      } catch {
+        // Safe fallback
+      }
+    }
   }
 
   private getContext(): AudioContext | null {
@@ -101,8 +191,175 @@ class SoundManager {
       osc2.start(now);
       osc1.stop(now + 1.6);
       osc2.stop(now + 1.6);
+
+      this.registerVoice([osc1, osc2], [gain], 1600);
     } catch {
       // AudioContext policy safe fallback
+    }
+  }
+
+  /**
+   * Tiếng Chuông Xoay Tây Tạng (Tibetan Singing Bowl):
+   * Tổng hợp đa tần số hình sin (multi-sine modal synthesis) mô phỏng chuông đồng thủ công:
+   * - Cặp tần số nền giao thoa (beating pair): ~180.0Hz và 182.4Hz tạo nhịp phách chậm ~2.4Hz thư giãn.
+   * - Họa âm kim loại phi điều hòa (metallic non-harmonic partials):
+   *     + Mode 2: 504Hz (~2.8x)
+   *     + Mode 3: 965Hz (~5.36x)
+   *     + Mode 4: 1540Hz (~8.55x)
+   * - Gõ vồ mềm (felt mallet strike transient): xung ấm nhẹ ở pha khởi phát.
+   * - Suy giảm hàm mũ kéo dài 7.2 giây (7.2s gradual exponential decay), các họa âm cao tắt dần
+   *   nhanh hơn tần số nền để giữ lại âm vang sâu lắng, tôn nghiêm khi hoàn thành nghi thức bói bài.
+   */
+  public playTibetanSingingBowl(): void {
+    if (!this.soundEnabled) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const totalDuration = 7.2;
+
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(1.0, now);
+      masterGain.connect(ctx.destination);
+
+      const sources: (AudioScheduledSourceNode | OscillatorNode | AudioBufferSourceNode)[] = [];
+      const gainNodes: GainNode[] = [masterGain];
+
+      // 1. Strike transient (padded mallet impact on rim)
+      const strikeOsc = ctx.createOscillator();
+      const strikeGain = ctx.createGain();
+      strikeOsc.type = 'sine';
+      strikeOsc.frequency.setValueAtTime(140, now);
+      strikeOsc.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+
+      strikeGain.gain.setValueAtTime(0.0001, now);
+      strikeGain.gain.linearRampToValueAtTime(0.12, now + 0.006);
+      strikeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+      strikeOsc.connect(strikeGain);
+      strikeGain.connect(masterGain);
+      strikeOsc.start(now);
+      strikeOsc.stop(now + 0.12);
+      sources.push(strikeOsc);
+      gainNodes.push(strikeGain);
+
+      // 2. Fundamental Beating Pair (~180Hz)
+      const baseModes = [
+        { freq: 180.0, gain: 0.16, decay: 7.2 },
+        { freq: 182.4, gain: 0.14, decay: 7.2 },
+      ];
+
+      // 3. Metallic Non-Harmonic Partials (Bessel-type bowl modal resonances)
+      const metallicPartials = [
+        { freq: 504.0, gain: 0.075, decay: 5.6 }, // 2nd radial mode (~2.8x)
+        { freq: 965.0, gain: 0.045, decay: 4.2 }, // 3rd mode (~5.36x)
+        { freq: 1540.0, gain: 0.025, decay: 2.8 }, // 4th metallic shimmer (~8.55x)
+      ];
+
+      const allModes = [...baseModes, ...metallicPartials];
+
+      for (const mode of allModes) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(mode.freq, now);
+
+        // Soft mallet strike onset (25ms attack) to prevent harsh click
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(mode.gain, now + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + mode.decay);
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+
+        osc.start(now);
+        osc.stop(now + mode.decay);
+
+        sources.push(osc);
+        gainNodes.push(gain);
+      }
+
+      this.registerVoice(sources, gainNodes, totalDuration * 1000);
+    } catch {
+      // AudioContext safe fallback
+    }
+  }
+
+  /**
+   * Âm thanh nhấp chuột tinh tế (Crisp Micro-Click):
+   * Dành cho vi tương tác nút bấm, chọn tùy chọn, chuyển tab:
+   * - Xung cơ học siêu ngắn (16ms): kết hợp xung sine trượt nhanh (2600Hz -> 750Hz)
+   *   và dải lọc highpass mô phỏng tiếp điểm micro-switch xúc giác cao cấp.
+   * - Âm lượng nhẹ nhàng (subtle), không gây mỏi thính giác khi nhấp liên tục.
+   */
+  public playCrispClick(): void {
+    if (!this.soundEnabled) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const duration = 0.016; // 16ms micro duration
+
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(1.0, now);
+      masterGain.connect(ctx.destination);
+
+      const sources: (AudioScheduledSourceNode | OscillatorNode | AudioBufferSourceNode)[] = [];
+      const gainNodes: GainNode[] = [masterGain];
+
+      // 1. Crisp pitch drop impulse
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2600, now);
+      osc.frequency.exponentialRampToValueAtTime(750, now + duration);
+
+      oscGain.gain.setValueAtTime(0.0001, now);
+      oscGain.gain.linearRampToValueAtTime(0.055, now + 0.002);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc.connect(oscGain);
+      oscGain.connect(masterGain);
+
+      osc.start(now);
+      osc.stop(now + duration);
+      sources.push(osc);
+      gainNodes.push(oscGain);
+
+      // 2. Micro friction noise click (tactile switch contact)
+      const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * 0.008)); // 8ms noise burst
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+      }
+
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(3200, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.028, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.008);
+
+      noiseSource.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(masterGain);
+
+      noiseSource.start(now);
+      sources.push(noiseSource);
+      gainNodes.push(noiseGain);
+
+      this.registerVoice(sources, gainNodes, duration * 1000 + 10);
+    } catch {
+      // AudioContext safe fallback
     }
   }
 
@@ -142,43 +399,103 @@ class SoundManager {
       gain.connect(ctx.destination);
 
       noise.start(now);
+      this.registerVoice([noise], [gain], 60);
     } catch {
       // AudioContext policy safe fallback
     }
   }
 
   /**
-   * Tiếng lật bài 3D (Card Flip):
-   * Sự kết hợp của tiếng gõ trầm ấm (woody thump) và tiếng gió lướt nhanh (flutter).
+   * Tiếng lật bài rột roạt tự nhiên (Organic Card Flip):
+   * Kết hợp âm thanh lướt gió (aerodynamic swoosh) và tiếng gõ nhẹ/bật mép bài (gentle slap):
+   * - Giai đoạn 1 (0ms - 130ms): Luồng khí cắt qua mép bài linen dầy dặn
+   *   (bandpass noise sweep từ 1800Hz xuống 620Hz).
+   * - Giai đoạn 2 (40ms - 160ms): Tiếng tiếp xúc bề mặt bàn nhung/gỗ (woody slap tap)
+   *   với tần số cộng hưởng 280Hz -> 82Hz.
+   * Mang lại xúc cảm chân thực vượt trội so với tiếng lật bài đơn âm cơ bản.
    */
-  public playCardFlip(): void {
+  public playOrganicCardFlip(): void {
     if (!this.soundEnabled) return;
     try {
       const ctx = this.getContext();
       if (!ctx) return;
 
       const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const totalDuration = 0.18; // 180ms
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(260, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(1.0, now);
+      masterGain.connect(ctx.destination);
 
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.linearRampToValueAtTime(0.3, now + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      const sources: (AudioScheduledSourceNode | OscillatorNode | AudioBufferSourceNode)[] = [];
+      const gainNodes: GainNode[] = [masterGain];
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      // 1. Aerodynamic swoosh (Air friction flutter: 0ms -> 130ms)
+      const swooshDuration = 0.13;
+      const swooshBufferSize = Math.max(1, Math.floor(ctx.sampleRate * swooshDuration));
+      const swooshBuffer = ctx.createBuffer(1, swooshBufferSize, ctx.sampleRate);
+      const swooshData = swooshBuffer.getChannelData(0);
+      for (let i = 0; i < swooshBufferSize; i++) {
+        swooshData[i] = Math.random() * 2 - 1;
+      }
 
-      osc.start(now);
-      osc.stop(now + 0.18);
+      const swooshNoise = ctx.createBufferSource();
+      swooshNoise.buffer = swooshBuffer;
 
-      this.playCardSlide();
+      const swooshFilter = ctx.createBiquadFilter();
+      swooshFilter.type = 'bandpass';
+      swooshFilter.Q.setValueAtTime(2.2, now);
+      swooshFilter.frequency.setValueAtTime(1800, now);
+      swooshFilter.frequency.exponentialRampToValueAtTime(620, now + swooshDuration);
+
+      const swooshGain = ctx.createGain();
+      swooshGain.gain.setValueAtTime(0.0001, now);
+      swooshGain.gain.linearRampToValueAtTime(0.09, now + 0.025);
+      swooshGain.gain.exponentialRampToValueAtTime(0.0001, now + swooshDuration);
+
+      swooshNoise.connect(swooshFilter);
+      swooshFilter.connect(swooshGain);
+      swooshGain.connect(masterGain);
+
+      swooshNoise.start(now);
+      sources.push(swooshNoise);
+      gainNodes.push(swooshGain);
+
+      // 2. Gentle slap & card flex tap (Altar contact / edge flick: starts at now + 0.04s)
+      const slapStart = now + 0.04;
+      const slapDuration = 0.12;
+
+      const slapOsc = ctx.createOscillator();
+      const slapGain = ctx.createGain();
+
+      slapOsc.type = 'triangle';
+      slapOsc.frequency.setValueAtTime(280, slapStart);
+      slapOsc.frequency.exponentialRampToValueAtTime(82, slapStart + slapDuration);
+
+      slapGain.gain.setValueAtTime(0.0001, slapStart);
+      slapGain.gain.linearRampToValueAtTime(0.22, slapStart + 0.012);
+      slapGain.gain.exponentialRampToValueAtTime(0.0001, slapStart + slapDuration);
+
+      slapOsc.connect(slapGain);
+      slapGain.connect(masterGain);
+
+      slapOsc.start(slapStart);
+      slapOsc.stop(slapStart + slapDuration);
+      sources.push(slapOsc);
+      gainNodes.push(slapGain);
+
+      this.registerVoice(sources, gainNodes, totalDuration * 1000);
     } catch {
-      // Safe fallback
+      // AudioContext safe fallback
     }
+  }
+
+  /**
+   * Tiếng lật bài (Card Flip - tương thích ngược):
+   * Tự động điều hướng tới playOrganicCardFlip để mang lại chất âm chân thực nhất.
+   */
+  public playCardFlip(): void {
+    this.playOrganicCardFlip();
   }
 
   /**
@@ -193,6 +510,8 @@ class SoundManager {
 
       const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
       const now = ctx.currentTime;
+      const sources: OscillatorNode[] = [];
+      const gainNodes: GainNode[] = [];
 
       notes.forEach((freq, i) => {
         const noteStart = now + i * 0.09;
@@ -211,7 +530,12 @@ class SoundManager {
 
         osc.start(noteStart);
         osc.stop(noteStart + 0.9);
+
+        sources.push(osc);
+        gainNodes.push(gain);
       });
+
+      this.registerVoice(sources, gainNodes, (notes.length * 0.09 + 0.9) * 1000);
     } catch {
       // Safe fallback
     }
@@ -230,6 +554,8 @@ class SoundManager {
       const now = ctx.currentTime;
       const cardFlicks = 20;
       const duration = 1.15;
+      const sources: OscillatorNode[] = [];
+      const gainNodes: GainNode[] = [];
 
       for (let i = 0; i < cardFlicks; i++) {
         const flickTime = now + (i / cardFlicks) * duration + (Math.random() * 0.015 - 0.007);
@@ -249,7 +575,12 @@ class SoundManager {
 
         osc.start(flickTime);
         osc.stop(flickTime + 0.045);
+
+        sources.push(osc);
+        gainNodes.push(gain);
       }
+
+      this.registerVoice(sources, gainNodes, (duration + 0.05) * 1000);
     } catch {
       // Safe fallback
     }
@@ -282,6 +613,8 @@ class SoundManager {
 
       osc.start(now);
       osc.stop(now + 0.05);
+
+      this.registerVoice([osc], [gain], 50);
     } catch {
       // Safe fallback
     }
@@ -321,6 +654,8 @@ class SoundManager {
 
       osc.start(now);
       osc.stop(now + 0.28);
+
+      this.registerVoice([osc], [gain], 280);
     } catch {
       // Safe fallback
     }
@@ -446,6 +781,8 @@ class SoundManager {
       };
 
       const preset = presetMap[readerId] ?? presetMap.ba_ngoai!;
+      const sources: OscillatorNode[] = [];
+      const gainNodes: GainNode[] = [];
 
       preset.notes.forEach((freq, idx) => {
         const startAt = now + idx * preset.stagger;
@@ -471,7 +808,12 @@ class SoundManager {
 
         osc.start(startAt);
         osc.stop(startAt + preset.duration + 0.02);
+
+        sources.push(osc);
+        gainNodes.push(gain);
       });
+
+      this.registerVoice(sources, gainNodes, (preset.notes.length * preset.stagger + preset.duration + 0.02) * 1000);
     } catch {
       // AudioContext safe fallback
     }
@@ -479,4 +821,3 @@ class SoundManager {
 }
 
 export const soundManager = new SoundManager();
-

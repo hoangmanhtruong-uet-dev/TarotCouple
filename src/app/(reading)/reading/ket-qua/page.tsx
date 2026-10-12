@@ -1008,6 +1008,21 @@ export default function KetQuaPage() {
     }
   }, [readingSuccess]);
 
+  // Play Tibetan singing bowl when reaching verdict stage & cleanup audio on unmount
+  useEffect(() => {
+    if (stage === 'verdict') {
+      soundManager.playTibetanSingingBowl();
+    } else if (stage === 'reveal_1' || stage === 'reveal_2' || stage === 'reveal_3') {
+      soundManager.playOrganicCardFlip();
+    }
+  }, [stage]);
+
+  useEffect(() => {
+    return () => {
+      soundManager.cleanupRouteAudio();
+    };
+  }, []);
+
   // ── Empty state ──────────────────────────────────────────────────────────
   if (!readingSuccess) {
     return (

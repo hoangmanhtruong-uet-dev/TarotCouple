@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { type HardwareTier } from './core';
 
 /**
  * Generates an Offscreen/DOM Canvas containing the Sacred Octagram & Lunar Phases
@@ -197,11 +198,23 @@ export interface Create3DTarotCardMeshOptions {
   height?: number;
   thickness?: number;
   onTextureLoaded?: () => void;
+  // PBR Gold Foil & Tier Options
+  tier?: HardwareTier;
+  usePhysicalMaterial?: boolean;
+  envMap?: THREE.Texture | null;
+  metalness?: number;
+  roughness?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
+  envMapIntensity?: number;
 }
 
 /**
- * Builds a complete 3D Tarot Card Box Mesh with 4 Antique Gold foil edges (#C9A24A),
- * a front RWS face (+x, -x, +y, -y, +z, -z), and a Sacred Geometry back face.
+ * Builds a complete 3D Tarot Card Box Mesh with:
+ * - 4 Antique Gold foil edges (#C9A24A) with calibrated PBR clearcoat & metalness
+ * - Front RWS face (+Z) with gilded borders
+ * - Sacred Geometry back face (-Z) with Sacred Octagram & Lunar phases
+ * - Seamless Tier-Adaptive fallback: MeshPhysicalMaterial for Tier 1, enhanced MeshStandardMaterial for Tier 2/Mobile.
  */
 export function create3DTarotCardMesh(
   options: Create3DTarotCardMeshOptions = {}
@@ -211,14 +224,37 @@ export function create3DTarotCardMesh(
   const thickness = options.thickness ?? 0.016;
   const accentHex = options.accentHex ?? '#C9A24A';
 
+  const isTier1 =
+    options.tier === 'tier1' || (!options.tier && options.usePhysicalMaterial !== false);
+  const usePhysical = options.usePhysicalMaterial ?? isTier1;
+
   const geometry = new THREE.BoxGeometry(width, height, thickness);
 
-  const edgeMaterial = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(accentHex),
-    metalness: 0.82,
-    roughness: 0.25,
-  });
+  // 1. Gilded Gold Foil Edge Material (Faces 0, 1, 2, 3)
+  const edgeMetalness = options.metalness ?? 0.85;
+  const edgeRoughness = options.roughness ?? 0.25;
+  const edgeClearcoat = options.clearcoat ?? 0.7;
+  const edgeClearcoatRoughness = options.clearcoatRoughness ?? 0.15;
+  const edgeEnvIntensity = options.envMapIntensity ?? 1.25;
 
+  const edgeMaterial = usePhysical
+    ? new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(accentHex),
+        metalness: edgeMetalness,
+        roughness: edgeRoughness,
+        clearcoat: edgeClearcoat,
+        clearcoatRoughness: edgeClearcoatRoughness,
+        reflectivity: 0.9,
+        ...(options.envMap ? { envMap: options.envMap, envMapIntensity: edgeEnvIntensity } : {}),
+      })
+    : new THREE.MeshStandardMaterial({
+        color: new THREE.Color(accentHex),
+        metalness: edgeMetalness,
+        roughness: edgeRoughness,
+        ...(options.envMap ? { envMap: options.envMap, envMapIntensity: 1.0 } : {}),
+      });
+
+  // 2. Procedural Textures for Front & Back
   const frontTexture = createCardFaceTexture({
     roman: options.roman,
     title: options.title,
@@ -229,21 +265,45 @@ export function create3DTarotCardMesh(
 
   const backTexture = createSacredCardBackTexture(accentHex);
 
-  const frontMaterial = new THREE.MeshStandardMaterial({
-    map: frontTexture ?? undefined,
-    color: new THREE.Color('#ffffff'),
-    metalness: 0.18,
-    roughness: 0.42,
-  });
+  // 3. Front Face Material (Face 4 / +Z)
+  const frontMaterial = usePhysical
+    ? new THREE.MeshPhysicalMaterial({
+        ...(frontTexture ? { map: frontTexture } : {}),
+        color: new THREE.Color('#ffffff'),
+        metalness: 0.18,
+        roughness: 0.38,
+        clearcoat: 0.45,
+        clearcoatRoughness: 0.2,
+        ...(options.envMap ? { envMap: options.envMap, envMapIntensity: 0.85 } : {}),
+      })
+    : new THREE.MeshStandardMaterial({
+        ...(frontTexture ? { map: frontTexture } : {}),
+        color: new THREE.Color('#ffffff'),
+        metalness: 0.18,
+        roughness: 0.42,
+        ...(options.envMap ? { envMap: options.envMap, envMapIntensity: 0.8 } : {}),
+      });
 
-  const backMaterial = new THREE.MeshStandardMaterial({
-    map: backTexture ?? undefined,
-    color: new THREE.Color('#ffffff'),
-    metalness: 0.35,
-    roughness: 0.38,
-  });
+  // 4. Back Face Material (Face 5 / -Z)
+  const backMaterial = usePhysical
+    ? new THREE.MeshPhysicalMaterial({
+        ...(backTexture ? { map: backTexture } : {}),
+        color: new THREE.Color('#ffffff'),
+        metalness: 0.38,
+        roughness: 0.32,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.18,
+        ...(options.envMap ? { envMap: options.envMap, envMapIntensity: 1.0 } : {}),
+      })
+    : new THREE.MeshStandardMaterial({
+        ...(backTexture ? { map: backTexture } : {}),
+        color: new THREE.Color('#ffffff'),
+        metalness: 0.35,
+        roughness: 0.38,
+        ...(options.envMap ? { envMap: options.envMap, envMapIntensity: 1.0 } : {}),
+      });
 
-  // BoxGeometry material order: [right, left, top, bottom, front(+Z), back(-Z)]
+  // BoxGeometry face order: [right (+X), left (-X), top (+Y), bottom (-Y), front (+Z), back (-Z)]
   const materials: THREE.Material[] = [
     edgeMaterial,
     edgeMaterial,
@@ -254,5 +314,8 @@ export function create3DTarotCardMesh(
   ];
 
   const mesh = new THREE.Mesh(geometry, materials);
+  mesh.castShadow = isTier1;
+  mesh.receiveShadow = isTier1;
+
   return mesh;
 }

@@ -1,7 +1,138 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
-  <rect width="256" height="256" rx="56" fill="#0B0914"/>
-  <rect x="16" y="16" width="224" height="224" rx="42" stroke="#D4AF37" stroke-width="3" stroke-opacity="0.65"/>
-  <circle cx="128" cy="128" r="76" stroke="#D4AF37" stroke-width="2" stroke-dasharray="6 6" stroke-opacity="0.5"/>
-  <path d="M128 42L146 98L204 108L156 144L170 202L128 168L86 202L100 144L52 108L110 98L128 42Z" stroke="#F3E5AB" stroke-width="4" fill="#D4AF37" fill-opacity="0.18"/>
-  <circle cx="128" cy="128" r="18" fill="#F3E5AB"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#1B172B"/>
+      <stop offset="50%" stop-color="#0E0C17"/>
+      <stop offset="100%" stop-color="#07060B"/>
+    </radialGradient>
+
+    <!-- Gold Foil Gradients -->
+    <linearGradient id="goldLinear" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDF2B8"/>
+      <stop offset="35%" stop-color="#E5C687"/>
+      <stop offset="70%" stop-color="#C9A24A"/>
+      <stop offset="100%" stop-color="#9A7728"/>
+    </linearGradient>
+
+    <linearGradient id="heartGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF5C2"/>
+      <stop offset="50%" stop-color="#E5C687"/>
+      <stop offset="100%" stop-color="#C9A24A"/>
+    </linearGradient>
+
+    <!-- Aura Filter Glow -->
+    <filter id="goldGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- App Icon Base Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  
+  <!-- Outer Sacred Border -->
+  <rect x="24" y="24" width="464" height="464" rx="92" stroke="url(#goldLinear)" stroke-width="2" stroke-opacity="0.35"/>
+  <rect x="34" y="34" width="444" height="444" rx="84" stroke="#C9A24A" stroke-width="1" stroke-dasharray="6 6" stroke-opacity="0.25"/>
+
+  <!-- Subtle Celestial Rings -->
+  <circle cx="256" cy="220" r="160" stroke="#C9A24A" stroke-width="1.2" stroke-opacity="0.2" stroke-dasharray="4 8"/>
+  <circle cx="256" cy="220" r="185" stroke="#E5C687" stroke-width="1" stroke-opacity="0.12"/>
+
+  <!-- ================= CARDS GROUP ================= -->
+  <!-- Left Card (Slight counter-clockwise tilt) -->
+  <g transform="translate(256, 220) rotate(-16) translate(-256, -220)">
+    <rect x="156" y="90" width="130" height="210" rx="18" fill="#14111F" stroke="url(#goldLinear)" stroke-width="3" filter="url(#softGlow)"/>
+    <rect x="166" y="100" width="110" height="190" rx="12" stroke="#C9A24A" stroke-width="1.5" stroke-opacity="0.4" fill="none"/>
+    <!-- Card Motif: Moon & Rays -->
+    <path d="M221 165 A24 24 0 0 1 205 215 A30 30 0 1 0 221 165 Z" fill="url(#goldLinear)" opacity="0.6"/>
+    <line x1="221" y1="135" x2="221" y2="150" stroke="#E5C687" stroke-width="2" stroke-linecap="round"/>
+    <line x1="221" y1="240" x2="221" y2="255" stroke="#E5C687" stroke-width="2" stroke-linecap="round"/>
+    <line x1="180" y1="195" x2="195" y2="195" stroke="#E5C687" stroke-width="2" stroke-linecap="round"/>
+    <line x1="247" y1="195" x2="262" y2="195" stroke="#E5C687" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Right Card (Slight clockwise tilt) -->
+  <g transform="translate(256, 220) rotate(16) translate(-256, -220)">
+    <rect x="226" y="90" width="130" height="210" rx="18" fill="#161322" stroke="url(#goldLinear)" stroke-width="3" filter="url(#softGlow)"/>
+    <rect x="236" y="100" width="110" height="190" rx="12" stroke="#C9A24A" stroke-width="1.5" stroke-opacity="0.4" fill="none"/>
+    <!-- Card Motif: Sun / Radiant Star -->
+    <circle cx="291" cy="195" r="16" fill="url(#goldLinear)" opacity="0.75"/>
+    <path d="M291 162 L294 175 L307 178 L296 186 L299 199 L287 191 L276 198 L280 185 L270 176 L283 174 Z" fill="#FDF2B8"/>
+    <circle cx="291" cy="195" r="32" stroke="#C9A24A" stroke-width="1" stroke-dasharray="3 4" stroke-opacity="0.5"/>
+  </g>
+
+  <!-- ================= SACRED CREST (Top Crown) ================= -->
+  <!-- Top Mystic Crescent & North Star -->
+  <g transform="translate(256, 76)">
+    <!-- Crescent -->
+    <path d="M-22 0 A24 24 0 0 0 22 0 A20 20 0 0 1 -22 0 Z" fill="url(#goldLinear)"/>
+    <!-- 8-Pointed Star -->
+    <path d="M0 -34 L3 -18 L18 -15 L4 -6 L8 10 L0 0 L-8 10 L-4 -6 L-18 -15 L-3 -18 Z" fill="#FFF5C2" filter="url(#softGlow)"/>
+    <!-- Tiny Dots -->
+    <circle cx="-32" cy="-10" r="2.5" fill="#E5C687"/>
+    <circle cx="32" cy="-10" r="2.5" fill="#E5C687"/>
+  </g>
+
+  <!-- ================= GLOWING RESONANCE HEART (Center Intersection) ================= -->
+  <g filter="url(#goldGlow)">
+    <!-- Radiant Heart Backplate -->
+    <path d="M256 160 C230 110 165 125 165 185 C165 240 256 295 256 295 C256 295 347 240 347 185 C347 125 282 110 256 160 Z" 
+          fill="#0B0914" 
+          stroke="url(#heartGold)" 
+          stroke-width="5"/>
+
+    <!-- Inner Heart Accent -->
+    <path d="M256 178 C238 138 185 150 185 195 C185 235 256 275 256 275 C256 275 327 235 327 195 C327 150 274 138 256 178 Z" 
+          fill="none" 
+          stroke="#FDF2B8" 
+          stroke-width="1.8" 
+          stroke-opacity="0.7"/>
+          
+    <!-- Center 8-pointed Cosmic Sparkle -->
+    <path d="M256 200 L259 214 L273 217 L260 223 L264 237 L256 228 L248 237 L252 223 L239 217 L253 214 Z" fill="#FFF8D6"/>
+    <circle cx="256" cy="220" r="3.5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Tiny Constellation Sparkles -->
+  <circle cx="120" cy="180" r="2" fill="#E5C687" opacity="0.8"/>
+  <circle cx="392" cy="180" r="2" fill="#E5C687" opacity="0.8"/>
+  <circle cx="145" cy="305" r="1.5" fill="#FDF2B8" opacity="0.7"/>
+  <circle cx="367" cy="305" r="1.5" fill="#FDF2B8" opacity="0.7"/>
+
+  <!-- ================= BRAND TYPOGRAPHY ================= -->
+  <!-- "TAROT" -->
+  <text x="256" y="380" 
+        text-anchor="middle" 
+        font-family="'Playfair Display', Georgia, serif" 
+        font-size="46" 
+        font-weight="700" 
+        letter-spacing="9" 
+        fill="url(#goldLinear)"
+        filter="url(#softGlow)">TAROT</text>
+
+  <!-- Subtitle "COUPLE" -->
+  <text x="256" y="420" 
+        text-anchor="middle" 
+        font-family="'Be Vietnam Pro', system-ui, sans-serif" 
+        font-size="20" 
+        font-weight="600" 
+        letter-spacing="14" 
+        fill="#E5C687" 
+        opacity="0.85">COUPLE</text>
+
+  <!-- Tiny Decorative Divider Line Under Brand -->
+  <line x1="216" y1="440" x2="296" y2="440" stroke="url(#goldLinear)" stroke-width="1.5" stroke-opacity="0.5"/>
+  <circle cx="256" cy="440" r="3" fill="#E5C687"/>
 </svg>

@@ -1416,7 +1416,31 @@ export async function generateClarifierReading(
   let advice = '';
   let savageQuote = '';
 
-  if (effectivePersona === 'ba_co_mo_hon') {
+  if (effectivePersona === 'ba_ngoai') {
+    interpretation = `Bà Ngoại trả lời cho con về câu hỏi "${questionAsked}" nghe ${safeNick}: Lá Làm Rõ ${normalized.name_vi} (${orientVi}) hiện ra với từ khóa "${primaryKw}" và ${secondaryKw}. Bà thấy con không việc gì phải lo lắng hay hấp tấp; điều quan trọng nhất lúc này là giữ gìn sức khỏe và lắng nghe con tim mình, cái gì an lành tự khắc sẽ tìm đến con.`;
+    advice = `Hôm nay con cứ ăn ngon ngủ kỹ, đừng tự tạo áp lực cho mình, để tâm trí thảnh thơi rồi đưa ra quyết định sau.`;
+    savageQuote = ensureConciseQuote(
+      `Bà Ngoại nhắn nhủ: Có sức khỏe và sự bình an trong lòng là con đã thắng một nửa rồi.`
+    );
+  } else if (effectivePersona === 'chi_dai') {
+    interpretation = `Chị giải đáp thẳng vào câu hỏi "${questionAsked}" cho cưng: Lá Làm Rõ ${normalized.name_vi} (${orientVi}) mang năng lượng "${primaryKw}" và ${secondaryKw}. Nút thắt nằm ở chỗ cưng đang nhượng bộ quá nhiều. Muốn giải quyết dứt điểm thì phải rõ ràng lập trường, không cả nể và không thỏa hiệp với sự mập mờ!`;
+    advice = `Hành động ngay trong 24 giờ tới: Thiết lập lại nguyên tắc của cưng, ai tôn trọng thì ở lại, ai mập mờ thì mời bước!`;
+    savageQuote = ensureConciseQuote(
+      `Chị Đại bắt bài: Đừng hỏi người ta muốn gì, hãy tự hỏi cưng có xứng đáng chịu đựng như vậy không!`
+    );
+  } else if (effectivePersona === 'ban_than') {
+    interpretation = `Tao soi thẳng câu hỏi "${questionAsked}" cho bồ nè ${safeNick}: Lá Làm Rõ ${normalized.name_vi} (${orientVi}) chốt hạ với từ khóa "${primaryKw}" và ${secondaryKw}. Bản thân bồ vốn đã biết câu trả lời rồi, chỉ là đang sợ đối mặt thôi. Đừng overthinking nữa, cứ làm theo những gì bồ thấy nhẹ lòng nhất đi!`;
+    advice = `Tối nay tạm gác suy nghĩ lại, ngủ một giấc thật sâu hoặc đi dạo hít thở không khí trong lành cùng tao.`;
+    savageQuote = ensureConciseQuote(
+      `Bạn thân nhắc nhẹ: Mọi chuyện rồi sẽ ổn thôi, có tao luôn đồng hành cùng bồ đây nè!`
+    );
+  } else if (effectivePersona === 'thay_cu_meo') {
+    interpretation = `Thầy hồi đáp câu hỏi "${questionAsked}" của bạn: Cổ bài ${normalized.name_vi} (${orientVi}) phản chiếu tần số "${primaryKw}" và ${secondaryKw}. Khi bạn nhìn nhận sự việc bằng góc nhìn khách quan không kỳ vọng, mọi nguyên nhân và hệ quả sẽ tự sáng tỏ một cách logic.`;
+    advice = `Dành 10 phút chiêm nghiệm tĩnh lặng, liệt kê các giải pháp khả thi và chọn hướng đi phù hợp với giá trị cốt lõi.`;
+    savageQuote = ensureConciseQuote(
+      `Thầy Cú Mèo soi sáng: Khi bạn giữ được tâm thế điềm tĩnh, không ngoại cảnh nào có thể làm xao động bạn.`
+    );
+  } else if (effectivePersona === 'ba_co_mo_hon') {
     interpretation = `Trả lời thẳng cho câu hỏi "${questionAsked}" của ${safeNick}: Lá Làm Rõ ${normalized.name_vi} (${orientVi}) hiện lên với từ khóa "${primaryKw}" và ${secondaryKw}. Điều này cho thấy nút thắt sẽ được tháo gỡ ngay khi con chủ động đặt lại ranh giới rõ ràng, thay vì ngồi chờ đối phương hay hoàn cảnh tự thay đổi.`;
     advice = `Chốt hành động trong 48 giờ tới: Nói rõ mong muốn của mình một lần duy nhất, sau đó tập trung 100% vào lịch trình cá nhân.`;
     savageQuote = ensureConciseQuote(

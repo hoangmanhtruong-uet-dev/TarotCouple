@@ -18,6 +18,7 @@ import {
 import type { FollowupMessagePayload, ReadingSuccessResponse } from '@/lib/api-types';
 import { FOLLOWUP_MAX_QUESTION_CHARS, FOLLOWUP_STAR_COST } from '@/lib/quota-store';
 import Link from 'next/link';
+import OutOfStarsSheet from '@/components/OutOfStarsSheet';
 
 interface FollowupChatModalProps {
   isOpen: boolean;
@@ -288,7 +289,7 @@ export default function FollowupChatModal({
                   ))}
                 </div>
                 <div className="p-2 rounded-xl bg-[#171424]/60 border border-[#262235] text-[11px] text-[#9E96B0] leading-relaxed">
-                  <span className="text-[#D9B36A] font-bold">Chốt hạ: </span>
+                  <span className="text-[#C9A24A] font-bold">Chốt hạ: </span>
                   {reading.result.overall_verdict}
                 </div>
               </motion.div>
@@ -369,7 +370,7 @@ export default function FollowupChatModal({
               animate={{ opacity: 1 }}
               className="flex items-center gap-2 text-xs text-[#9E96B0] p-2"
             >
-              <Sparkles className="w-4 h-4 animate-spin text-[#D9B36A]" />
+              <Sparkles className="w-4 h-4 animate-spin text-[#C9A24A]" />
               <span>{reading.readerDisplayName} đang đọc năng lượng và soạn câu trả lời...</span>
             </motion.div>
           )}
@@ -403,7 +404,7 @@ export default function FollowupChatModal({
               type="button"
               disabled={isSending}
               onClick={() => handleSendMessage(chip)}
-              className="px-2.5 py-1 rounded-full bg-[#1A1727] hover:bg-[#252037] border border-[#2E2840] hover:border-[#D9B36A]/50 text-[11px] text-[#9E96B0] hover:text-[#F8F5F0] transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-40"
+              className="px-2.5 py-1 rounded-full bg-[#1A1727] hover:bg-[#252037] border border-[#2E2840] hover:border-[#C9A24A]/50 text-[11px] text-[#9E96B0] hover:text-[#F8F5F0] transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-40"
             >
               {chip}
             </button>
@@ -428,7 +429,7 @@ export default function FollowupChatModal({
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={`Hỏi ${reading.readerDisplayName}... (tối đa 200 ký tự)`}
                 disabled={isSending}
-                className="w-full py-2.5 pl-3.5 pr-14 rounded-2xl bg-[#14121F] border border-[#262235] focus:border-[#D9B36A] focus:outline-none text-sm text-[#F8F5F0] placeholder-[#5E5873] transition-colors"
+                className="w-full py-2.5 pl-3.5 pr-14 rounded-2xl bg-[#14121F] border border-[#262235] focus:border-[#C9A24A] focus:outline-none text-sm text-[#F8F5F0] placeholder-[#5E5873] transition-colors"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#5E5873]">
                 {inputText.length}/{FOLLOWUP_MAX_QUESTION_CHARS}
@@ -450,65 +451,16 @@ export default function FollowupChatModal({
         </div>
 
         {/* Out of Stars Modal Sheet */}
-        <AnimatePresence>
-          {showOutOfStarsSheet && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
-            >
-              <div className="w-full max-w-sm p-6 rounded-3xl bg-[#161324] border border-[#D9B36A]/50 text-center shadow-2xl space-y-4">
-                <div className="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center mx-auto text-xl">
-                  ⭐
-                </div>
-                <div>
-                  <h4 className="font-display text-base font-bold text-[#F8F5F0]">
-                    Hết Sao Để Hỏi Sâu
-                  </h4>
-                  <p className="text-xs text-[#9E96B0] mt-1.5 leading-relaxed">
-                    Bạn đã dùng hết 2 câu miễn phí và số dư hiện có ({starsBalance} ⭐) chưa đủ 5 Sao để hỏi tiếp.
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-[#100E1C] border border-[#262235] text-left text-xs space-y-2">
-                  <div className="text-[11px] font-bold text-[#D9B36A] uppercase tracking-wider">
-                    Cách nhận thêm Sao miễn phí:
-                  </div>
-                  <div className="text-[#9E96B0] flex items-center gap-2">
-                    <span>🔥</span>
-                    <span>Điểm danh hàng ngày: +2 Sao mỗi ngày</span>
-                  </div>
-                  <div className="text-[#9E96B0] flex items-center gap-2">
-                    <span>🎁</span>
-                    <span>Mời bạn bè cùng bói: +5 Sao / bạn</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowOutOfStarsSheet(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#262135] text-[#9E96B0] hover:text-[#F8F5F0] text-xs font-semibold cursor-pointer transition-colors"
-                  >
-                    Đóng
-                  </button>
-                  <Link
-                    href="/"
-                    onClick={() => {
-                      setShowOutOfStarsSheet(false);
-                      onClose();
-                    }}
-                    className="flex-1 py-2.5 rounded-xl bg-[#D9B36A] text-[#0B0A12] text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-md"
-                  >
-                    <span>Về Trang Chủ</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <OutOfStarsSheet
+          isOpen={showOutOfStarsSheet}
+          onClose={() => setShowOutOfStarsSheet(false)}
+          requiredStars={FOLLOWUP_STAR_COST}
+          currentStars={starsBalance}
+          reasonText="Bạn đã dùng hết 2 câu hỏi miễn phí và cần thêm Sao để tiếp tục hỏi sâu."
+          onStarsClaimed={() => {
+            setStarsBalance((prev) => prev + 2);
+          }}
+        />
       </motion.div>
     </div>
   );

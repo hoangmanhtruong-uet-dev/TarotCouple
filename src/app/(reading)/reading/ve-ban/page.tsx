@@ -100,7 +100,7 @@ export default function VeBanProfilePage() {
       >
         {/* Nickname */}
         <div>
-          <label className="block text-xs font-semibold text-[#D9B36A] mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-[#C9A24A] mb-1.5 uppercase tracking-wider">
             Biệt Danh Của Bạn *
           </label>
           <input
@@ -125,7 +125,7 @@ export default function VeBanProfilePage() {
         {/* Birth Year (Bắt buộc kèm badge phân tầng lứa tuổi trực quan) */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider">
+            <label className="text-xs font-semibold text-[#C9A24A] uppercase tracking-wider">
               Năm Sinh Của Bạn *
             </label>
             <button
@@ -162,13 +162,9 @@ export default function VeBanProfilePage() {
                 <span className="text-base shrink-0">🌸</span>
                 <div className="text-[11px] text-[#F8F5F0] leading-relaxed">
                   <span className="font-bold text-pink-300">Chế độ Học Đường Trong Sáng (10–15 tuổi):</span>{' '}
-                  {selectedReaderId === 'ba_co_mo_hon' ? (
-                    <span>
-                      Reader <strong className="text-pink-300">Bà Ngoại Vui Tính</strong> sẽ đồng hành (xưng hô Bà Ngoại - cháu) cùng các chủ đề học tập, bạn bè và vận may.
-                    </span>
-                  ) : (
-                    <span>Chủ đề được điều chỉnh lành mạnh, phù hợp lứa tuổi học đường.</span>
-                  )}
+                  <span>
+                    Reader <strong className="text-pink-300">{activeReader.teen_safe_name || activeReader.name}</strong> sẽ đồng hành nhẹ nhàng, ấm áp cùng các chủ đề học tập, tình bạn và vận may ngày mới.
+                  </span>
                 </div>
               </div>
             ) : (
@@ -177,7 +173,7 @@ export default function VeBanProfilePage() {
                 <div className="text-[11px] text-[#F8F5F0] leading-relaxed">
                   <span className="font-bold text-emerald-300">Chế độ Trưởng Thành (16+ tuổi):</span>{' '}
                   Mở khóa trọn vẹn phong cách xưng hô của{' '}
-                  <strong style={{ color: readerAccentColor }}>{activeReader.name}</strong>, bao gồm Bà Cố chém gắt, các chủ đề tình cảm người lớn, tài chính và phân tích sâu sắc.
+                  <strong style={{ color: readerAccentColor }}>{activeReader.name}</strong> cùng các chủ đề tình cảm, sự nghiệp, tài chính và phân tích sâu sắc.
                 </div>
               </div>
             )}
@@ -187,7 +183,7 @@ export default function VeBanProfilePage() {
         {/* Cung Hoàng Đạo: Dropdown gọn, mặc định KHÔNG chọn, có nút Bỏ chọn */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider">
+            <label className="text-xs font-semibold text-[#C9A24A] uppercase tracking-wider">
               Cung Hoàng Đạo (Tùy chọn)
             </label>
             {zodiacSign && (
@@ -244,7 +240,7 @@ export default function VeBanProfilePage() {
         <button
           type="button"
           onClick={handleSaveAndContinue}
-          className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+          className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
         >
           <span>{fromMe ? 'Lưu thay đổi' : 'Tiếp tục'}</span>
           <ArrowRight className="w-4 h-4 shrink-0" />
@@ -258,7 +254,7 @@ export default function VeBanProfilePage() {
           onClick={() => setShowAgeHelpModal(false)}
         >
           <div
-            className="w-full max-w-md bg-[#14121F] border border-[#D9B36A]/40 rounded-3xl p-6 shadow-2xl relative"
+            className="w-full max-w-md bg-[#14121F] border border-[#C9A24A]/40 rounded-3xl p-6 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -270,7 +266,7 @@ export default function VeBanProfilePage() {
             </button>
 
             <div className="flex items-center gap-2.5 mb-3">
-              <ShieldCheck className="w-5 h-5 text-[#D9B36A]" />
+              <ShieldCheck className="w-5 h-5 text-[#C9A24A]" />
               <h3 className="font-display text-base font-bold text-[#F8F5F0]">
                 Chính Sách Phân Tầng Độ Tuổi
               </h3>
@@ -306,7 +302,7 @@ export default function VeBanProfilePage() {
             <button
               type="button"
               onClick={() => setShowAgeHelpModal(false)}
-              className="w-full mt-5 py-3 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-bold text-xs shadow-md transition-colors cursor-pointer"
+              className="w-full mt-5 py-3 rounded-xl bg-[#C9A24A] hover:bg-[#E5C687] text-[#0B0A12] font-bold text-xs shadow-md transition-colors cursor-pointer"
             >
               Đã hiểu & Tiếp tục
             </button>

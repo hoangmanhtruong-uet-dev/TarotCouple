@@ -47,7 +47,7 @@ export default function RootLayout({
       lang="vi"
       className={`${beVietnamPro.variable} ${playfair.variable} dark`}
     >
-      <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#D9B36A]/30 selection:text-[#E5C687]">
+      <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#C9A24A]/30 selection:text-[#E5C687]">
         <PhoneFrameContainer>{children}</PhoneFrameContainer>
       </body>
     </html>

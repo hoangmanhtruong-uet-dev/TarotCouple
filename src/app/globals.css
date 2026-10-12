@@ -2,17 +2,31 @@
 
 :root {
   color-scheme: dark;
-  --bg-obsidian: #0b0a12;
-  --bg-velvet: #14121f;
-  --bg-card: #171424;
-  --bg-elevated: #1d192c;
-  --gold-antique: #d9b36a;
+  /* Canonical Design Tokens (khoá) per TarotCouple_Plan_GoLive.pdf Section 4.2 */
+  --bg: #09080d;
+  --surface: #14111c;
+  --surface-2: #1d1829;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #f2eef8;
+  --text-dim: #a9a1bc;
+  --gold: #c9a24a;
+  --violet: #8b5cf6;
+  --violet-deep: #6a3fb5;
+  --rose: #e879a8;
+  --danger: #e5566d;
+
+  /* Legacy Design Tokens Aliases */
+  --bg-obsidian: var(--bg);
+  --bg-velvet: var(--surface);
+  --bg-card: var(--surface);
+  --bg-elevated: var(--surface-2);
+  --gold-antique: var(--gold);
   --gold-champagne: #e5c687;
-  --gold-border: rgba(217, 179, 106, 0.28);
-  --crimson-ember: #e5624a;
+  --gold-border: var(--border);
+  --crimson-ember: var(--danger);
   --jade-healing: #5db075;
-  --text-ivory: #f8f5f0;
-  --text-muted: #9e96b0;
+  --text-ivory: var(--text);
+  --text-muted: var(--text-dim);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 

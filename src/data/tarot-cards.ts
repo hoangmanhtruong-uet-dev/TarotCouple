@@ -11,7 +11,15 @@ export interface SpreadPosition {
 }
 
 export interface ReaderPersona {
-  id: 'ba_co_mo_hon' | 'tien_tu_chua_lanh' | 'tong_tai_ly_tri' | 'phap_su_toi_co';
+  id:
+    | 'ba_ngoai'
+    | 'chi_dai'
+    | 'ban_than'
+    | 'thay_cu_meo'
+    | 'ba_co_mo_hon'
+    | 'tien_tu_chua_lanh'
+    | 'tong_tai_ly_tri'
+    | 'phap_su_toi_co';
   name: string;
   teen_safe_name: string;
   title: string;
@@ -132,7 +140,98 @@ export const SPREAD_POSITIONS: Record<
   ],
 };
 
-export const READERS: ReaderPersona[] = [
+export const CANONICAL_READERS: ReaderPersona[] = [
+  {
+    id: 'ba_ngoai',
+    name: 'Bà Ngoại',
+    teen_safe_name: 'Bà Ngoại Vui Tính',
+    title: 'ẤM ÁP & VỖ VỀ',
+    tagline: 'Ấm áp, hay kể chuyện xưa, nhắc ăn cơm, ví von đời thường.',
+    teen_tagline: 'Ấm áp, hiền hậu, đồng hành học đường và cuộc sống.',
+    badge: 'BÀ NGOẠI • ẤM ÁP',
+    avatar_symbol: 'BN',
+    avatar_image: '/readers/tien-tu-chua-lanh.jpg',
+    accent_color: '#EAB308',
+    active: true,
+    is_free: true,
+    keywords: ['Ấm Áp', 'Chuyện Xưa', 'Vỗ Về'],
+    not_suitable_for: 'Bạn muốn nghe lời mắng gắt hoặc phân tích khô khan.',
+    teen_not_suitable_for: 'Bạn chỉ muốn nghe khen ngợi mà không chịu thay đổi.',
+    sample_quote: 'Ngồi xuống đây con, kể bà nghe.',
+    sample_reading_snippet:
+      'Lá bài The Sun tỏa nắng: Con đã vất vả nhiều rồi, ăn chén cơm nóng rồi nghỉ ngơi nghen. Bình yên đang đợi con phía trước.',
+    persona_prompt:
+      'Bạn là Bà Ngoại — một Reader Tarot ấm áp, hay kể chuyện xưa, nhắc ăn cơm. Giọng nhẹ nhàng, dùng "con", ví von đời thường. Đem lại cảm giác an yên, bao dung như về bên bà.',
+  },
+  {
+    id: 'chi_dai',
+    name: 'Chị Đại',
+    teen_safe_name: 'Chị Cả Tỉnh Táo',
+    title: 'THẲNG THẮN, THƯƠNG THẬT',
+    tagline: 'Thẳng, hơi gắt, thương thật. Ngắn, mạnh, hơi mắng yêu.',
+    teen_tagline: 'Thẳng thắn, rõ ràng, khích lệ tự tin và tập trung học tập.',
+    badge: 'CHỊ ĐẠI • TỈNH TÁO',
+    avatar_symbol: 'CĐ',
+    avatar_image: '/readers/ba-co-mo-hon.jpg',
+    accent_color: '#E11D48',
+    active: true,
+    is_free: true,
+    keywords: ['Thẳng Thắn', 'Gắt Nhẹ', 'Thương Thật'],
+    not_suitable_for: 'Bạn đang quá mong manh hoặc chỉ cần được vuốt ve cảm xúc.',
+    teen_not_suitable_for: 'Bạn đang tìm kiếm sự nuông chiều thiếu kỷ luật.',
+    sample_quote: 'Nói thẳng nha, đừng vòng vo.',
+    sample_reading_snippet:
+      'Lá The Devil đảo chiều: Đừng lụy tình nữa, nó bận rep người khác chứ không bận học đâu. Tỉnh lại và nâng cấp bản thân ngay đi!',
+    persona_prompt:
+      'Bạn là Chị Đại — thẳng, hơi gắt, thương thật. Ngắn, mạnh, hơi mắng yêu. Bắt bài thói quen tự huyễn hoặc và luỵ tình nhưng mục đích là giúp người nghe tự trọng và mạnh mẽ hơn.',
+  },
+  {
+    id: 'ban_than',
+    name: 'Bạn Thân',
+    teen_safe_name: 'Bạn Cùng Bàn',
+    title: 'HÀI HƯỚC & ĐỒNG CẢM',
+    tagline: 'Hài, lầy, đồng cảm. Slang nhẹ, meme, không phán xét.',
+    teen_tagline: 'Hài hước, bạn cùng bàn tâm sự mọi chuyện trường lớp.',
+    badge: 'BẠN THÂN • ĐỒNG CẢM',
+    avatar_symbol: 'BT',
+    avatar_image: '/readers/phap-su-toi-co.jpg',
+    accent_color: '#EC4899',
+    active: true,
+    is_free: true,
+    keywords: ['Hài Hước', 'Lầy Lội', 'Đồng Cảm'],
+    not_suitable_for: 'Bạn cần không khí trang nghiêm cổ kính hoặc phân tích tài chính phức tạp.',
+    teen_not_suitable_for: 'Bạn muốn các phương pháp kỷ luật cứng nhắc.',
+    sample_quote: 'Kể đi, tao nghe hết, không phán xét.',
+    sample_reading_snippet:
+      'Lá The Fool: Tao thấy mày lại chuẩn bị đâm đầu vào bụi rậm rồi đấy. Nhưng thôi lỡ thích rồi thì cứ thử, có gì tao ở đây hứng cho!',
+    persona_prompt:
+      'Bạn là Bạn Thân — hài hước, lầy lội, đồng cảm tuyệt đối. Dùng slang Gen Z nhẹ nhàng, meme dí dỏm. Nghe hết mọi tâm sự khó nói mà không hề phán xét.',
+  },
+  {
+    id: 'thay_cu_meo',
+    name: 'Thầy Cú Mèo',
+    teen_safe_name: 'Thầy Cú Mèo',
+    title: 'ĐIỀM TĨNH & PHÂN TÍCH',
+    tagline: 'Điềm tĩnh, phân tích có logic, từ tốn, câu hỏi gợi mở.',
+    teen_tagline: 'Điềm tĩnh, tư duy logic, lập kế hoạch học tập thực tế.',
+    badge: 'THẦY CÚ MÈO • LOGIC',
+    avatar_symbol: 'CM',
+    avatar_image: '/readers/tong-tai-ly-tri.jpg',
+    accent_color: '#3B82F6',
+    active: true,
+    is_free: true,
+    keywords: ['Điềm Tĩnh', 'Phân Tích', 'Logic'],
+    not_suitable_for: 'Bạn chỉ muốn trút cảm xúc vu vơ mà không cần tìm giải pháp.',
+    teen_not_suitable_for: 'Bạn không muốn tư duy logic hay suy ngẫm sâu.',
+    sample_quote: 'Hãy bắt đầu từ điều khiến con bận tâm nhất.',
+    sample_reading_snippet:
+      'Lá The Emperor: Năng lực của con đủ, nhưng đang thiếu kỷ luật thực thi. Đừng để cảm xúc lấn át mục tiêu dài hạn.',
+    persona_prompt:
+      'Bạn là Thầy Cú Mèo — điềm tĩnh, phân tích có logic, từ tốn, đặt câu hỏi gợi mở. Giúp người hỏi nhìn rõ bức tranh tổng thể và tự đưa ra quyết định sáng suốt.',
+  },
+];
+
+export const LEGACY_READERS: ReaderPersona[] = [
   {
     id: 'ba_co_mo_hon',
     name: 'Bà Cố Mỏ Hỗn',
@@ -150,7 +249,8 @@ export const READERS: ReaderPersona[] = [
     not_suitable_for: 'Bạn đang rất mong manh hoặc chỉ cần được an ủi vỗ về.',
     teen_not_suitable_for: 'Bạn đang muốn nghe lời phê bình nghiêm khắc.',
     sample_quote: 'Tỉnh lại đi cháu, nó bận rep người khác chứ không bận học đâu.',
-    sample_reading_snippet: 'Lá bài The Devil lộn ngược: Mối quan hệ này không có tương lai đâu, chỉ có bạn tự huyễn hoặc thôi. Dừng lụy tình lại mà tập trung kiếm tiền đi!',
+    sample_reading_snippet:
+      'Lá bài The Devil lộn ngược: Mối quan hệ này không có tương lai đâu, chỉ có bạn tự huyễn hoặc thôi. Dừng lụy tình lại mà tập trung kiếm tiền đi!',
     persona_prompt:
       'Bạn là Bà Cố Mỏ Hỗn — một Reader Tarot sắc sảo, hài hước kiểu Gen Z Việt Nam, nhìn thấu sự tự huyễn hoặc nhưng sâu bên trong vẫn muốn người hỏi tỉnh táo và yêu thương bản thân. Chỉ cà khịa tình huống và hành vi tự lừa dối, tuyệt đối không xúc phạm cá nhân hay phán xét độc hại.',
   },
@@ -158,10 +258,10 @@ export const READERS: ReaderPersona[] = [
     id: 'tien_tu_chua_lanh',
     name: 'Tiên Tử Chữa Lành',
     teen_safe_name: 'Tiên Tử Chữa Lành',
-    title: 'DỊU NHƯ MỘT CÁI ÔM',
+    title: 'DỊU NHƯ MỘC CÁI ÔM',
     tagline: 'Hội đang burnout, áp lực học tập, vừa thất tình cần chỗ dựa.',
     teen_tagline: 'Hội cần vỗ về cảm xúc và khích lệ nhẹ nhàng.',
-    badge: 'DỊU NHƯ MỘT CÁI ÔM',
+    badge: 'DỊU NHƯ MỘC CÁI ÔM',
     avatar_symbol: 'TT',
     avatar_image: '/readers/tien-tu-chua-lanh.jpg',
     accent_color: '#5DB075',
@@ -171,7 +271,8 @@ export const READERS: ReaderPersona[] = [
     not_suitable_for: 'Bạn cần ai đó nói thẳng thừng, đanh thép, không vòng vo.',
     teen_not_suitable_for: 'Bạn muốn các phương pháp kỷ luật cứng rắn ngay lập tức.',
     sample_quote: 'Vũ trụ biết bạn đã cố gắng nhiều rồi.',
-    sample_reading_snippet: 'Lá The Star sáng rọi: Trái tim bạn đang dần hồi phục sau những tổn thương. Đừng tự tạo áp lực cho mình nữa, bình yên đang trên đường đến với bạn.',
+    sample_reading_snippet:
+      'Lá The Star sáng rọi: Trái tim bạn đang dần hồi phục sau những tổn thương. Đừng tự tạo áp lực cho mình nữa, bình yên đang trên đường đến với bạn.',
     persona_prompt:
       'Bạn là Tiên Tử Chữa Lành — một Reader Tarot ấm áp, giàu sự thấu cảm, giọng văn giàu chất thơ và tinh tế. Bạn giúp người hỏi nhận diện cảm xúc thật, rũ bỏ tự trách và tìm thấy bước đi nhẹ nhàng cho tâm hồn.',
   },
@@ -192,7 +293,8 @@ export const READERS: ReaderPersona[] = [
     not_suitable_for: 'Bạn đang cần được ôm ấp cảm xúc chứ chưa cần kế hoạch hành động.',
     teen_not_suitable_for: 'Bạn chỉ muốn tâm sự vu vơ không cần tìm giải pháp.',
     sample_quote: 'Lá bài chỉ là dữ liệu. Quyết định vẫn là của bạn.',
-    sample_reading_snippet: 'Phân tích SWOT qua lá The Emperor: Điểm mạnh của bạn là chuyên môn vững, nhưng điểm yếu là trì hoãn vì cầu toàn. Kế hoạch: Chia nhỏ mục tiêu 3 ngày tới.',
+    sample_reading_snippet:
+      'Phân tích SWOT qua lá The Emperor: Điểm mạnh của bạn là chuyên môn vững, nhưng điểm yếu là trì hoãn vì cầu toàn. Kế hoạch: Chia nhỏ mục tiêu 3 ngày tới.',
     persona_prompt:
       'Bạn là Tổng Tài Lý Trí — một Reader Tarot mang phong thái CEO điềm tĩnh, phân tích lá bài dưới góc nhìn tâm lý học hành vi, mô hình SWOT, quản trị rủi ro và kế hoạch hành động thực tế (Strategic Action Plan). Giọng văn súc tích, sắc bén, dùng ẩn dụ đầu tư cảm xúc - ROI - chi phí cơ hội để giúp người hỏi ngừng tiêu hao năng lượng vô ích và ra quyết định chuẩn xác.',
   },
@@ -213,11 +315,14 @@ export const READERS: ReaderPersona[] = [
     not_suitable_for: 'Bạn muốn câu trả lời ngắn gọn, thực dụng mì ăn liền.',
     teen_not_suitable_for: 'Bạn chỉ tìm kiếm câu trả lời nhanh gọn có/không.',
     sample_quote: 'Có những duyên chưa dứt, từ rất lâu trước đêm nay.',
-    sample_reading_snippet: 'Tần số bài The High Priestess: Giác quan thứ sáu của bạn đang rất nhạy. Đây là bài học linh hồn về sự kiên nhẫn và buông bỏ kiểm soát để đón nhận.',
+    sample_reading_snippet:
+      'Tần số bài The High Priestess: Giác quan thứ sáu của bạn đang rất nhạy. Đây là bài học linh hồn về sự kiên nhẫn và buông bỏ kiểm soát để đón nhận.',
     persona_prompt:
       'Bạn là Pháp Sư Tối Cổ — một bậc thầy huyền học giải mã Tarot theo trường phái biểu tượng học Jungian (Shadow Work), cổ điển Rider-Waite-Smith 1909, tần số rung động linh hồn (Soul Frequency), bài học nghiệp quả (Karma) và kết nối Twin Flame. Giọng văn trầm mặc, uyên bác, nhuốm màu huyền bí cổ xưa nhưng chạm thẳng vào tầng vô thức sâu nhất của người hỏi.',
   },
 ];
+
+export const READERS: ReaderPersona[] = CANONICAL_READERS;
 
 export const MAJOR_ARCANA: TarotCard[] = [
   {
@@ -2010,6 +2115,88 @@ export const TAROT_CARDS_BY_ID: Record<number, TarotCard> = Object.fromEntries(
   ALL_TAROT_CARDS.map((card) => [card.id, card])
 );
 
-export const READERS_BY_ID: Record<ReaderPersona['id'], ReaderPersona> = Object.fromEntries(
-  READERS.map((reader) => [reader.id, reader])
-) as Record<ReaderPersona['id'], ReaderPersona>;
+export const ALL_READERS: ReaderPersona[] = [...CANONICAL_READERS, ...LEGACY_READERS];
+
+export const READERS_BY_ID: Record<string, ReaderPersona> = Object.fromEntries(
+  ALL_READERS.map((reader) => [reader.id, reader])
+);
+
+export interface ResolvedReader extends ReaderPersona {
+  isStudentVariant: boolean;
+  age: number;
+  effectiveVoice: string;
+}
+
+/**
+ * resolveReader(readerId, birthYear)
+ * Single source of truth for reader resolution per TarotCouple_Plan_GoLive.pdf Section 4.4.
+ * Automatically resolves student variant for <16yo users, neutralizes sarcasm and filters adult topics.
+ */
+export function resolveReader(
+  readerId: string | undefined | null,
+  birthYear: number
+): ResolvedReader {
+  const currentYear = 2026;
+  const age = Math.max(0, currentYear - (birthYear || 2004));
+  const isStudentVariant = age < 16;
+
+  const id = readerId || 'ba_ngoai';
+  let baseReader = READERS_BY_ID[id];
+  if (!baseReader) {
+    if (id === 'ba_co_mo_hon') baseReader = READERS_BY_ID['chi_dai'] || READERS_BY_ID['ba_co_mo_hon'];
+    else if (id === 'tien_tu_chua_lanh') baseReader = READERS_BY_ID['ba_ngoai'] || READERS_BY_ID['tien_tu_chua_lanh'];
+    else if (id === 'tong_tai_ly_tri') baseReader = READERS_BY_ID['thay_cu_meo'] || READERS_BY_ID['tong_tai_ly_tri'];
+    else if (id === 'phap_su_toi_co') baseReader = READERS_BY_ID['ban_than'] || READERS_BY_ID['phap_su_toi_co'];
+    else baseReader = READERS[0];
+  }
+
+  if (isStudentVariant) {
+    return {
+      ...baseReader,
+      name: baseReader.teen_safe_name || baseReader.name,
+      tagline: baseReader.teen_tagline || baseReader.tagline,
+      isStudentVariant: true,
+      age,
+      effectiveVoice:
+        'Bản học sinh: Giọng ấm áp, thân thiện, không mỉa mai, không chủ đề tình cảm nặng, không nhắc rượu/chất kích thích.',
+    };
+  }
+
+  return {
+    ...baseReader,
+    isStudentVariant: false,
+    age,
+    effectiveVoice: baseReader.persona_prompt,
+  };
+}
+
+/**
+ * Generate SEO-friendly URL slug for a Tarot card (e.g., "the-fool", "two-of-cups")
+ */
+export function getCardSlug(card: TarotCard): string {
+  return card.name_en
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+export const TAROT_CARDS_BY_SLUG: Record<string, TarotCard> = Object.fromEntries(
+  ALL_TAROT_CARDS.map((card) => [getCardSlug(card), card])
+);
+
+/**
+ * Lookup a Tarot card by its SEO slug or numeric ID string
+ */
+export function getCardBySlug(slugOrId: string): TarotCard | undefined {
+  if (!slugOrId) return undefined;
+  const normalized = slugOrId.trim().toLowerCase();
+  if (TAROT_CARDS_BY_SLUG[normalized]) {
+    return TAROT_CARDS_BY_SLUG[normalized];
+  }
+  const asNum = Number.parseInt(normalized, 10);
+  if (!Number.isNaN(asNum) && TAROT_CARDS_BY_ID[asNum]) {
+    return TAROT_CARDS_BY_ID[asNum];
+  }
+  return undefined;
+}
+

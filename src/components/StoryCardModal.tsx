@@ -264,7 +264,7 @@ export function StoryCardModal({
                           onClick={() => setQuoteIndex(idx as 0 | 1 | 2)}
                           className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer text-xs sm:text-sm leading-snug ${
                             quoteIndex === idx
-                              ? 'bg-[#1D192C] border-[#D9B36A] text-[#F8F5F0] ring-1 ring-[#D9B36A]'
+                              ? 'bg-[#1D192C] border-[#C9A24A] text-[#F8F5F0] ring-1 ring-[#C9A24A]'
                               : 'bg-[#0B0A12] border-[#262235] text-[#9E96B0] hover:text-[#F8F5F0]'
                           }`}
                         >
@@ -272,7 +272,7 @@ export function StoryCardModal({
                             <span
                               className={`w-4 h-4 rounded-full border mt-0.5 shrink-0 flex items-center justify-center text-[10px] ${
                                 quoteIndex === idx
-                                  ? 'border-[#D9B36A] bg-[#D9B36A] text-[#0B0A12] font-bold'
+                                  ? 'border-[#C9A24A] bg-[#C9A24A] text-[#0B0A12] font-bold'
                                   : 'border-[#262235]'
                               }`}
                             >
@@ -292,7 +292,7 @@ export function StoryCardModal({
                         type="checkbox"
                         checked={hideQuestion}
                         onChange={(e) => setHideQuestion(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 rounded border-[#262235] bg-[#0B0A12] text-[#D9B36A] accent-[#D9B36A] cursor-pointer"
+                        className="mt-0.5 h-4 w-4 rounded border-[#262235] bg-[#0B0A12] text-[#C9A24A] accent-[#C9A24A] cursor-pointer"
                       />
                       <div>
                         <p className="text-xs font-medium text-[#F8F5F0]">
@@ -320,7 +320,7 @@ export function StoryCardModal({
                       type="button"
                       disabled={isSharing || isDownloading}
                       onClick={handleNativeShare}
-                      className="w-full py-3 px-5 rounded-xl bg-[#D9B36A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs sm:text-sm shadow-[0_4px_16px_rgba(217,179,106,0.3)] transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
+                      className="w-full py-3 px-5 rounded-xl bg-[#C9A24A] hover:bg-[#E5C687] text-[#0B0A12] font-semibold text-xs sm:text-sm shadow-[0_4px_16px_rgba(217,179,106,0.3)] transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
                     >
                       {isSharing ? 'Đang mở chia sẻ...' : 'Chia sẻ lên Story'}
                     </button>

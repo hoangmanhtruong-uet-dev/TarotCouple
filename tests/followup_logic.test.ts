@@ -88,7 +88,7 @@ describe('Followup "Thắc mắc sâu hơn" backend logic', () => {
         question: `Câu hỏi số ${i}`,
         answer: `Câu trả lời ${i}`,
         costType: i <= 2 ? 'free' : 'star',
-        starsDeducted: i <= 2 ? 0 : 5,
+        starsDeducted: i <= 2 ? 0 : FOLLOWUP_STAR_COST,
       });
     }
 

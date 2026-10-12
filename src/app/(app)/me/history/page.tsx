@@ -92,7 +92,7 @@ export default function ReadingHistoryPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Toast */}
       {toastMsg && (
-        <div className="fixed top-18 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#D9B36A] text-[#0B0A12] text-xs font-bold shadow-lg animate-fade-in">
+        <div className="fixed top-18 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#C9A24A] text-[#0B0A12] text-xs font-bold shadow-lg animate-fade-in">
           {toastMsg}
         </div>
       )}
@@ -117,7 +117,7 @@ export default function ReadingHistoryPage() {
               <span>Xóa tất cả</span>
             </button>
           )}
-          <span className="text-[11px] font-bold tracking-[0.2em] text-[#D9B36A] uppercase">
+          <span className="text-[11px] font-bold tracking-[0.2em] text-[#C9A24A] uppercase">
             TAROT JOURNAL
           </span>
         </div>
@@ -148,7 +148,7 @@ export default function ReadingHistoryPage() {
               onClick={() => setFilterMode(tab.id as any)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 filterMode === tab.id
-                  ? 'bg-[#D9B36A] text-[#0B0A12] shadow-sm'
+                  ? 'bg-[#C9A24A] text-[#0B0A12] shadow-sm'
                   : 'bg-[#14121F] hover:bg-[#1D192C] text-[#9E96B0] border border-[#262235]'
               }`}
             >
@@ -166,7 +166,7 @@ export default function ReadingHistoryPage() {
               key={entry.id}
               initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-3xl bg-[#14121F]/90 border border-[#262235] hover:border-[#D9B36A]/50 transition-all shadow-xl group relative overflow-hidden cursor-pointer"
+              className="p-5 rounded-3xl bg-[#14121F]/90 border border-[#262235] hover:border-[#C9A24A]/50 transition-all shadow-xl group relative overflow-hidden cursor-pointer"
               onClick={() => setSelectedEntry(entry)}
             >
               <div className="flex items-center justify-between mb-3">
@@ -222,7 +222,7 @@ export default function ReadingHistoryPage() {
                     key={i}
                     className="p-2 rounded-xl bg-[#0B0A12] border border-[#262235] text-center"
                   >
-                    <p className="text-[10px] font-bold text-[#D9B36A] line-clamp-1">
+                    <p className="text-[10px] font-bold text-[#C9A24A] line-clamp-1">
                       {c.card.name_vi}
                     </p>
                     <span className="text-[9px] text-[#9E96B0]">
@@ -245,7 +245,7 @@ export default function ReadingHistoryPage() {
                     e.stopPropagation();
                     handleReplayReading(entry);
                   }}
-                  className="font-bold text-[#D9B36A] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="font-bold text-[#C9A24A] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Xem lại toàn bộ</span>
@@ -268,7 +268,7 @@ export default function ReadingHistoryPage() {
         </div>
       ) : (
         <div className="text-center py-16 bg-[#14121F]/60 border border-[#262235] rounded-3xl p-8">
-          <BookOpen className="w-10 h-10 text-[#D9B36A] mx-auto mb-3 opacity-60" />
+          <BookOpen className="w-10 h-10 text-[#C9A24A] mx-auto mb-3 opacity-60" />
           <h3 className="text-sm font-bold text-[#F8F5F0] mb-1">
             {filterMode === 'all' ? 'Chưa có nhật ký nào được lưu' : 'Không có bản ghi phù hợp với bộ lọc'}
           </h3>
@@ -277,7 +277,7 @@ export default function ReadingHistoryPage() {
           </p>
           <Link
             href="/reading/reader"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#D9B36A] text-[#0B0A12] font-bold text-xs shadow-md"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#C9A24A] text-[#0B0A12] font-bold text-xs shadow-md"
           >
             <span>Bắt Đầu Bốc Bài Ngay &rarr;</span>
           </Link>
@@ -296,7 +296,7 @@ export default function ReadingHistoryPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95, y: 15 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg max-h-[85vh] overflow-y-auto no-scrollbar bg-[#14121F] border border-[#D9B36A]/40 rounded-3xl p-6 shadow-2xl relative space-y-4"
+              className="w-full max-w-lg max-h-[85vh] overflow-y-auto no-scrollbar bg-[#14121F] border border-[#C9A24A]/40 rounded-3xl p-6 shadow-2xl relative space-y-4"
             >
               <button
                 type="button"
@@ -307,7 +307,7 @@ export default function ReadingHistoryPage() {
               </button>
 
               <div>
-                <span className="text-[10px] font-bold text-[#D9B36A] uppercase tracking-wider block mb-1">
+                <span className="text-[10px] font-bold text-[#C9A24A] uppercase tracking-wider block mb-1">
                   CHI TIẾT TRẢI BÀI NGÀY {new Date(selectedEntry.createdAt).toLocaleDateString('vi-VN')}
                 </span>
                 <h3 className="font-display text-lg font-bold text-[#F8F5F0]">
@@ -325,7 +325,7 @@ export default function ReadingHistoryPage() {
 
               {/* 3 Cards */}
               <div className="space-y-2">
-                <p className="text-[10px] text-[#D9B36A] uppercase font-bold tracking-wider">
+                <p className="text-[10px] text-[#C9A24A] uppercase font-bold tracking-wider">
                   3 Lá Bài Định Mệnh:
                 </p>
                 <div className="grid grid-cols-3 gap-2">
@@ -349,8 +349,8 @@ export default function ReadingHistoryPage() {
               </div>
 
               {/* Overall verdict */}
-              <div className="p-4 rounded-2xl bg-[#1C172B] border border-[#D9B36A]/30 space-y-2">
-                <p className="text-[10px] text-[#D9B36A] font-bold uppercase tracking-wider">
+              <div className="p-4 rounded-2xl bg-[#1C172B] border border-[#C9A24A]/30 space-y-2">
+                <p className="text-[10px] text-[#C9A24A] font-bold uppercase tracking-wider">
                   Chốt hạ tổng quan:
                 </p>
                 <p className="text-xs text-[#F8F5F0] leading-relaxed">
@@ -366,7 +366,7 @@ export default function ReadingHistoryPage() {
                 <button
                   type="button"
                   onClick={() => handleExportStory(selectedEntry)}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] text-[#0B0A12] font-bold text-xs shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] text-[#0B0A12] font-bold text-xs shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Xuất Story 9:16</span>

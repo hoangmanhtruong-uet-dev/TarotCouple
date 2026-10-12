@@ -25,13 +25,13 @@ function MysticLoveCardArt() {
   return (
     <svg viewBox="0 0 160 220" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Outer subtle cosmic burst */}
-      <circle cx="80" cy="110" r="50" stroke="#D9B36A" strokeWidth="0.7" strokeDasharray="2 3" opacity="0.4" />
-      <circle cx="80" cy="110" r="68" stroke="#D9B36A" strokeWidth="0.5" opacity="0.25" />
+      <circle cx="80" cy="110" r="50" stroke="#C9A24A" strokeWidth="0.7" strokeDasharray="2 3" opacity="0.4" />
+      <circle cx="80" cy="110" r="68" stroke="#C9A24A" strokeWidth="0.5" opacity="0.25" />
       
       {/* Top Left Crescent Moon */}
       <path
         d="M60 25 C78 25, 88 40, 84 58 C72 56, 52 48, 50 38 C48 30, 52 26, 60 25 Z"
-        fill="#D9B36A"
+        fill="#C9A24A"
         opacity="0.9"
       />
       {/* Moon profile nose & face */}
@@ -45,7 +45,7 @@ function MysticLoveCardArt() {
           <path
             key={deg}
             d="M0 -30 L4 -20 L0 -16 L-4 -20 Z"
-            fill="#D9B36A"
+            fill="#C9A24A"
             transform={`rotate(${deg})`}
             opacity="0.85"
           />
@@ -57,41 +57,41 @@ function MysticLoveCardArt() {
             y1="-18"
             x2="0"
             y2="-26"
-            stroke="#D9B36A"
+            stroke="#C9A24A"
             strokeWidth="1.2"
             transform={`rotate(${deg})`}
             opacity="0.6"
           />
         ))}
         {/* Sun core circle */}
-        <circle cx="0" cy="0" r="15" fill="#D9B36A" />
+        <circle cx="0" cy="0" r="15" fill="#C9A24A" />
         {/* Sun serene face */}
         <circle cx="-5" cy="-3" r="1.2" fill="#14121F" />
         <circle cx="5" cy="-3" r="1.2" fill="#14121F" />
         <path d="M-4 4 Q0 8 4 4" stroke="#14121F" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-        <circle cx="-7" cy="1" r="1.5" fill="#D9B36A" opacity="0.6" />
-        <circle cx="7" cy="1" r="1.5" fill="#D9B36A" opacity="0.6" />
+        <circle cx="-7" cy="1" r="1.5" fill="#C9A24A" opacity="0.6" />
+        <circle cx="7" cy="1" r="1.5" fill="#C9A24A" opacity="0.6" />
       </g>
 
       {/* Bottom Right Crescent Moon */}
       <path
         d="M100 195 C82 195, 72 180, 76 162 C88 164, 108 172, 110 182 C112 190, 108 194, 100 195 Z"
-        fill="#D9B36A"
+        fill="#C9A24A"
         opacity="0.9"
       />
       <circle cx="98" cy="182" r="1.5" fill="#14121F" />
       <path d="M102 175 Q96 172 100 168" stroke="#14121F" strokeWidth="1" fill="none" />
 
       {/* Twinkling stars & celestial dots */}
-      <circle cx="32" cy="75" r="1.5" fill="#D9B36A" opacity="0.7" />
-      <circle cx="45" cy="85" r="1" fill="#D9B36A" opacity="0.5" />
-      <circle cx="125" cy="65" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="135" cy="95" r="1" fill="#D9B36A" opacity="0.6" />
-      <circle cx="35" cy="155" r="1.5" fill="#D9B36A" opacity="0.7" />
-      <circle cx="128" cy="145" r="1" fill="#D9B36A" opacity="0.6" />
+      <circle cx="32" cy="75" r="1.5" fill="#C9A24A" opacity="0.7" />
+      <circle cx="45" cy="85" r="1" fill="#C9A24A" opacity="0.5" />
+      <circle cx="125" cy="65" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="135" cy="95" r="1" fill="#C9A24A" opacity="0.6" />
+      <circle cx="35" cy="155" r="1.5" fill="#C9A24A" opacity="0.7" />
+      <circle cx="128" cy="145" r="1" fill="#C9A24A" opacity="0.6" />
       {/* 4-point sparkle */}
-      <path d="M115 45 Q115 50 120 50 Q115 50 115 55 Q115 50 110 50 Q115 50 115 45 Z" fill="#D9B36A" opacity="0.8" />
-      <path d="M40 125 Q40 129 44 129 Q40 129 40 133 Q40 129 36 129 Q40 129 40 125 Z" fill="#D9B36A" opacity="0.7" />
+      <path d="M115 45 Q115 50 120 50 Q115 50 115 55 Q115 50 110 50 Q115 50 115 45 Z" fill="#C9A24A" opacity="0.8" />
+      <path d="M40 125 Q40 129 44 129 Q40 129 40 133 Q40 129 36 129 Q40 129 40 125 Z" fill="#C9A24A" opacity="0.7" />
     </svg>
   );
 }
@@ -100,16 +100,16 @@ function MysticCareerCardArt() {
   return (
     <svg viewBox="0 0 160 220" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Cosmic background rings & infinity loops */}
-      <ellipse cx="80" cy="110" rx="55" ry="70" stroke="#D9B36A" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.35" />
+      <ellipse cx="80" cy="110" rx="55" ry="70" stroke="#C9A24A" strokeWidth="0.6" strokeDasharray="3 3" opacity="0.35" />
       <path
         d="M45 70 C45 35, 115 35, 115 70 C115 105, 45 115, 45 150 C45 185, 115 185, 115 150"
-        stroke="#D9B36A"
+        stroke="#C9A24A"
         strokeWidth="0.8"
         opacity="0.3"
       />
       <path
         d="M115 70 C115 35, 45 35, 45 70 C45 105, 115 115, 115 150 C115 185, 45 185, 45 150"
-        stroke="#D9B36A"
+        stroke="#C9A24A"
         strokeWidth="0.8"
         opacity="0.3"
       />
@@ -117,22 +117,22 @@ function MysticCareerCardArt() {
       {/* Hourglass Frame */}
       <g transform="translate(80, 110)">
         {/* Top & Bottom base plates */}
-        <rect x="-38" y="-72" width="76" height="6" rx="2" fill="#D9B36A" opacity="0.9" />
-        <rect x="-32" y="-66" width="64" height="3" fill="#D9B36A" opacity="0.7" />
-        <rect x="-38" y="66" width="76" height="6" rx="2" fill="#D9B36A" opacity="0.9" />
-        <rect x="-32" y="63" width="64" height="3" fill="#D9B36A" opacity="0.7" />
+        <rect x="-38" y="-72" width="76" height="6" rx="2" fill="#C9A24A" opacity="0.9" />
+        <rect x="-32" y="-66" width="64" height="3" fill="#C9A24A" opacity="0.7" />
+        <rect x="-38" y="66" width="76" height="6" rx="2" fill="#C9A24A" opacity="0.9" />
+        <rect x="-32" y="63" width="64" height="3" fill="#C9A24A" opacity="0.7" />
 
         {/* Hourglass Glass Silhouette */}
         <path
           d="M-30 -63 C-28 -20, -6 -6, 0 0 C6 -6, 28 -20, 30 -63 Z"
-          stroke="#D9B36A"
+          stroke="#C9A24A"
           strokeWidth="2"
           fill="#14121F"
           fillOpacity="0.4"
         />
         <path
           d="M-30 63 C-28 20, -6 6, 0 0 C6 6, 28 20, 30 63 Z"
-          stroke="#D9B36A"
+          stroke="#C9A24A"
           strokeWidth="2"
           fill="#14121F"
           fillOpacity="0.4"
@@ -140,7 +140,7 @@ function MysticCareerCardArt() {
 
         {/* Top Chamber: Radiant Sun within the sand */}
         <g transform="translate(0, -34)">
-          <circle cx="0" cy="0" r="10" fill="#D9B36A" opacity="0.9" />
+          <circle cx="0" cy="0" r="10" fill="#C9A24A" opacity="0.9" />
           {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
             <line
               key={deg}
@@ -148,7 +148,7 @@ function MysticCareerCardArt() {
               y1="-12"
               x2="0"
               y2="-17"
-              stroke="#D9B36A"
+              stroke="#C9A24A"
               strokeWidth="1.5"
               transform={`rotate(${deg})`}
               opacity="0.8"
@@ -163,29 +163,29 @@ function MysticCareerCardArt() {
         <g transform="translate(0, 34)">
           <path
             d="M-5 -12 C8 -12, 14 -2, 10 12 C1 10, -10 3, -11 -4 C-12 -9, -9 -11, -5 -12 Z"
-            fill="#D9B36A"
+            fill="#C9A24A"
             opacity="0.9"
           />
           <circle cx="-4" cy="-2" r="1" fill="#14121F" />
           {/* Subtle sand stipples */}
-          <circle cx="-12" cy="18" r="0.8" fill="#D9B36A" opacity="0.7" />
-          <circle cx="-4" cy="20" r="0.8" fill="#D9B36A" opacity="0.7" />
-          <circle cx="6" cy="19" r="0.8" fill="#D9B36A" opacity="0.7" />
-          <circle cx="14" cy="17" r="0.8" fill="#D9B36A" opacity="0.7" />
+          <circle cx="-12" cy="18" r="0.8" fill="#C9A24A" opacity="0.7" />
+          <circle cx="-4" cy="20" r="0.8" fill="#C9A24A" opacity="0.7" />
+          <circle cx="6" cy="19" r="0.8" fill="#C9A24A" opacity="0.7" />
+          <circle cx="14" cy="17" r="0.8" fill="#C9A24A" opacity="0.7" />
         </g>
 
         {/* Flowing Sand Particles down the neck */}
-        <circle cx="0" cy="-3" r="1.2" fill="#D9B36A" />
-        <circle cx="0" cy="3" r="1" fill="#D9B36A" opacity="0.8" />
-        <circle cx="0" cy="10" r="1" fill="#D9B36A" opacity="0.8" />
+        <circle cx="0" cy="-3" r="1.2" fill="#C9A24A" />
+        <circle cx="0" cy="3" r="1" fill="#C9A24A" opacity="0.8" />
+        <circle cx="0" cy="10" r="1" fill="#C9A24A" opacity="0.8" />
       </g>
 
       {/* Surrounding constellation stars */}
-      <circle cx="28" cy="45" r="1.5" fill="#D9B36A" opacity="0.7" />
-      <circle cx="132" cy="48" r="1.2" fill="#D9B36A" opacity="0.6" />
-      <circle cx="26" cy="175" r="1.2" fill="#D9B36A" opacity="0.6" />
-      <circle cx="134" cy="172" r="1.5" fill="#D9B36A" opacity="0.7" />
-      <path d="M130 110 Q130 114 134 114 Q130 114 130 118 Q130 114 126 114 Q130 114 130 110 Z" fill="#D9B36A" opacity="0.75" />
+      <circle cx="28" cy="45" r="1.5" fill="#C9A24A" opacity="0.7" />
+      <circle cx="132" cy="48" r="1.2" fill="#C9A24A" opacity="0.6" />
+      <circle cx="26" cy="175" r="1.2" fill="#C9A24A" opacity="0.6" />
+      <circle cx="134" cy="172" r="1.5" fill="#C9A24A" opacity="0.7" />
+      <path d="M130 110 Q130 114 134 114 Q130 114 130 118 Q130 114 126 114 Q130 114 130 110 Z" fill="#C9A24A" opacity="0.75" />
     </svg>
   );
 }
@@ -196,25 +196,25 @@ function MysticFinanceCardArt() {
       {/* Sacred geometry triangles (Merkaba / Star of David / Alchemy) */}
       <g transform="translate(80, 110)">
         {/* Upward alchemy triangle */}
-        <polygon points="0,-72 62,36 -62,36" stroke="#D9B36A" strokeWidth="1" opacity="0.4" fill="none" />
-        <polygon points="0,-64 54,30 -54,30" stroke="#D9B36A" strokeWidth="0.5" opacity="0.25" fill="none" />
+        <polygon points="0,-72 62,36 -62,36" stroke="#C9A24A" strokeWidth="1" opacity="0.4" fill="none" />
+        <polygon points="0,-64 54,30 -54,30" stroke="#C9A24A" strokeWidth="0.5" opacity="0.25" fill="none" />
         {/* Downward alchemy triangle */}
-        <polygon points="0,72 62,-36 -62,-36" stroke="#D9B36A" strokeWidth="1" opacity="0.4" fill="none" />
-        <polygon points="0,64 54,-30 -54,-30" stroke="#D9B36A" strokeWidth="0.5" opacity="0.25" fill="none" />
+        <polygon points="0,72 62,-36 -62,-36" stroke="#C9A24A" strokeWidth="1" opacity="0.4" fill="none" />
+        <polygon points="0,64 54,-30 -54,-30" stroke="#C9A24A" strokeWidth="0.5" opacity="0.25" fill="none" />
 
         {/* Outer radial rays */}
         {[0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345].map((deg) => (
           <path
             key={deg}
             d="M0 -42 L5 -32 L0 -26 L-5 -32 Z"
-            fill="#D9B36A"
+            fill="#C9A24A"
             transform={`rotate(${deg})`}
             opacity={deg % 30 === 0 ? '0.9' : '0.6'}
           />
         ))}
 
         {/* Center Golden Radiant Sun Face */}
-        <circle cx="0" cy="0" r="26" fill="#D9B36A" />
+        <circle cx="0" cy="0" r="26" fill="#C9A24A" />
         {/* Ornate facial details */}
         <circle cx="-8" cy="-5" r="2" fill="#14121F" />
         <circle cx="8" cy="-5" r="2" fill="#14121F" />
@@ -232,12 +232,12 @@ function MysticFinanceCardArt() {
       </g>
 
       {/* Radiating corner sparkles */}
-      <circle cx="28" cy="30" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="132" cy="30" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="28" cy="190" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="132" cy="190" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <path d="M80 18 Q80 22 84 22 Q80 22 80 26 Q80 22 76 22 Q80 22 80 18 Z" fill="#D9B36A" opacity="0.85" />
-      <path d="M80 194 Q80 198 84 198 Q80 198 80 202 Q80 198 76 198 Q80 198 80 194 Z" fill="#D9B36A" opacity="0.85" />
+      <circle cx="28" cy="30" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="132" cy="30" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="28" cy="190" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="132" cy="190" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <path d="M80 18 Q80 22 84 22 Q80 22 80 26 Q80 22 76 22 Q80 22 80 18 Z" fill="#C9A24A" opacity="0.85" />
+      <path d="M80 194 Q80 198 84 198 Q80 198 80 202 Q80 198 76 198 Q80 198 80 194 Z" fill="#C9A24A" opacity="0.85" />
     </svg>
   );
 }
@@ -246,14 +246,14 @@ function MysticHealthCardArt() {
   return (
     <svg viewBox="0 0 160 220" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Background celestial rays */}
-      <circle cx="80" cy="110" r="60" stroke="#D9B36A" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.3" />
+      <circle cx="80" cy="110" r="60" stroke="#C9A24A" strokeWidth="0.5" strokeDasharray="3 3" opacity="0.3" />
       
       {/* Mystical Serpent Coiling (Ouroboros / Asclepius Caduceus Rod) */}
       <g transform="translate(80, 110)">
         {/* Serpent body coils */}
         <path
           d="M-5 -75 C-12 -65, -8 -50, 2 -40 C14 -28, 22 -10, 10 5 C-2 20, -18 35, -4 55 C6 68, -2 80, 0 85"
-          stroke="#D9B36A"
+          stroke="#C9A24A"
           strokeWidth="11"
           strokeLinecap="round"
           fill="none"
@@ -272,24 +272,24 @@ function MysticHealthCardArt() {
         {/* Serpent Head & Crown */}
         <path
           d="M-5 -75 C-10 -78, -12 -86, -6 -90 C-1 -94, 2 -90, 4 -86 C5 -81, 0 -76, -5 -75 Z"
-          fill="#D9B36A"
+          fill="#C9A24A"
         />
         <circle cx="-5" cy="-86" r="1.3" fill="#14121F" />
         {/* Serpent Tongue flick */}
-        <path d="M-3 -92 L-3 -98 L-6 -101 M-3 -98 L0 -101" stroke="#D9B36A" strokeWidth="1" strokeLinecap="round" />
+        <path d="M-3 -92 L-3 -98 L-6 -101 M-3 -98 L0 -101" stroke="#C9A24A" strokeWidth="1" strokeLinecap="round" />
 
         {/* Serpent Tail rattle */}
-        <path d="M0 85 L2 92 M0 87 L-2 90" stroke="#D9B36A" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M0 85 L2 92 M0 87 L-2 90" stroke="#C9A24A" strokeWidth="1.5" strokeLinecap="round" />
       </g>
 
       {/* Twinkling stars around the serpent */}
-      <circle cx="35" cy="55" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="48" cy="72" r="1" fill="#D9B36A" opacity="0.6" />
-      <circle cx="122" cy="60" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="130" cy="80" r="1" fill="#D9B36A" opacity="0.6" />
-      <circle cx="32" cy="150" r="1.5" fill="#D9B36A" opacity="0.8" />
-      <circle cx="124" cy="155" r="1.2" fill="#D9B36A" opacity="0.7" />
-      <path d="M125 110 Q125 114 129 114 Q125 114 125 118 Q125 114 121 114 Q125 114 125 110 Z" fill="#D9B36A" opacity="0.8" />
+      <circle cx="35" cy="55" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="48" cy="72" r="1" fill="#C9A24A" opacity="0.6" />
+      <circle cx="122" cy="60" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="130" cy="80" r="1" fill="#C9A24A" opacity="0.6" />
+      <circle cx="32" cy="150" r="1.5" fill="#C9A24A" opacity="0.8" />
+      <circle cx="124" cy="155" r="1.2" fill="#C9A24A" opacity="0.7" />
+      <path d="M125 110 Q125 114 129 114 Q125 114 125 118 Q125 114 121 114 Q125 114 125 110 Z" fill="#C9A24A" opacity="0.8" />
     </svg>
   );
 }
@@ -345,6 +345,14 @@ const SAMPLE_PROMPT_BY_TOPIC: Record<TopicId, string> = {
 };
 
 const READER_GREETINGS: Record<ReaderId, string> = {
+  ba_ngoai:
+    'Hôm nay điều gì đang nằm trong lòng con? Kể bà nghe một chút nào.',
+  chi_dai:
+    'Nói thẳng nha, đừng vòng vo. Đang vướng mắc chuyện gì thì chọn chủ đề đi!',
+  ban_than:
+    'Kể đi, tao nghe hết, không phán xét đâu. Đang vướng drama gì chọn lẹ nào bồ!',
+  thay_cu_meo:
+    'Hãy bắt đầu từ điều khiến con bận tâm nhất. Chọn chủ đề cốt lõi để cùng phân tích.',
   ba_co_mo_hon:
     'Nào, đêm nay muốn soi chuyện gì? Chọn một chủ đề để Bà Cố mổ xẻ tận gốc rễ nào!',
   tien_tu_chua_lanh:
@@ -394,7 +402,7 @@ export default function ChuDeSelectionPage() {
   const [tappedTopicId, setTappedTopicId] = useState<TopicId | null>(null);
 
   // Typewriter greeting
-  const readerGreeting = READER_GREETINGS[selectedReaderId] || READER_GREETINGS.ba_co_mo_hon;
+  const readerGreeting = READER_GREETINGS[selectedReaderId] || READER_GREETINGS.ba_ngoai;
   const [displayedGreeting, setDisplayedGreeting] = useState('');
   useEffect(() => {
     if (shouldReduceMotion) {
@@ -489,7 +497,7 @@ export default function ChuDeSelectionPage() {
           <p className="text-xs text-[#E5C687] italic font-serif leading-relaxed min-h-[30px]">
             &ldquo;{displayedGreeting}&rdquo;
             {displayedGreeting.length < readerGreeting.length && (
-              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#D9B36A] animate-pulse align-middle" />
+              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#C9A24A] animate-pulse align-middle" />
             )}
           </p>
         </div>
@@ -550,20 +558,20 @@ export default function ChuDeSelectionPage() {
               }}
             >
               {/* Ornate Double Tarot Card Border */}
-              <div className="absolute inset-1.5 sm:inset-2.5 rounded-[14px] sm:rounded-[20px] border border-[#D9B36A]/40 pointer-events-none transition-colors group-hover:border-[#D9B36A]/70" />
-              <div className="absolute inset-2.5 sm:inset-3.5 rounded-[10px] sm:rounded-[16px] border border-[#D9B36A]/20 pointer-events-none" />
+              <div className="absolute inset-1.5 sm:inset-2.5 rounded-[14px] sm:rounded-[20px] border border-[#C9A24A]/40 pointer-events-none transition-colors group-hover:border-[#C9A24A]/70" />
+              <div className="absolute inset-2.5 sm:inset-3.5 rounded-[10px] sm:rounded-[16px] border border-[#C9A24A]/20 pointer-events-none" />
 
               {/* 4 Ornate Corners (Moon & Diamond star glyphs) */}
-              <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 text-[8px] sm:text-[10px] text-[#D9B36A]/70 pointer-events-none">
+              <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 text-[8px] sm:text-[10px] text-[#C9A24A]/70 pointer-events-none">
                 ☾
               </div>
-              <div className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 text-[8px] sm:text-[10px] text-[#D9B36A]/70 pointer-events-none">
+              <div className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 text-[8px] sm:text-[10px] text-[#C9A24A]/70 pointer-events-none">
                 ✦
               </div>
-              <div className="absolute bottom-2.5 left-2.5 sm:bottom-3.5 sm:left-3.5 text-[8px] sm:text-[10px] text-[#D9B36A]/70 pointer-events-none">
+              <div className="absolute bottom-2.5 left-2.5 sm:bottom-3.5 sm:left-3.5 text-[8px] sm:text-[10px] text-[#C9A24A]/70 pointer-events-none">
                 ✦
               </div>
-              <div className="absolute bottom-2.5 right-2.5 sm:bottom-3.5 sm:right-3.5 text-[8px] sm:text-[10px] text-[#D9B36A]/70 pointer-events-none">
+              <div className="absolute bottom-2.5 right-2.5 sm:bottom-3.5 sm:right-3.5 text-[8px] sm:text-[10px] text-[#C9A24A]/70 pointer-events-none">
                 ☽
               </div>
 
@@ -575,11 +583,11 @@ export default function ChuDeSelectionPage() {
               {/* Card Bottom Title Banner */}
               <div className="relative z-10 pt-1 pb-1">
                 <div className="flex items-center justify-center gap-1 mb-1">
-                  <span className="w-2 h-[1px] bg-[#D9B36A]/40" />
-                  <span className="text-[7px] text-[#D9B36A]/60">✧</span>
-                  <span className="w-2 h-[1px] bg-[#D9B36A]/40" />
+                  <span className="w-2 h-[1px] bg-[#C9A24A]/40" />
+                  <span className="text-[7px] text-[#C9A24A]/60">✧</span>
+                  <span className="w-2 h-[1px] bg-[#C9A24A]/40" />
                 </div>
-                <h3 className="font-serif tracking-widest text-xs sm:text-sm md:text-base font-extrabold text-[#D9B36A] uppercase transition-colors group-hover:text-[#F3E5AB]">
+                <h3 className="font-serif tracking-widest text-xs sm:text-sm md:text-base font-extrabold text-[#C9A24A] uppercase transition-colors group-hover:text-[#F3E5AB]">
                   {config.titleVi}
                 </h3>
               </div>
@@ -611,7 +619,7 @@ export default function ChuDeSelectionPage() {
           <span>Sửa thông tin cá nhân</span>
         </button>
 
-        <span className="text-[11px] text-[#D9B36A]/80 font-serif italic">
+        <span className="text-[11px] text-[#C9A24A]/80 font-serif italic">
           ✦ Chạm lá bài để mở khóa tâm sự
         </span>
       </div>

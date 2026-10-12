@@ -53,6 +53,14 @@ const SAMPLE_QUESTIONS_BY_TOPIC: Record<TopicId, string[]> = {
 };
 
 const READER_QUESTION_PROMPTS: Record<ReaderId, string> = {
+  ba_ngoai:
+    'Kể bà nghe... không cần hay, cứ thật là được. Điều gì đang làm con trĩu lòng?',
+  chi_dai:
+    'Nói thẳng vào vấn đề, đang khúc mắc chuyện gì? Viết thật rõ để Chị Đại chỉ điểm!',
+  ban_than:
+    'Bắn hết nỗi niềm ra đây, dài ngắn gì tao cũng đọc. Đang lấn cấn chuyện gì nói nghe coi?',
+  thay_cu_meo:
+    'Ghi lại chi tiết bối cảnh, câu hỏi hoặc quyết định khó khăn bạn đang đối mặt để cùng phân tích.',
   ba_co_mo_hon:
     'Ghi chi tiết câu chuyện vào đây, càng thật thà thì Bà Cố mổ xẻ càng chuẩn, đừng giấu bài!',
   tien_tu_chua_lanh:
@@ -125,7 +133,7 @@ export default function NoiNiemPage() {
 
   // Typewriter effect
   const readerPrompt =
-    READER_QUESTION_PROMPTS[selectedReaderId] || READER_QUESTION_PROMPTS.ba_co_mo_hon;
+    READER_QUESTION_PROMPTS[selectedReaderId] || READER_QUESTION_PROMPTS.ba_ngoai;
   const [displayedPrompt, setDisplayedPrompt] = useState('');
   useEffect(() => {
     if (shouldReduceMotion) {
@@ -211,7 +219,7 @@ export default function NoiNiemPage() {
           <p className="text-xs text-[#E5C687] italic font-serif leading-relaxed min-h-[30px]">
             &ldquo;{displayedPrompt}&rdquo;
             {displayedPrompt.length < readerPrompt.length && (
-              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#D9B36A] animate-pulse align-middle" />
+              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#C9A24A] animate-pulse align-middle" />
             )}
           </p>
         </div>
@@ -244,8 +252,8 @@ export default function NoiNiemPage() {
         }}
       >
         <div className="flex items-center justify-between mb-2.5">
-          <label className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider flex items-center gap-1.5">
-            <Feather className="w-3.5 h-3.5 text-[#D9B36A]" />
+          <label className="text-xs font-semibold text-[#C9A24A] uppercase tracking-wider flex items-center gap-1.5">
+            <Feather className="w-3.5 h-3.5 text-[#C9A24A]" />
             <span>Nỗi Niềm Phong Ấn Gửi Vũ Trụ</span>
           </label>
 
@@ -348,14 +356,14 @@ export default function NoiNiemPage() {
           onChange={(e) =>
             setContextForm({ hideQuestionOnShare: e.target.checked })
           }
-          className="w-4 h-4 rounded cursor-pointer accent-[#D9B36A]"
+          className="w-4 h-4 rounded cursor-pointer accent-[#C9A24A]"
         />
       </div>
 
       {/* 4. Gợi ý câu hỏi nhanh LỌC THEO CHỦ ĐỀ dạng chip (đánh dấu đã dùng) */}
       <div className="mb-6">
         <div className="flex items-center gap-1.5 mb-2.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#D9B36A]" />
+          <Sparkles className="w-3.5 h-3.5 text-[#C9A24A]" />
           <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider">
             Gợi ý câu hỏi ({TOPIC_LABELS[selectedTopic] || selectedTopic}):
           </p>
@@ -440,7 +448,7 @@ export default function NoiNiemPage() {
               className={`flex-1 py-3.5 sm:py-4 rounded-2xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg whitespace-nowrap ${
                 isQuestionEmpty
                   ? 'opacity-40 bg-[#1D192C] text-[#9E96B0] border border-[#262235] cursor-not-allowed'
-                  : 'bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] shadow-[0_4px_25px_rgba(217,179,106,0.35)] transform active:scale-98'
+                  : 'bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] shadow-[0_4px_25px_rgba(217,179,106,0.35)] transform active:scale-98'
               }`}
             >
               <span>Tiếp tục chọn Bộ bài</span>

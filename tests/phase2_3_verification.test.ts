@@ -54,10 +54,10 @@ describe('Phase 2 & Phase 3 Verification Suite (78 Cards, 4 Readers, Couple, Cla
 
     const activeReaders = READERS.filter((r) => r.active);
     expect(activeReaders.map((r) => r.id)).toEqual([
-      'ba_co_mo_hon',
-      'tien_tu_chua_lanh',
-      'tong_tai_ly_tri',
-      'phap_su_toi_co',
+      'ba_ngoai',
+      'chi_dai',
+      'ban_than',
+      'thay_cu_meo',
     ]);
   });
 
@@ -307,20 +307,20 @@ describe('Phase 2 & Phase 3 Verification Suite (78 Cards, 4 Readers, Couple, Cla
     expect(okClarifierJson.clarifier.starsSpent).toBe(5);
     expect(okClarifierJson.quota.starsBalance).toBe(7);
 
-    // 4. Payment Under-18 Block (birthYear 2010 -> 16yo in 2026 -> HTTP 403 AGE_PAYMENT_BLOCKED)
-    const under18PayRes = await postPayment(
+    // 4. Payment Under-11 Block (birthYear 2016 -> 10yo in 2026 -> HTTP 403 AGE_PAYMENT_BLOCKED)
+    const under11PayRes = await postPayment(
       new Request('http://localhost:3000/api/payment', {
         method: 'POST',
         headers: clientHeaders,
         body: JSON.stringify({
           packageId: 'dem_suy_19k',
-          birthYear: 2010,
+          birthYear: 2016,
         }),
       })
     );
-    expect(under18PayRes.status).toBe(403);
-    const under18PayJson = await under18PayRes.json();
-    expect(under18PayJson.code).toBe('AGE_PAYMENT_BLOCKED');
+    expect(under11PayRes.status).toBe(403);
+    const under11PayJson = await under11PayRes.json();
+    expect(under11PayJson.code).toBe('AGE_PAYMENT_BLOCKED');
 
     // 5. Adult Payment Order + Idempotent Webhook Confirmation
     const getPkgRes = await getPayment(

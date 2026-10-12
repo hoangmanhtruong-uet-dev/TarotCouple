@@ -11,13 +11,13 @@ function ReaderIndexRedirect() {
   const selectedReaderId = useReadingStore((state) => state.selectedReaderId);
 
   useEffect(() => {
-    const slug = READER_SLUG_MAP[selectedReaderId] || 'ba-co-mo-hon';
+    const slug = READER_SLUG_MAP[selectedReaderId] || 'ba-ngoai';
     const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     router.replace(`/reading/reader/${slug}${query}`);
   }, [router, searchParams, selectedReaderId]);
 
   return (
-    <div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#D9B36A] text-sm font-medium">
+    <div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#C9A24A] text-sm font-medium">
       Đang chuẩn bị lều Reader...
     </div>
   );
@@ -25,7 +25,7 @@ function ReaderIndexRedirect() {
 
 export default function ReaderSelectionPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#D9B36A] text-sm font-medium">Đang chuyển tới Reader...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#C9A24A] text-sm font-medium">Đang chuyển tới Reader...</div>}>
       <ReaderIndexRedirect />
     </Suspense>
   );

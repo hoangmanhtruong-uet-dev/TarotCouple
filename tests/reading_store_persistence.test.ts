@@ -1,13 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useReadingStore } from '../src/lib/reading-store';
+import {
+  ALL_READER_SLUGS,
+  READER_SLUG_MAP,
+  SLUG_TO_READER_ID,
+} from '../src/lib/reader-slugs';
+import { READERS } from '../src/data/tarot-cards';
 
 describe('Zustand Reading Flow Store & F5 Persistence Suite', () => {
   beforeEach(() => {
-    // Reset state before each test
     useReadingStore.getState().resetReadingFlow();
     useReadingStore.setState({
-      selectedReaderId: 'ba_co_mo_hon',
-      readerAccentColor: '#E5624A',
+      selectedReaderId: 'ba_ngoai',
+      readerAccentColor: '#EAB308',
       nickname: 'Linh',
       partnerNickname: '',
       zodiacSign: '',
@@ -23,15 +28,19 @@ describe('Zustand Reading Flow Store & F5 Persistence Suite', () => {
     });
   });
 
-  it('1. updates Reader selection and dynamic accent color in store', () => {
+  it('1. updates Reader selection and dynamic accent color in store (and normalizes legacy reader IDs)', () => {
     const store = useReadingStore.getState();
-    expect(store.selectedReaderId).toBe('ba_co_mo_hon');
-    expect(store.readerAccentColor).toBe('#E5624A');
+    expect(store.selectedReaderId).toBe('ba_ngoai');
+    expect(store.readerAccentColor).toBe('#EAB308');
 
-    store.setSelectedReaderId('tien_tu_chua_lanh', '#5DB075');
+    store.setSelectedReaderId('chi_dai', '#E11D48');
     const updated = useReadingStore.getState();
-    expect(updated.selectedReaderId).toBe('tien_tu_chua_lanh');
-    expect(updated.readerAccentColor).toBe('#5DB075');
+    expect(updated.selectedReaderId).toBe('chi_dai');
+    expect(updated.readerAccentColor).toBe('#E11D48');
+
+    // Legacy ID automatically normalizes to canonical ID so /reading/reader/[slug] never 404s
+    store.setSelectedReaderId('ba_co_mo_hon');
+    expect(useReadingStore.getState().selectedReaderId).toBe('chi_dai');
   });
 
   it('2. updates user context form data across Step 2', () => {
@@ -91,18 +100,15 @@ describe('Zustand Reading Flow Store & F5 Persistence Suite', () => {
   });
 
   it('5. simulates F5 refresh (serializing to and rehydrating from localStorage)', () => {
-    // Modify store state
-    useReadingStore.getState().setSelectedReaderId('tong_tai_ly_tri', '#5B8DEF');
+    useReadingStore.getState().setSelectedReaderId('thay_cu_meo', '#3B82F6');
     useReadingStore.getState().setContextForm({
       nickname: 'Doanh Nhân',
       questionText: 'Chiến lược quý 4 như thế nào?',
     });
     useReadingStore.getState().setSelectedFanIndices([0, 21, 55]);
 
-    // Snapshot state
     const currentState = useReadingStore.getState();
 
-    // Serialize to JSON (similar to persist middleware writing to localStorage)
     const serialized = JSON.stringify({
       state: {
         selectedReaderId: currentState.selectedReaderId,
@@ -114,29 +120,52 @@ describe('Zustand Reading Flow Store & F5 Persistence Suite', () => {
       version: 0,
     });
 
-    // Simulate page reload: parse JSON and set to store
     const parsed = JSON.parse(serialized);
-    expect(parsed.state.selectedReaderId).toBe('tong_tai_ly_tri');
-    expect(parsed.state.readerAccentColor).toBe('#5B8DEF');
-    expect(parsed.state.nickname).toBe('Doanh Nhân');
-    expect(parsed.state.questionText).toBe('Chiến lược quý 4 như thế nào?');
-    expect(parsed.state.selectedFanIndices).toEqual([0, 21, 55]);
+    expect(parsed.state.selectedReaderId).toBe('thay_cu_meo');
+    expect(parsed.state.readerAccentColor).toBe('#3B82F6');
+
+    useReadingStore.getState().resetReadingFlow();
+    expect(useReadingStore.getState().selectedFanIndices).toEqual([]);
+
+    useReadingStore.setState(parsed.state);
+
+    const restored = useReadingStore.getState();
+    expect(restored.selectedReaderId).toBe('thay_cu_meo');
+    expect(restored.nickname).toBe('Doanh Nhân');
+    expect(restored.questionText).toBe('Chiến lược quý 4 như thế nào?');
+    expect(restored.selectedFanIndices).toEqual([0, 21, 55]);
   });
 
-  it('6. tracks hasFilledProfile flag to skip /reading/ve-ban on subsequent readings', () => {
+  it('6. resetReadingFlow clears cards and reading result while preserving user profile & reader preference', () => {
     const store = useReadingStore.getState();
-    expect(store.hasFilledProfile).toBe(false);
+    store.setSelectedReaderId('ban_than', '#EC4899');
+    store.setContextForm({ nickname: 'Bạch Dương', birthYear: 1999 });
+    store.setSelectedFanIndices([1, 2, 3]);
+    store.setActiveQuoteIdx(1);
 
-    // User fills profile for the first time
-    store.setContextForm({
-      hasFilledProfile: true,
-      nickname: 'An Nhiên',
-      birthYear: 2012, // 14 years old (Kid/Teen safe)
-    });
+    store.resetReadingFlow();
 
-    const updated = useReadingStore.getState();
-    expect(updated.hasFilledProfile).toBe(true);
-    expect(updated.nickname).toBe('An Nhiên');
-    expect(updated.birthYear).toBe(2012);
+    const afterReset = useReadingStore.getState();
+    expect(afterReset.selectedFanIndices).toEqual([]);
+    expect(afterReset.readingSuccess).toBeNull();
+    expect(afterReset.clarifierCard).toBeNull();
+    expect(afterReset.activeQuoteIdx).toBe(0);
+    expect(afterReset.selectedReaderId).toBe('ban_than');
+    expect(afterReset.nickname).toBe('Bạch Dương');
+    expect(afterReset.birthYear).toBe(1999);
+  });
+
+  it('7. ensures all 8 reader slugs (canonical + legacy aliases like ba-co-mo-hon) resolve to valid READERS entries without 404', () => {
+    for (const slug of ALL_READER_SLUGS) {
+      const readerId = SLUG_TO_READER_ID[slug];
+      expect(readerId).toBeDefined();
+      const reader = READERS.find((r) => r.id === readerId);
+      expect(reader).toBeDefined();
+    }
+
+    expect(READER_SLUG_MAP.ba_co_mo_hon).toBe('chi-dai');
+    expect(READER_SLUG_MAP.tien_tu_chua_lanh).toBe('ba-ngoai');
+    expect(READER_SLUG_MAP.tong_tai_ly_tri).toBe('thay-cu-meo');
+    expect(READER_SLUG_MAP.phap_su_toi_co).toBe('ban-than');
   });
 });

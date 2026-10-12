@@ -42,9 +42,9 @@ function PhoneFrameContent({ children }: PhoneFrameContainerProps) {
         <button
           type="button"
           onClick={() => setIsFrameActive(false)}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#171424]/95 hover:bg-[#231D36] border border-[#D9B36A]/45 text-xs font-bold text-[#F3E5AB] shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#171424]/95 hover:bg-[#231D36] border border-[#C9A24A]/45 text-xs font-bold text-[#F3E5AB] shadow-[0_4px_20px_rgba(0,0,0,0.6)] transition-all cursor-pointer"
         >
-          <Monitor className="w-3.5 h-3.5 text-[#D9B36A]" />
+          <Monitor className="w-3.5 h-3.5 text-[#C9A24A]" />
           <span>Thoát Khung ĐT (Toàn Màn Hình)</span>
         </button>
       </div>

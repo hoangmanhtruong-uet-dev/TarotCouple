@@ -97,10 +97,14 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
     expect(Boolean(s2.selectedTopic)).toBe(false); // Needs redirect to /reading/chu-de
   });
 
-  it('7. verifies 10-15 age safety: payments strictly disabled and ba_ngoai persona override', () => {
-    const policy = classifyAgeTier(2014, 2026, 'ba_co_mo_hon'); // 12 years old
-    expect(policy.isKidTeenSafeMode).toBe(true);
-    expect(policy.paymentEnabled).toBe(false); // Zero path to bank payment
-    expect(policy.effectivePersona).toBe('ba_ngoai_vui_tinh');
+  it('7. verifies age safety: payments strictly disabled for <11yo and ba_ngoai persona override for 10-15yo', () => {
+    const kidPolicy = classifyAgeTier(2016, 2026, 'ba_co_mo_hon'); // 10 years old (<11yo)
+    expect(kidPolicy.isKidTeenSafeMode).toBe(true);
+    expect(kidPolicy.paymentEnabled).toBe(false); // Zero path to bank payment for <11yo
+    expect(kidPolicy.effectivePersona).toBe('ba_ngoai_vui_tinh');
+
+    const teenPolicy = classifyAgeTier(2014, 2026, 'ba_co_mo_hon'); // 12 years old (>=11yo)
+    expect(teenPolicy.isKidTeenSafeMode).toBe(true);
+    expect(teenPolicy.paymentEnabled).toBe(true);
   });
 });

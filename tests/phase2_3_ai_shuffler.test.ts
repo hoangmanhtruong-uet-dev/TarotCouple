@@ -30,14 +30,22 @@ import {
 describe('Phase 2 & 3 AI, Shuffler 22/78 & Prompts Verification', () => {
   it('validates all 4 readers, 5 effective personas, 22/78 deck_mode, Couple & Clarifier schemas', () => {
     expect(ReaderIdSchema.options).toEqual([
+      'ba_ngoai',
+      'chi_dai',
+      'ban_than',
+      'thay_cu_meo',
       'ba_co_mo_hon',
       'tien_tu_chua_lanh',
       'tong_tai_ly_tri',
       'phap_su_toi_co',
     ]);
     expect(EffectivePersonaSchema.options).toEqual([
-      'ba_co_mo_hon',
+      'ba_ngoai',
+      'chi_dai',
+      'ban_than',
+      'thay_cu_meo',
       'ba_ngoai_vui_tinh',
+      'ba_co_mo_hon',
       'tien_tu_chua_lanh',
       'tong_tai_ly_tri',
       'phap_su_toi_co',

@@ -4,9 +4,10 @@ import { generateDailyCardReading } from '@/lib/ai-provider';
 import type { DailyPullPayload } from '@/lib/api-types';
 import {
   DAILY_PULL_STAR_REWARD,
+  DAILY_STREAK_DAY7_REWARD,
   getQuotaStatus,
   getTodayDailyPull,
-   getTodayKey,
+  getTodayKey,
   recordDailyPullCompletion,
   resolveClientKey,
 } from '@/lib/quota-store';
@@ -88,8 +89,12 @@ export async function POST(request: Request) {
 
   const preQuota = getQuotaStatus(clientKey);
   const previewStreak = (preQuota.streakDays ?? 0) + 1;
+  const previewReward =
+    previewStreak % 7 === 0
+      ? DAILY_STREAK_DAY7_REWARD
+      : DAILY_PULL_STAR_REWARD;
   const previewStars =
-    (preQuota.starsBalance ?? 10) + DAILY_PULL_STAR_REWARD;
+    (preQuota.starsBalance ?? 10) + previewReward;
 
   const dailyGenerated = await generateDailyCardReading({
     card: {
@@ -100,7 +105,7 @@ export async function POST(request: Request) {
     readerId,
     date: today,
     streakDays: previewStreak,
-    starsRewarded: DAILY_PULL_STAR_REWARD,
+    starsRewarded: previewReward,
     totalStarsBalance: previewStars,
   });
 

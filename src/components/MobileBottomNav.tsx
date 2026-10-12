@@ -257,7 +257,7 @@ export default function MobileBottomNav({
       {/* Fixed Thumb-Zone Bottom Tab Bar (4 Tabs matching Redesign UI: Bốc bài | Bói Đôi | Hôm nay | Tôi) */}
       <nav
         aria-label="Thanh điều hướng chính"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9B36A]/20 bg-[#0B0A12]/95 backdrop-blur-xl pb-safe"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#C9A24A]/20 bg-[#0B0A12]/95 backdrop-blur-xl pb-safe"
       >
         <div className="mx-auto grid max-w-md grid-cols-4 items-center px-2 pt-1.5 pb-1">
           {/* Tab 1: Bốc bài */}
@@ -273,7 +273,7 @@ export default function MobileBottomNav({
             <div
               className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
                 activeTab === 'solo'
-                  ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40'
+                  ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40'
                   : ''
               }`}
             >
@@ -297,7 +297,7 @@ export default function MobileBottomNav({
             <div
               className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
                 activeTab === 'couple'
-                  ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40'
+                  ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40'
                   : ''
               }`}
             >
@@ -335,7 +335,7 @@ export default function MobileBottomNav({
             <div
               className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
                 isExploreSheetOpen
-                  ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40'
+                  ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40'
                   : ''
               }`}
             >

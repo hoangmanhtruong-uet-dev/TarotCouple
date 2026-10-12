@@ -26,7 +26,7 @@ export default function AppBottomNav() {
   return (
     <nav
       aria-label="Thanh điều hướng chính"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9B36A]/20 bg-[#0B0A12]/95 backdrop-blur-xl pb-safe"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#C9A24A]/20 bg-[#0B0A12]/95 backdrop-blur-xl pb-safe"
     >
       <div className="mx-auto grid max-w-md grid-cols-4 items-center px-2 pt-1.5 pb-1">
         {/* Tab 1: Trang chủ */}
@@ -38,7 +38,7 @@ export default function AppBottomNav() {
         >
           <div
             className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
-              isHome ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40' : ''
+              isHome ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40' : ''
             }`}
           >
             <Compass className="h-4 w-4" />
@@ -55,7 +55,7 @@ export default function AppBottomNav() {
         >
           <div
             className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
-              isReading ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40' : ''
+              isReading ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40' : ''
             }`}
           >
             <Sparkles className="h-4 w-4" />
@@ -72,7 +72,7 @@ export default function AppBottomNav() {
         >
           <div
             className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
-              isCouple ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40' : ''
+              isCouple ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40' : ''
             }`}
           >
             <Heart className="h-4 w-4" />
@@ -89,7 +89,7 @@ export default function AppBottomNav() {
         >
           <div
             className={`flex h-7 w-12 items-center justify-center rounded-full transition ${
-              isMe ? 'bg-[#D9B36A]/20 border border-[#D9B36A]/40' : ''
+              isMe ? 'bg-[#C9A24A]/20 border border-[#C9A24A]/40' : ''
             }`}
           >
             <User className="h-4 w-4" />

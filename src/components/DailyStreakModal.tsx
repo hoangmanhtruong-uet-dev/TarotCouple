@@ -20,6 +20,7 @@ import type {
 } from '@/lib/api-types';
 import type { ReaderId } from '@/lib/schemas';
 import { TarotCardVisual } from '@/components/TarotCardVisual';
+import { soundManager } from '@/lib/sound-effects';
 
 export interface DailyStreakModalProps {
   isOpen: boolean;
@@ -62,6 +63,8 @@ function buildFallbackDailyPull(
   const card =
     ALL_TAROT_CARDS[daySeed % ALL_TAROT_CARDS.length] ?? ALL_TAROT_CARDS[0]!;
   const reversed = daySeed % 5 === 0;
+  const nextStreak = currentStreak + 1;
+  const reward = nextStreak % 7 === 0 ? 5 : 2;
 
   return {
     date: todayStr,
@@ -75,9 +78,9 @@ function buildFallbackDailyPull(
     luckyColor:
       LUCKY_COLORS_FALLBACK[daySeed % LUCKY_COLORS_FALLBACK.length]!,
     luckyItem: LUCKY_ITEMS_FALLBACK[daySeed % LUCKY_ITEMS_FALLBACK.length]!,
-    streakDays: currentStreak + 1,
-    starsRewarded: 2,
-    totalStarsBalance: currentStars + 2,
+    streakDays: nextStreak,
+    starsRewarded: reward,
+    totalStarsBalance: currentStars + reward,
   };
 }
 
@@ -109,7 +112,7 @@ export function DailyStreakModal({
       .then((data) => {
         if (!data) return;
         const payload: DailyPullPayload | undefined =
-          data.dailyPull || data.pull || (data.card ? data : undefined);
+          data.daily || data.dailyPull || data.pull || (data.card ? data : undefined);
         if (payload && payload.card) {
           setDailyPull(payload);
           setIsCardFlipped(true);
@@ -124,6 +127,7 @@ export function DailyStreakModal({
   const handleDrawDailyCard = async () => {
     if (isDrawing) return;
     if (dailyPull) {
+      soundManager.playCardFlip();
       setIsCardFlipped((prev) => !prev);
       return;
     }
@@ -139,16 +143,23 @@ export function DailyStreakModal({
           nickname: nickname.trim() || 'Bạn Ẩn Danh',
           birth_year: birthYear,
           reader_id: readerId,
+          readerId,
         }),
       });
 
       const data = await res.json();
       const payload: DailyPullPayload | undefined =
-        data?.dailyPull || data?.pull || (data?.card ? data : undefined);
+        data?.daily || data?.dailyPull || data?.pull || (data?.card ? data : undefined);
 
       if (payload && payload.card) {
+        soundManager.playCardFlip();
         setDailyPull(payload);
-        setTimeout(() => setIsCardFlipped(true), 120);
+        setTimeout(() => {
+          setIsCardFlipped(true);
+          if (!data?.alreadyPulledToday) {
+            soundManager.playMysticChime();
+          }
+        }, 120);
 
         const nextQuota: QuotaStatusPayload = data.quota || {
           ...quota,
@@ -158,7 +169,7 @@ export function DailyStreakModal({
         };
         onQuotaUpdated?.(nextQuota);
 
-        if (payload.starsRewarded > 0) {
+        if (!data?.alreadyPulledToday && payload.starsRewarded > 0) {
           setRewardToast(
             `Điểm danh thành công! Bạn nhận được +${payload.starsRewarded} Sao ⭐ (Tổng: ${payload.totalStarsBalance} ⭐)`
           );
@@ -171,11 +182,15 @@ export function DailyStreakModal({
         const fallback = buildFallbackDailyPull(
           nickname || 'Bạn',
           readerId,
-          quota.streakDays ?? 1,
+          quota.streakDays ?? 0,
           quota.starsBalance ?? 10
         );
+        soundManager.playCardFlip();
         setDailyPull(fallback);
-        setTimeout(() => setIsCardFlipped(true), 120);
+        setTimeout(() => {
+          setIsCardFlipped(true);
+          soundManager.playMysticChime();
+        }, 120);
         onQuotaUpdated?.({
           ...quota,
           streakDays: fallback.streakDays,
@@ -190,11 +205,15 @@ export function DailyStreakModal({
       const fallback = buildFallbackDailyPull(
         nickname || 'Bạn',
         readerId,
-        quota.streakDays ?? 1,
+        quota.streakDays ?? 0,
         quota.starsBalance ?? 10
       );
+      soundManager.playCardFlip();
       setDailyPull(fallback);
-      setTimeout(() => setIsCardFlipped(true), 120);
+      setTimeout(() => {
+        setIsCardFlipped(true);
+        soundManager.playMysticChime();
+      }, 120);
       onQuotaUpdated?.({
         ...quota,
         streakDays: fallback.streakDays,
@@ -259,20 +278,20 @@ export function DailyStreakModal({
             {/* Body */}
             <div className="p-5 sm:p-6 space-y-6 max-h-[82vh] overflow-y-auto">
               {/* Top Streak & Reward Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#1D162B] via-[#171324] to-[#1D162B] border border-[#D4AF37]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#1D162B] via-[#171324] to-[#1D162B] border border-[#C9A24A]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/50 text-amber-200 font-bold text-sm flex items-center gap-1.5">
                     <Flame className="w-4 h-4 text-amber-400" />
                     <span>🔥 Chuỗi {streakDays} ngày liên tiếp</span>
                   </div>
-                  <div className="px-3 py-1.5 rounded-xl bg-[#09080D]/80 border border-[#D4AF37]/40 text-xs font-semibold text-[#F3E5AB] flex items-center gap-1.5">
-                    <Gift className="w-3.5 h-3.5 text-[#D4AF37]" />
-                    <span>Thưởng mỗi ngày: +2 Sao ⭐</span>
+                  <div className="px-3 py-1.5 rounded-xl bg-[#09080D]/80 border border-[#C9A24A]/40 text-xs font-semibold text-[#F3E5AB] flex items-center gap-1.5">
+                    <Gift className="w-3.5 h-3.5 text-[#C9A24A]" />
+                    <span>Mỗi ngày +2 ⭐ • Ngày 7 +5 ⭐</span>
                   </div>
                 </div>
 
                 <div className="inline-flex items-center gap-1.5 text-xs text-[#F3E5AB] bg-[#09080D]/80 px-3.5 py-2 rounded-xl border border-white/10">
-                  <Star className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]" />
+                  <Star className="w-3.5 h-3.5 text-[#C9A24A] fill-[#C9A24A]" />
                   <span>Ví Sao hiện tại:</span>
                   <strong className="text-[#F8F5F0] font-bold">
                     {starsBalance} ⭐
@@ -283,13 +302,15 @@ export function DailyStreakModal({
               {/* 7-Day Streak Progress Track */}
               <div className="grid grid-cols-7 gap-2">
                 {streakMilestones.map((dayNum) => {
-                  const isCompleted = dayNum <= (streakDays % 8 || 1);
+                  const completedInCycle =
+                    streakDays > 0 ? ((streakDays - 1) % 7) + 1 : 0;
+                  const isCompleted = dayNum <= completedInCycle;
                   return (
                     <div
                       key={dayNum}
                       className={`p-2 rounded-xl border text-center transition-all ${
                         isCompleted
-                          ? 'bg-[#D4AF37]/20 border-[#F3E5AB] text-[#F3E5AB]'
+                          ? 'bg-[#C9A24A]/20 border-[#C9A24A] text-[#F3E5AB]'
                           : 'bg-[#09080D]/60 border-white/10 text-[#A39BB5]'
                       }`}
                     >

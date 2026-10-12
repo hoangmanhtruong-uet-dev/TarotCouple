@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -14,9 +14,14 @@ import {
   Share2,
   ArrowLeft,
   Sparkles,
+  Copy,
+  Check,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import { classifyAgeTier } from '@/lib/safety';
 import { CURRENT_REFERENCE_YEAR } from '@/lib/schemas';
+import { soundManager } from '@/lib/sound-effects';
 import type {
   PaymentOrderPayload,
   QuotaStatusPayload,
@@ -101,40 +106,121 @@ export function WalletPayOSModal({
   onQuotaUpdated,
   onOpenDailyModal,
 }: WalletPayOSModalProps) {
-  const [activeOrder, setActiveOrder] = useState<PaymentOrderPayload | null>(
-    null
-  );
+  const [activeOrder, setActiveOrder] = useState<PaymentOrderPayload | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState<boolean>(false);
-  const [isConfirmingWebhook, setIsConfirmingWebhook] =
-    useState<boolean>(false);
+  const [isPolling, setIsPolling] = useState<boolean>(false);
+  const [isConfirmingWebhook, setIsConfirmingWebhook] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(600);
+  const [copiedField, setCopiedField] = useState<'account' | 'memo' | null>(null);
 
-  const agePolicy = classifyAgeTier(birthYear, CURRENT_REFERENCE_YEAR);
-  const isUnder18 = birthYear > 2008 || !agePolicy.paymentEnabled;
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Rào chắn độ tuổi <11t (theo yêu cầu Sprint 2)
+  const age = Math.max(0, CURRENT_REFERENCE_YEAR - birthYear);
+  const isUnder11 = age < 11;
 
   const starsBalance = quota.starsBalance ?? 10;
   const dailySpendVnd = quota.dailySpendVnd ?? 0;
   const dailySpendCapVnd = quota.dailySpendCapVnd ?? 50000;
   const spendRatio = Math.min(
     100,
-    dailySpendCapVnd > 0
-      ? Math.round((dailySpendVnd / dailySpendCapVnd) * 100)
-      : 0
+    dailySpendCapVnd > 0 ? Math.round((dailySpendVnd / dailySpendCapVnd) * 100) : 0
   );
 
+  // Đóng modal -> reset state
   useEffect(() => {
     if (!isOpen) {
       setActiveOrder(null);
       setErrorMsg(null);
       setSuccessBanner(null);
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     }
   }, [isOpen]);
 
+  // Bộ đếm ngược 10 phút khi có đơn hàng đang chờ
+  useEffect(() => {
+    if (activeOrder && activeOrder.status === 'pending') {
+      setCountdownSeconds(600);
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdownSeconds((prev) => {
+          if (prev <= 1) {
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    }
+    return () => {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, [activeOrder?.orderCode, activeOrder?.status]);
+
+  // CƠ CHẾ POLLING TỰ ĐỘNG MỖI 2.5s KHI ĐƠN HÀNG PENDING
+  useEffect(() => {
+    if (activeOrder && activeOrder.status === 'pending') {
+      pollingIntervalRef.current = setInterval(() => {
+        void checkOrderStatus(activeOrder.orderCode);
+      }, 2500);
+    } else {
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    }
+    return () => {
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    };
+  }, [activeOrder?.orderCode, activeOrder?.status]);
+
+  // Hàm kiểm tra trạng thái đơn hàng (Polling hoặc Manual)
+  const checkOrderStatus = async (orderCode: string, isManual = false) => {
+    if (isPolling) return;
+    if (isManual) setIsPolling(true);
+
+    try {
+      const res = await fetch(`/api/payment?orderCode=${encodeURIComponent(orderCode)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.order?.status === 'paid') {
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+          soundManager.playMysticChime();
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([60, 60, 120]);
+          }
+          setActiveOrder((prev) => (prev ? { ...prev, status: 'paid' } : null));
+          setSuccessBanner(
+            `🎉 Thanh toán VietQR PayOS thành công! Đã cộng +${data.order.starsToCredit || activeOrder?.starsToCredit} Sao ⭐ vào ví Tinh Hà.`
+          );
+          if (data.quota && onQuotaUpdated) {
+            onQuotaUpdated(data.quota);
+          }
+        }
+      }
+    } catch {
+      // Safe fallback
+    } finally {
+      if (isManual) setIsPolling(false);
+    }
+  };
+
+  // Sao chép clipboard với phản hồi giao diện
+  const copyToClipboard = (text: string, field: 'account' | 'memo') => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  };
+
+  // Chọn gói và khởi tạo đơn PayOS VietQR
   const handleSelectPackage = async (pkg: StarPackage) => {
-    if (isUnder18) {
+    if (isUnder11) {
       setErrorMsg(
-        'Tài khoản dưới 18 tuổi được khóa tự động tính năng nạp tiền ngân hàng theo chính sách bảo vệ độ tuổi.'
+        'Tài khoản dưới 11 tuổi được khóa tự động tính năng nạp tiền ngân hàng theo chính sách bảo vệ trẻ em.'
       );
       return;
     }
@@ -172,7 +258,6 @@ export function WalletPayOSModal({
       if (orderPayload && orderPayload.orderCode) {
         setActiveOrder(orderPayload);
       } else {
-        // Fallback sandbox order
         const fallbackCode = `TC${Date.now().toString().slice(-6)}`;
         setActiveOrder({
           orderCode: fallbackCode,
@@ -208,6 +293,7 @@ export function WalletPayOSModal({
     }
   };
 
+  // Xác nhận chuyển khoản thủ công (Test webhook giả lập)
   const handleConfirmWebhook = async () => {
     if (!activeOrder || isConfirmingWebhook) return;
     setIsConfirmingWebhook(true);
@@ -247,6 +333,7 @@ export function WalletPayOSModal({
 
       onQuotaUpdated?.(updatedQuota);
       setActiveOrder({ ...activeOrder, status: 'paid' });
+      soundManager.playMysticChime();
       setSuccessBanner(
         `🎉 Thanh toán VietQR PayOS thành công! Đã cộng +${activeOrder.starsToCredit} Sao ⭐ vào ví của bạn (Số dư mới: ${updatedQuota.starsBalance ?? starsBalance + activeOrder.starsToCredit} ⭐).`
       );
@@ -267,6 +354,12 @@ export function WalletPayOSModal({
     }
   };
 
+  const formatCountdown = (totalSec: number) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   return (
     <AnimatePresence>
       {isOpen ? (
@@ -274,7 +367,7 @@ export function WalletPayOSModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#09080D]/90 backdrop-blur-md p-3 sm:p-6 overflow-y-auto select-none"
           role="dialog"
           aria-modal="true"
           aria-label="Ví Sao & Cổng Thanh Toán VietQR PayOS"
@@ -284,20 +377,20 @@ export function WalletPayOSModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.94, opacity: 0, y: 16 }}
             transition={{ type: 'spring', stiffness: 200, damping: 22 }}
-            className="relative w-full max-w-4xl rounded-3xl bg-[#12101B] border border-[#D4AF37]/45 shadow-[0_24px_80px_rgba(0,0,0,0.92)] overflow-hidden my-auto"
+            className="relative w-full max-w-4xl rounded-3xl bg-[#14111C] border border-[#C9A24A]/45 shadow-[0_24px_80px_rgba(0,0,0,0.92)] overflow-hidden my-auto"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#D4AF37]/25 bg-[#09080D]/85">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#C9A24A]/25 bg-[#09080D]/85">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/50 flex items-center justify-center text-[#F3E5AB]">
-                  <Star className="w-5 h-5 text-[#D4AF37] fill-[#D4AF37]" />
+                <div className="w-9 h-9 rounded-xl bg-[#C9A24A]/15 border border-[#C9A24A]/50 flex items-center justify-center text-[#F3E5AB]">
+                  <Star className="w-5 h-5 text-[#C9A24A] fill-[#C9A24A]" />
                 </div>
                 <div>
                   <h3 className="font-display text-lg sm:text-xl font-bold text-[#F8F5F0]">
                     Ví Sao ⭐ & Cổng Thanh Toán VietQR (PayOS)
                   </h3>
-                  <p className="text-xs text-[#A39BB5]">
-                    Chi tiêu có trách nhiệm • Trần bảo vệ 50.000đ/ngày • Bảo vệ độ tuổi tự động
+                  <p className="text-xs text-[#9E96B0]">
+                    Chi tiêu có trách nhiệm • Trần bảo vệ 50.000đ/ngày • Rào chắn độ tuổi &lt;11t
                   </p>
                 </div>
               </div>
@@ -316,9 +409,9 @@ export function WalletPayOSModal({
               {/* Top Wallet & Responsible Spending Bar */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Current Star Balance */}
-                <div className="md:col-span-4 p-4 rounded-2xl bg-gradient-to-br from-[#1F172E] to-[#120E1C] border border-[#D4AF37]/45 flex items-center justify-between">
+                <div className="md:col-span-4 p-4 rounded-2xl bg-gradient-to-br from-[#1D1829] to-[#09080D] border border-[#C9A24A]/45 flex items-center justify-between">
                   <div>
-                    <span className="text-[11px] uppercase tracking-wider text-[#A39BB5] block">
+                    <span className="text-[11px] uppercase tracking-wider text-[#9E96B0] block">
                       Số dư Ví Sao hiện tại
                     </span>
                     <motion.p
@@ -330,17 +423,15 @@ export function WalletPayOSModal({
                       ⭐ {starsBalance} Sao
                     </motion.p>
                   </div>
-                  <Sparkles className="w-7 h-7 text-[#D4AF37]" />
+                  <Sparkles className="w-7 h-7 text-[#C9A24A]" />
                 </div>
 
                 {/* Responsible Spending Daily Cap */}
-                <div className="md:col-span-5 p-4 rounded-2xl bg-[#171424] border border-white/10 space-y-2">
+                <div className="md:col-span-5 p-4 rounded-2xl bg-[#1D1829] border border-white/10 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#A39BB5]">
+                    <span className="text-[#9E96B0]">
                       Đã chi hôm nay:{' '}
-                      <strong className="text-[#F8F5F0]">
-                        {formatVnd(dailySpendVnd)}
-                      </strong>
+                      <strong className="text-[#F8F5F0]">{formatVnd(dailySpendVnd)}</strong>
                     </span>
                     <span className="text-[#F3E5AB] font-semibold">
                       Trần bảo vệ: {formatVnd(dailySpendCapVnd)}/ngày
@@ -348,33 +439,33 @@ export function WalletPayOSModal({
                   </div>
                   <div className="w-full h-2.5 rounded-full bg-[#09080D] border border-white/10 overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-400 via-[#D4AF37] to-amber-400 transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-emerald-400 via-[#C9A24A] to-amber-400 transition-all duration-300"
                       style={{ width: `${spendRatio}%` }}
                     />
                   </div>
-                  <p className="text-[11px] text-[#A39BB5]">
-                    Chính sách Chi Tiêu Có Trách Nhiệm (Mục 7.3): Tự động chặn nạp quá 50.000đ/ngày.
+                  <p className="text-[11px] text-[#9E96B0]">
+                    Chính sách Chi Tiêu Có Trách Nhiệm: Tự động chặn nạp quá 50.000đ/ngày.
                   </p>
                 </div>
 
-                {/* Age Tier Switcher & Status */}
-                <div className="md:col-span-3 p-4 rounded-2xl bg-[#171424] border border-white/10 flex flex-col justify-between">
+                {/* Age Tier Switcher & Status (<11t vs 11+) */}
+                <div className="md:col-span-3 p-4 rounded-2xl bg-[#1D1829] border border-white/10 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-wider text-[#A39BB5]">
+                    <span className="text-[11px] uppercase tracking-wider text-[#9E96B0]">
                       Độ tuổi tài khoản
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        isUnder18
+                        isUnder11
                           ? 'bg-amber-500/20 text-amber-200 border border-amber-400/40'
                           : 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40'
                       }`}
                     >
-                      {CURRENT_REFERENCE_YEAR - birthYear} tuổi
+                      {age} tuổi
                     </span>
                   </div>
                   <p className="text-xs font-semibold text-[#F8F5F0] mt-1">
-                    {isUnder18 ? 'Dưới 18 tuổi (Khóa nạp)' : '18+ tuổi (Mở PayOS)'}
+                    {isUnder11 ? 'Dưới 11 tuổi (Khóa nạp)' : '11+ tuổi (Mở PayOS)'}
                   </p>
                   {onBirthYearChange ? (
                     <div className="flex items-center gap-1.5 mt-2">
@@ -382,39 +473,39 @@ export function WalletPayOSModal({
                         type="button"
                         onClick={() => onBirthYearChange(2004)}
                         className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border cursor-pointer ${
-                          !isUnder18
-                            ? 'bg-[#D4AF37]/25 border-[#F3E5AB] text-[#F3E5AB]'
-                            : 'bg-[#09080D] border-white/10 text-[#A39BB5]'
+                          !isUnder11
+                            ? 'bg-[#C9A24A]/25 border-[#F3E5AB] text-[#F3E5AB]'
+                            : 'bg-[#09080D] border-white/10 text-[#9E96B0]'
                         }`}
                       >
-                        Test 18+ (2004)
+                        18+ (2004)
                       </button>
                       <button
                         type="button"
-                        onClick={() => onBirthYearChange(2010)}
+                        onClick={() => onBirthYearChange(2017)}
                         className={`flex-1 py-1 rounded-lg text-[10px] font-semibold border cursor-pointer ${
-                          isUnder18
+                          isUnder11
                             ? 'bg-amber-500/25 border-amber-300 text-amber-200'
-                            : 'bg-[#09080D] border-white/10 text-[#A39BB5]'
+                            : 'bg-[#09080D] border-white/10 text-[#9E96B0]'
                         }`}
                       >
-                        Test &lt;18t (2010)
+                        &lt;11t (2017)
                       </button>
                     </div>
                   ) : null}
                 </div>
               </div>
 
-              {/* Under-18 Protective Lock Banner */}
-              {isUnder18 ? (
+              {/* RÀO CHẮN ĐỘ TUỔI <11t PROTECTIVE BANNER */}
+              {isUnder11 ? (
                 <div
-                  data-testid="under-18-payment-lock-banner"
+                  data-testid="under-11-payment-lock-banner"
                   className="p-5 rounded-2xl bg-amber-950/70 border-2 border-amber-400/60 space-y-4 shadow-[0_0_30px_rgba(245,158,11,0.2)]"
                 >
                   <div className="flex items-start gap-3">
                     <Shield className="w-6 h-6 text-amber-300 shrink-0 mt-0.5" />
                     <p className="text-xs sm:text-sm text-amber-100 leading-relaxed font-medium">
-                      🛡️ Tài khoản dưới 18 tuổi: Tính năng nạp tiền ngân hàng đã được khóa tự động theo chính sách bảo vệ độ tuổi. Bạn có thể nhận Sao miễn phí qua Điểm danh hàng ngày (+2 ⭐) hoặc Chia sẻ ảnh Story!
+                      🛡️ Tài khoản dưới 11 tuổi: Tính năng nạp tiền ngân hàng đã được khóa tự động theo chính sách bảo vệ trẻ em. Bạn có thể nhận Sao miễn phí qua Điểm danh hàng ngày (+2 ⭐) hoặc Chia sẻ ảnh Story!
                     </p>
                   </div>
 
@@ -469,9 +560,9 @@ export function WalletPayOSModal({
                         key={pkg.id}
                         className={`rounded-2xl p-5 border flex flex-col justify-between transition-all ${
                           isBestSeller
-                            ? 'bg-gradient-to-b from-[#221933] to-[#130F1E] border-2 border-[#D4AF37] shadow-[0_12px_35px_rgba(212,175,55,0.2)]'
-                            : 'bg-[#171424] border-[#D4AF37]/30'
-                        } ${isUnder18 ? 'opacity-65' : ''}`}
+                            ? 'bg-gradient-to-b from-[#1D1829] to-[#14111C] border-2 border-[#C9A24A] shadow-[0_12px_35px_rgba(201,162,74,0.2)]'
+                            : 'bg-[#14111C] border-[#C9A24A]/30'
+                        } ${isUnder11 ? 'opacity-65' : ''}`}
                       >
                         <div className="space-y-3">
                           <div className="flex items-start justify-between gap-2">
@@ -479,7 +570,7 @@ export function WalletPayOSModal({
                               <h4 className="font-display text-xl font-bold text-[#F8F5F0]">
                                 {pkg.name}
                               </h4>
-                              <p className="text-xs text-[#D4AF37] font-semibold mt-0.5">
+                              <p className="text-xs text-[#C9A24A] font-semibold mt-0.5">
                                 {formatVnd(pkg.priceVnd)} = {pkg.stars} ⭐
                               </p>
                             </div>
@@ -487,8 +578,8 @@ export function WalletPayOSModal({
                               <span
                                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                                   isBestSeller
-                                    ? 'bg-[#D4AF37] text-[#09080D] border-[#F3E5AB]'
-                                    : 'bg-white/5 text-[#F3E5AB] border-[#D4AF37]/40'
+                                    ? 'bg-[#C9A24A] text-[#09080D] border-[#F3E5AB]'
+                                    : 'bg-white/5 text-[#F3E5AB] border-[#C9A24A]/40'
                                 }`}
                               >
                                 {pkg.badge}
@@ -496,17 +587,14 @@ export function WalletPayOSModal({
                             ) : null}
                           </div>
 
-                          <p className="text-xs text-[#A39BB5] leading-relaxed">
+                          <p className="text-xs text-[#9E96B0] leading-relaxed">
                             {pkg.description}
                           </p>
 
                           <ul className="space-y-1.5 pt-1">
                             {pkg.perks.map((perk, idx) => (
-                              <li
-                                key={idx}
-                                className="text-xs text-[#D8D2E7] flex items-center gap-2"
-                              >
-                                <span className="text-[#D4AF37]">✦</span>
+                              <li key={idx} className="text-xs text-[#D8D2E7] flex items-center gap-2">
+                                <span className="text-[#C9A24A]">✦</span>
                                 <span>{perk}</span>
                               </li>
                             ))}
@@ -516,31 +604,25 @@ export function WalletPayOSModal({
                         <div className="mt-5 pt-3 border-t border-white/10">
                           <button
                             type="button"
-                            disabled={
-                              isUnder18 ||
-                              isCreatingOrder ||
-                              isVipExceedsDailyCap
-                            }
+                            disabled={isUnder11 || isCreatingOrder || isVipExceedsDailyCap}
                             onClick={() => void handleSelectPackage(pkg)}
                             className={`w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
-                              isUnder18
-                                ? 'bg-white/5 text-[#A39BB5] border border-white/10 cursor-not-allowed'
+                              isUnder11
+                                ? 'bg-white/5 text-[#9E96B0] border border-white/10 cursor-not-allowed'
                                 : isBestSeller
-                                  ? 'bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] text-[#09080D] shadow-[0_6px_20px_rgba(212,175,55,0.35)] hover:brightness-110 cursor-pointer'
-                                  : 'bg-[#09080D] hover:bg-[#241D36] text-[#F3E5AB] border border-[#D4AF37]/50 cursor-pointer'
+                                ? 'bg-gradient-to-r from-[#C9A24A] via-[#F3E5AB] to-[#C9A24A] text-[#09080D] shadow-[0_6px_20px_rgba(201,162,74,0.35)] hover:brightness-110 cursor-pointer'
+                                : 'bg-[#09080D] hover:bg-[#1D1829] text-[#F3E5AB] border border-[#C9A24A]/50 cursor-pointer'
                             }`}
                           >
-                            {isUnder18 ? (
+                            {isUnder11 ? (
                               <>
                                 <Lock className="w-3.5 h-3.5" />
-                                <span>Đã khóa nạp (&lt;18 tuổi)</span>
+                                <span>Đã khóa nạp (&lt;11 tuổi)</span>
                               </>
                             ) : (
                               <>
                                 <QrCode className="w-4 h-4" />
-                                <span>
-                                  Nạp {formatVnd(pkg.priceVnd)} nhận {pkg.stars} ⭐
-                                </span>
+                                <span>Nạp {formatVnd(pkg.priceVnd)} nhận {pkg.stars} ⭐</span>
                               </>
                             )}
                           </button>
@@ -550,54 +632,64 @@ export function WalletPayOSModal({
                   })}
                 </div>
               ) : (
-                /* VIEW 2: VIETQR PAYOS CHECKOUT VIEW */
+                /* VIEW 2: VIETQR PAYOS CHECKOUT VIEW VỚI POLLING TỰ ĐỘNG */
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl bg-[#171424] border border-[#D4AF37]/45 p-5 sm:p-6 space-y-5"
+                  className="rounded-2xl bg-[#1D1829] border border-[#C9A24A]/45 p-5 sm:p-6 space-y-5"
                 >
                   <div className="flex items-center justify-between border-b border-white/10 pb-3">
                     <button
                       type="button"
                       onClick={() => setActiveOrder(null)}
-                      className="inline-flex items-center gap-1.5 text-xs text-[#A39BB5] hover:text-[#F8F5F0] cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs text-[#9E96B0] hover:text-[#F8F5F0] cursor-pointer"
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span>Chọn gói Sao khác</span>
                     </button>
 
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-xs font-semibold text-emerald-200">
-                      Cổng VietQR Động • PayOS
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-xs font-semibold text-emerald-200">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        <span>VietQR Động • PayOS</span>
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                     {/* QR Image Frame */}
-                    <div className="md:col-span-5 flex flex-col items-center space-y-2">
-                      <div className="p-4 rounded-2xl bg-white text-[#09080D] shadow-xl flex flex-col items-center space-y-2 max-w-[230px] w-full">
+                    <div className="md:col-span-5 flex flex-col items-center space-y-3">
+                      <div className="p-4 rounded-2xl bg-white text-[#09080D] shadow-xl flex flex-col items-center space-y-2 max-w-[240px] w-full relative">
                         <img
                           src={activeOrder.vietQrImageUrl}
                           alt={`Mã VietQR PayOS cho đơn ${activeOrder.orderCode}`}
-                          className="w-44 h-44 object-contain"
+                          className="w-48 h-48 object-contain"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                           }}
                         />
                         <div className="text-center border-t border-zinc-200 pt-2 w-full">
-                          <p className="text-[11px] font-bold text-zinc-800">
-                            VIETQR • NAPAS 247
-                          </p>
-                          <p className="text-[10px] font-mono text-zinc-600">
+                          <p className="text-[11px] font-bold text-zinc-800">VIETQR • NAPAS 247</p>
+                          <p className="text-[10px] font-mono text-zinc-600 truncate">
                             Nội dung: {activeOrder.orderCode}
                           </p>
                         </div>
                       </div>
+
+                      {/* Đếm ngược hết hạn QR */}
+                      <div className="flex items-center gap-1.5 text-xs text-[#9E96B0]">
+                        <Clock className="w-3.5 h-3.5 text-[#C9A24A]" />
+                        <span>Hết hạn sau: </span>
+                        <strong className="text-[#F3E5AB] font-mono">
+                          {formatCountdown(countdownSeconds)}
+                        </strong>
+                      </div>
                     </div>
 
-                    {/* Order Info & 1-Click Webhook Confirmation */}
+                    {/* Order Info & Polling Status */}
                     <div className="md:col-span-7 space-y-4">
                       <div>
-                        <span className="text-xs uppercase tracking-wider text-[#D4AF37] font-semibold">
+                        <span className="text-xs uppercase tracking-wider text-[#C9A24A] font-semibold">
                           Thông tin đơn thanh toán PayOS
                         </span>
                         <h4 className="font-display text-2xl font-bold text-[#F8F5F0] mt-0.5">
@@ -605,59 +697,95 @@ export function WalletPayOSModal({
                         </h4>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-[#09080D]/80 border border-white/10 space-y-2 text-xs sm:text-sm">
+                      <div className="p-4 rounded-xl bg-[#09080D]/80 border border-white/10 space-y-2.5 text-xs sm:text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-[#A39BB5]">Mã đơn (Order Code):</span>
-                          <strong className="font-mono text-[#F3E5AB]">
-                            {activeOrder.orderCode}
-                          </strong>
+                          <span className="text-[#9E96B0]">Mã đơn / Nội dung CK:</span>
+                          <div className="flex items-center gap-1.5">
+                            <strong className="font-mono text-[#F3E5AB]">
+                              {activeOrder.orderCode}
+                            </strong>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(activeOrder.orderCode, 'memo')}
+                              className="p-1 rounded hover:bg-white/10 text-[#9E96B0] hover:text-[#F8F5F0] cursor-pointer"
+                              title="Sao chép nội dung"
+                            >
+                              {copiedField === 'memo' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </div>
+
                         <div className="flex items-center justify-between">
-                          <span className="text-[#A39BB5]">Số tiền chuyển khoản:</span>
+                          <span className="text-[#9E96B0]">Số tiền cần chuyển:</span>
                           <strong className="text-emerald-300 font-bold text-base">
                             {formatVnd(activeOrder.amountVnd)}
                           </strong>
                         </div>
+
                         <div className="flex items-center justify-between">
-                          <span className="text-[#A39BB5]">Số Sao nhận được:</span>
+                          <span className="text-[#9E96B0]">Số Sao nhận được:</span>
                           <strong className="text-[#F3E5AB] font-bold">
                             +{activeOrder.starsToCredit} Sao ⭐
                           </strong>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#A39BB5]">Trạng thái:</span>
+
+                        <div className="flex items-center justify-between border-t border-white/10 pt-2">
+                          <span className="text-[#9E96B0]">Trạng thái:</span>
                           <span
-                            className={`font-semibold ${
-                              activeOrder.status === 'paid'
-                                ? 'text-emerald-400'
-                                : 'text-amber-300'
+                            className={`font-semibold flex items-center gap-1.5 ${
+                              activeOrder.status === 'paid' ? 'text-emerald-400' : 'text-amber-300'
                             }`}
                           >
-                            {activeOrder.status === 'paid'
-                              ? 'Đã thanh toán & Cộng Sao'
-                              : 'Đang chờ quét mã QR...'}
+                            {activeOrder.status === 'paid' ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Đã thanh toán & Cộng Sao!</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Tự động kiểm tra mỗi 2.5s...</span>
+                              </>
+                            )}
                           </span>
                         </div>
                       </div>
 
+                      {/* Các nút hành động */}
                       {activeOrder.status !== 'paid' ? (
-                        <button
-                          type="button"
-                          disabled={isConfirmingWebhook}
-                          onClick={() => void handleConfirmWebhook()}
-                          className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500 text-[#09080D] font-bold text-xs sm:text-sm shadow-[0_8px_25px_rgba(16,185,129,0.35)] hover:brightness-110 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-60"
-                        >
-                          {isConfirmingWebhook
-                            ? 'Đang xác thực chữ ký Webhook PayOS...'
-                            : '✅ Xác nhận đã chuyển khoản (Test Webhook PayOS tức thì)'}
-                        </button>
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            disabled={isPolling}
+                            onClick={() => void checkOrderStatus(activeOrder.orderCode, true)}
+                            className="w-full py-3 px-4 rounded-xl bg-[#14111C] hover:bg-[#1D1829] border border-[#C9A24A]/40 text-[#F3E5AB] font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isPolling ? 'animate-spin' : ''}`} />
+                            <span>{isPolling ? 'Đang kiểm tra...' : 'Kiểm tra trạng thái ngay'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isConfirmingWebhook}
+                            onClick={() => void handleConfirmWebhook()}
+                            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-[#09080D] font-bold text-xs shadow-md cursor-pointer transition-all disabled:opacity-60"
+                          >
+                            {isConfirmingWebhook
+                              ? 'Đang xác thực Webhook...'
+                              : '✅ Giả lập Xác nhận chuyển khoản (Sandbox Test)'}
+                          </button>
+                        </div>
                       ) : (
                         <button
                           type="button"
                           onClick={onClose}
-                          className="w-full py-3.5 px-5 rounded-2xl bg-[#D4AF37] text-[#09080D] font-bold text-sm cursor-pointer"
+                          className="w-full py-3.5 px-5 rounded-2xl bg-[#C9A24A] hover:bg-[#E8C872] text-[#09080D] font-bold text-sm cursor-pointer transition-all shadow-lg"
                         >
-                          Quay lại dùng Sao mở khóa Lá Làm Rõ ngay →
+                          Quay lại dùng Sao mở khóa Lá Làm Rõ ngay &rarr;
                         </button>
                       )}
                     </div>

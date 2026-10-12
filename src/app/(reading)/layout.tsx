@@ -47,7 +47,7 @@ export default function ReadingLayout({
 
   return (
     <div
-      className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] flex flex-col justify-between selection:bg-[#D9B36A]/30 selection:text-[#E5C687]"
+      className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] flex flex-col justify-between selection:bg-[#C9A24A]/30 selection:text-[#E5C687]"
       style={{
         // Set reader accent CSS variable for subtle branding
         ['--reader-accent' as string]: readerAccentColor,
@@ -73,7 +73,7 @@ export default function ReadingLayout({
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                       isCurrent
-                        ? 'bg-[#D9B36A] text-[#0B0A12] ring-2 ring-[#D9B36A]/40'
+                        ? 'bg-[#C9A24A] text-[#0B0A12] ring-2 ring-[#C9A24A]/40'
                         : isCompleted
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                         : 'bg-[#1D192C] text-[#9E96B0] border border-[#262235]'
@@ -120,7 +120,7 @@ export default function ReadingLayout({
                     <div
                       className={`rounded-full transition-all duration-300 ${
                         isSubActive
-                          ? 'w-4 h-1.5 bg-[#D9B36A] shadow-[0_0_8px_rgba(217,179,106,0.6)]'
+                          ? 'w-4 h-1.5 bg-[#C9A24A] shadow-[0_0_8px_rgba(217,179,106,0.6)]'
                           : isSubDone
                           ? 'w-1.5 h-1.5 bg-emerald-400'
                           : 'w-1.5 h-1.5 bg-[#3B354D]'

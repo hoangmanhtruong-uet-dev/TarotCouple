@@ -9,7 +9,8 @@ import { DailyStreakModal } from '@/components/DailyStreakModal';
 import { ReferralAndAdModal } from '@/components/ReferralAndAdModal';
 import { LegalPrivacyModal } from '@/components/LegalPrivacyModal';
 import { useQuotaSync } from '@/lib/use-quota';
-import type { QuotaStatusPayload } from '@/lib/api-types';
+import { useReadingStore } from '@/lib/reading-store';
+import { CURRENT_REFERENCE_YEAR } from '@/lib/schemas';
 
 export default function MeProfilePage() {
   const shouldReduceMotion = useReducedMotion();
@@ -19,20 +20,26 @@ export default function MeProfilePage() {
   const [isLegalOpen, setIsLegalOpen] = useState(false);
 
   const { quota, updateQuota } = useQuotaSync();
+  const { birthYear, nickname, setContextForm } = useReadingStore();
+
+  const userBirthYear = birthYear || 2004;
+  const userNickname = nickname || 'Bạn';
+  const age = Math.max(0, CURRENT_REFERENCE_YEAR - userBirthYear);
+  const isUnder11 = age < 11;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8 select-none">
       {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8"
       >
-        <span className="text-[11px] font-bold tracking-[0.2em] text-[#D9B36A] uppercase block mb-1">
+        <span className="text-[11px] font-bold tracking-[0.2em] text-[#C9A24A] uppercase block mb-1">
           TÀI KHOẢN • HỒ SƠ TÂM LINH
         </span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
-          Không Gian Của Bạn
+          Không Gian Của {userNickname}
         </h1>
         <p className="text-xs sm:text-sm text-[#9E96B0] mt-1">
           Quản lý số dư Sao, chuỗi điểm danh streak và tiện ích nhận thưởng.
@@ -45,17 +52,17 @@ export default function MeProfilePage() {
           whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
           whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
           onClick={() => setIsWalletOpen(true)}
-          className="p-5 rounded-2xl bg-[#14121F] border border-[#D9B36A]/40 hover:border-[#D9B36A] transition-all cursor-pointer shadow-sm relative overflow-hidden"
+          className="p-5 rounded-2xl bg-[#14111C] border border-[#C9A24A]/40 hover:border-[#C9A24A] transition-all cursor-pointer shadow-sm relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-[#9E96B0]">Ví Sao</span>
-            <Star className="w-4 h-4 text-[#D9B36A] fill-[#D9B36A]" />
+            <Star className="w-4 h-4 text-[#C9A24A] fill-[#C9A24A]" />
           </div>
           <p className="font-display text-2xl font-bold text-[#F8F5F0]">
             {quota.starsBalance ?? 15} Sao
           </p>
-          <span className="text-[10px] text-[#D9B36A] font-semibold mt-1 block">
-            Nạp thêm với PayOS &rarr;
+          <span className="text-[10px] text-[#C9A24A] font-semibold mt-1 block">
+            {isUnder11 ? 'Điểm danh tích Sao (<11t) →' : 'Nạp thêm với PayOS →'}
           </span>
         </motion.div>
 
@@ -63,7 +70,7 @@ export default function MeProfilePage() {
           whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
           whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
           onClick={() => setIsStreakOpen(true)}
-          className="p-5 rounded-2xl bg-[#14121F] border border-amber-500/40 hover:border-amber-400 transition-all cursor-pointer shadow-sm relative overflow-hidden"
+          className="p-5 rounded-2xl bg-[#14111C] border border-amber-500/40 hover:border-amber-400 transition-all cursor-pointer shadow-sm relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-[#9E96B0]">Streak</span>
@@ -79,19 +86,21 @@ export default function MeProfilePage() {
       </div>
 
       {/* Menu List */}
-      <div className="bg-[#14121F]/80 border border-[#262235] rounded-3xl p-3 space-y-1 mb-8 shadow-xl">
+      <div className="bg-[#14111C]/80 border border-[#262235] rounded-3xl p-3 space-y-1 mb-8 shadow-xl">
         <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
           <Link
             href="/reading/ve-ban?from=me"
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D1829] text-left transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#D9B36A]/10 border border-[#D9B36A]/30 flex items-center justify-center text-[#E5C687]">
-                <Sparkles className="w-5 h-5 text-[#D9B36A]" />
+              <div className="w-10 h-10 rounded-xl bg-[#C9A24A]/10 border border-[#C9A24A]/30 flex items-center justify-center text-[#F3E5AB]">
+                <Sparkles className="w-5 h-5 text-[#C9A24A]" />
               </div>
               <div>
                 <p className="text-sm font-bold text-[#F8F5F0]">Hồ Sơ Tâm Linh Của Bạn</p>
-                <p className="text-xs text-[#9E96B0]">Sửa biệt danh, năm sinh, cung hoàng đạo</p>
+                <p className="text-xs text-[#9E96B0]">
+                  Sửa biệt danh, năm sinh ({userBirthYear} • {age} tuổi)
+                </p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-[#9E96B0]" />
@@ -102,14 +111,14 @@ export default function MeProfilePage() {
           whileHover={shouldReduceMotion ? {} : { x: 4 }}
           type="button"
           onClick={() => setIsReferralOpen(true)}
-          className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+          className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D1829] text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <Gift className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-[#F8F5F0]">Mời Bạn Bè & Xem Quảng Cáo</p>
+              <p className="text-sm font-bold text-[#F8F5F0]">Mời Bạn Bè & Nhận Sao</p>
               <p className="text-xs text-[#9E96B0]">Nhận +5 Sao khi chia sẻ mã mời</p>
             </div>
           </div>
@@ -119,10 +128,10 @@ export default function MeProfilePage() {
         <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
           <Link
             href="/wrapped"
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D1829] text-left transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#D9B36A]/10 border border-[#D9B36A]/30 flex items-center justify-center text-[#E5C687]">
+              <div className="w-10 h-10 rounded-xl bg-[#C9A24A]/10 border border-[#C9A24A]/30 flex items-center justify-center text-[#F3E5AB]">
                 <Moon className="w-5 h-5" />
               </div>
               <div>
@@ -137,7 +146,7 @@ export default function MeProfilePage() {
         <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
           <Link
             href="/me/history"
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D1829] text-left transition-colors"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-300">
@@ -155,7 +164,7 @@ export default function MeProfilePage() {
         <motion.div whileHover={shouldReduceMotion ? {} : { x: 4 }}>
           <Link
             href="/cards"
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D1829] text-left transition-colors"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300">
@@ -174,7 +183,7 @@ export default function MeProfilePage() {
           whileHover={shouldReduceMotion ? {} : { x: 4 }}
           type="button"
           onClick={() => setIsLegalOpen(true)}
-          className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D192C] text-left transition-colors"
+          className="w-full flex items-center justify-between p-3.5 rounded-2xl hover:bg-[#1D1829] text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#9E96B0]">
@@ -193,17 +202,19 @@ export default function MeProfilePage() {
       <WalletPayOSModal
         isOpen={isWalletOpen}
         onClose={() => setIsWalletOpen(false)}
-        birthYear={2004}
+        birthYear={userBirthYear}
+        onBirthYearChange={(newYear) => setContextForm({ birthYear: newYear })}
         quota={quota}
         onQuotaUpdated={(newQ) => updateQuota(newQ)}
+        onOpenDailyModal={() => setIsStreakOpen(true)}
       />
 
       <DailyStreakModal
         isOpen={isStreakOpen}
         onClose={() => setIsStreakOpen(false)}
-        nickname="Linh"
-        birthYear={2004}
-        readerId="ba_co_mo_hon"
+        nickname={userNickname}
+        birthYear={userBirthYear}
+        readerId="ba_ngoai"
         quota={quota}
         onQuotaUpdated={(newQ) => updateQuota(newQ)}
       />
@@ -211,7 +222,7 @@ export default function MeProfilePage() {
       <ReferralAndAdModal
         isOpen={isReferralOpen}
         onClose={() => setIsReferralOpen(false)}
-        nickname="Linh"
+        nickname={userNickname}
         quota={quota}
         onQuotaUpdated={(newQ) => updateQuota(newQ)}
       />

@@ -13,7 +13,7 @@ export default function WrappedStandalonePage() {
         isOpen={true}
         onClose={() => router.push('/me')}
         nickname="Linh"
-        readerId="ba_co_mo_hon"
+        readerId="ba_ngoai"
       />
     </div>
   );

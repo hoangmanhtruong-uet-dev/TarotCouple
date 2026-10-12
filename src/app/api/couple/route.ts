@@ -96,6 +96,9 @@ export async function GET(request: Request) {
     {
       status: 'ok',
       room: publicView,
+      ...(room.status === 'completed' && room.fullReading
+        ? { reading: room.fullReading }
+        : {}),
     },
     { status: 200 }
   );

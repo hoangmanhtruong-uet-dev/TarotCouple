@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ReaderId, TopicId, DeckMode } from './schemas';
-import type { ReadingSuccessResponse, DrawnCardClientPayload, ClarifierCardPayload } from './api-types';
+import type { ReadingSuccessResponse, ClarifierCardPayload } from './api-types';
 import { READERS } from '@/data/tarot-cards';
+import { normalizeCanonicalReaderId } from './reader-slugs';
 
 export interface ReadingFlowState {
   // Step 1: Reader Selection
@@ -57,8 +58,8 @@ const dummyStorage = {
 export const useReadingStore = create<ReadingFlowState>()(
   persist(
     (set) => ({
-      selectedReaderId: 'ba_co_mo_hon',
-      readerAccentColor: '#E5624A',
+      selectedReaderId: 'ba_ngoai',
+      readerAccentColor: '#EAB308',
 
       hasFilledProfile: false,
       nickname: '',
@@ -77,8 +78,12 @@ export const useReadingStore = create<ReadingFlowState>()(
       activeQuoteIdx: 0,
 
       setSelectedReaderId: (id, accentColor) => {
-        const fallbackAccent = accentColor || READERS.find((r) => r.id === id)?.accent_color || '#E5624A';
-        set({ selectedReaderId: id, readerAccentColor: fallbackAccent });
+        const canonicalId = normalizeCanonicalReaderId(id);
+        const fallbackAccent =
+          accentColor ||
+          READERS.find((r) => r.id === canonicalId)?.accent_color ||
+          '#EAB308';
+        set({ selectedReaderId: canonicalId, readerAccentColor: fallbackAccent });
       },
 
       setContextForm: (data) =>
@@ -111,6 +116,20 @@ export const useReadingStore = create<ReadingFlowState>()(
           ? window.localStorage
           : dummyStorage
       ),
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState as Partial<ReadingFlowState>) || {};
+        const canonicalId = normalizeCanonicalReaderId(
+          persisted.selectedReaderId || currentState.selectedReaderId
+        );
+        const canonicalReader =
+          READERS.find((r) => r.id === canonicalId) || READERS[0]!;
+        return {
+          ...currentState,
+          ...persisted,
+          selectedReaderId: canonicalId,
+          readerAccentColor: canonicalReader.accent_color,
+        };
+      },
     }
   )
 );

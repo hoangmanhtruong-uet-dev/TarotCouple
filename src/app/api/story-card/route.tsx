@@ -105,6 +105,46 @@ function parseCardsParam(
 }
 
 function getPersonaTheme(persona: EffectivePersona) {
+  if (persona === 'ba_ngoai') {
+    return {
+      badgeText: 'BÀ NGOẠI • GÓC BẾP ẤM ÁP',
+      accentPrimary: '#EAB308',
+      accentSecondary: '#FEF08A',
+      borderGlow: 'rgba(234, 179, 8, 0.45)',
+      pillBg: 'rgba(234, 179, 8, 0.18)',
+      bgGradient: 'linear-gradient(180deg, #0D0A14 0%, #1F1726 48%, #09080D 100%)',
+    };
+  }
+  if (persona === 'chi_dai') {
+    return {
+      badgeText: 'CHỊ ĐẠI • THẲNG MÀ THƯƠNG',
+      accentPrimary: '#E11D48',
+      accentSecondary: '#FDA4AF',
+      borderGlow: 'rgba(225, 29, 72, 0.45)',
+      pillBg: 'rgba(225, 29, 72, 0.18)',
+      bgGradient: 'linear-gradient(180deg, #0F0712 0%, #26101E 48%, #09080D 100%)',
+    };
+  }
+  if (persona === 'ban_than') {
+    return {
+      badgeText: 'BẠN THÂN • HỘI BÀ TÁM ĐÊM KHUYA',
+      accentPrimary: '#EC4899',
+      accentSecondary: '#FBCFE8',
+      borderGlow: 'rgba(236, 72, 153, 0.45)',
+      pillBg: 'rgba(236, 72, 153, 0.18)',
+      bgGradient: 'linear-gradient(180deg, #0E0714 0%, #24112B 48%, #09080D 100%)',
+    };
+  }
+  if (persona === 'thay_cu_meo') {
+    return {
+      badgeText: 'THẦY CÚ MÈO • GÓC NHÌN THÔNG THÁI',
+      accentPrimary: '#3B82F6',
+      accentSecondary: '#BFDBFE',
+      borderGlow: 'rgba(59, 130, 246, 0.45)',
+      pillBg: 'rgba(59, 130, 246, 0.18)',
+      bgGradient: 'linear-gradient(180deg, #070B19 0%, #0F1B33 48%, #070A14 100%)',
+    };
+  }
   if (persona === 'tien_tu_chua_lanh') {
     return {
       badgeText: 'TIÊN TỬ CHỮA LÀNH • TRẠM DỪNG TÂM HỒN',
@@ -147,15 +187,35 @@ function getPersonaTheme(persona: EffectivePersona) {
   }
   return {
     badgeText: 'BÀ CỐ MỎ HỖN • CHECK VAR VŨ TRỤ',
-    accentPrimary: '#E5B869',
+    accentPrimary: '#C9A24A',
     accentSecondary: '#FDE68A',
-    borderGlow: 'rgba(229, 184, 105, 0.48)',
-    pillBg: 'rgba(229, 184, 105, 0.16)',
+    borderGlow: 'rgba(201, 162, 74, 0.48)',
+    pillBg: 'rgba(201, 162, 74, 0.16)',
     bgGradient: 'linear-gradient(180deg, #08060C 0%, #19102C 48%, #08060C 100%)',
   };
 }
 
 const DEFAULT_QUOTES_BY_PERSONA: Record<EffectivePersona, [string, string, string]> = {
+  ba_ngoai: [
+    'Ngồi xuống đây con, kể bà nghe. Ăn chén cơm ấm rồi lòng sẽ bình yên.',
+    'Chuyện gì rồi cũng sẽ qua, thương lấy thân mình trước đã nghen con.',
+    'Bà thương con nhiều, đừng ôm một mình mà nặng lòng.',
+  ],
+  chi_dai: [
+    'Nói thẳng nha, đừng vòng vo. Tỉnh mộng đi cưng, người ta bận rep đứa khác rồi!',
+    'Vũ trụ bật đèn xanh cho mày bước tiếp, đứng đó khóc lóc làm gì?',
+    'Biết yêu bản thân thì ngẩng cao đầu lên, giá trị của mày không nằm ở sự thương hại.',
+  ],
+  ban_than: [
+    'Kể đi, tao nghe hết, không phán xét. Đêm nay có tao thức cùng mày!',
+    'Lại overthinking đúng không? Thôi ngủ đi mai còn dậy kiếm tiền bồ ơi!',
+    'Dù cả thế giới có quay lưng thì tao vẫn ở đây, yên tâm đi!',
+  ],
+  thay_cu_meo: [
+    'Hãy bắt đầu từ điều khiến con bận tâm nhất. Dữ liệu không nói dối.',
+    'Cắt lỗ cảm xúc đúng lúc là quyết định thông thái nhất của bạn.',
+    'Khi góc nhìn thay đổi, bài toán khó nhất cũng sẽ có lời giải.',
+  ],
   ba_co_mo_hon: [
     'Người ta cho con sự mập mờ, còn con tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng.',
     'Vũ trụ bật đèn sáng trưng qua ba lá bài, chỉ có con tự nhắm mắt kêu tối!',

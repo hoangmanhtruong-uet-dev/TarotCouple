@@ -29,9 +29,9 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
   {
     id: 'kit_late_night_ghosting',
     themeTitle: 'Người ấy im lặng 3 ngày: Bận thật hay đang âm thầm Ghost?',
-    readerId: 'ba_co_mo_hon',
-    readerName: 'Bà Cố Mỏ Hỗn',
-    hookTitle: 'Nửa đêm lướt trúng trải bài này thì đừng hỏi sao Bà Cố nói thẳng!',
+    readerId: 'chi_dai',
+    readerName: 'Chị Đại',
+    hookTitle: 'Nửa đêm lướt trúng trải bài này thì đừng hỏi sao Chị Đại nói thẳng!',
     slides: [
       {
         slideNumber: 1,
@@ -63,10 +63,10 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
       },
     ],
     captionSeo:
-      'Người ta im lặng 3 ngày là đang bận thật hay đang âm thầm ghost bạn? Lật 3 lá bài cùng Bà Cố Mỏ Hỗn để tỉnh mộng ngay đêm nay 🔮👇 Trải bài miễn phí tại tarotcouple.vercel.app',
+      'Người ta im lặng 3 ngày là đang bận thật hay đang âm thầm ghost bạn? Lật 3 lá bài cùng Chị Đại để tỉnh mộng ngay đêm nay 🔮👇 Trải bài miễn phí tại tarotcouple.vercel.app',
     hashtags: [
       '#tarotcouple',
-      '#bacomohon',
+      '#chidai',
       '#tarotai',
       '#boitarottinhyeu',
       '#demsuy',
@@ -74,14 +74,14 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
       '#tarotvietnam',
     ],
     capcutVoiceoverScript:
-      'Nếu người ấy đã im lặng ba ngày liền mà bạn vẫn tự nhủ chắc người ta đang bận, thì nghe Bà Cố phán ngay ba lá bài này nhé! Lá The Hermit đi cùng Bảy Kiếm nói thẳng: người muốn tìm bạn sẽ tự khắc có thời gian, còn người muốn né thì bận thở cũng thành lý do. Vào ngay Tarot Couple để tự tay rút ba lá xem cục diện thật sự của hai người nha!',
+      'Nếu người ấy đã im lặng ba ngày liền mà bạn vẫn tự nhủ chắc người ta đang bận, thì nghe Chị Đại phán ngay ba lá bài này nhé! Lá The Hermit đi cùng Bảy Kiếm nói thẳng: người muốn tìm bạn sẽ tự khắc có thời gian, còn người muốn né thì bận thở cũng thành lý do. Vào ngay Tarot Couple để tự tay rút ba lá xem cục diện thật sự của hai người nha!',
     recommendedSoundVibe: 'Nhạc nền Piano Mystery / Lo-fi Đêm Suy (Tốc độ đọc 1.15x)',
   },
   {
     id: 'kit_couple_check_var',
     themeTitle: 'Check Var Độ Hợp Cạ & Red Flag 🚩 Cùng Crush (Bói Đôi 48h)',
-    readerId: 'tong_tai_ly_tri',
-    readerName: 'Tổng Tài Lý Trí',
+    readerId: 'thay_cu_meo',
+    readerName: 'Thầy Cú Mèo',
     hookTitle: 'Đừng đoán mò tình cảm nữa, gửi link phòng Bói Đôi bắt người ta rút bài cùng!',
     slides: [
       {
@@ -98,7 +98,7 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
         roleLabel: 'Slide 2: Lật 3 lá bài & Cú Twist',
         headline: 'Lá của bạn (The Lovers) × Lá người ấy (Two of Cups)',
         bodyText:
-          'Tổng Tài Lý Trí chấm điểm: Độ Hợp Cạ 91% — Tín hiệu đèn xanh rõ rệt từ cả hai phía, chỉ chờ một người mở lời trước!',
+          'Thầy Cú Mèo phân tích: Độ Hợp Cạ 91% — Tín hiệu đèn xanh rõ rệt từ cả hai phía, chỉ chờ một người mở lời trước!',
         visualPromptNote:
           'Hai lá bài The Lovers và Two of Cups đặt cạnh nhau kết nối bằng tia sáng vàng kim.',
       },
@@ -106,7 +106,7 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
         slideNumber: 3,
         roleLabel: 'Slide 3: Câu chốt hạ & Call-to-Action',
         headline:
-          '“Dữ liệu đã rõ 91%, đầu tư một tin nhắn mở lời ngay tối nay là khoản sinh lời cao nhất!”',
+          '“Dữ liệu đã rõ 91%, đầu tư một tin nhắn mở lời ngay tối nay là bước đi hợp lý nhất!”',
         bodyText:
           'Tag ngay người bạn muốn rủ vào phòng Bói Đôi hoặc lấy link tại TarotCouple trên Bio 🔮',
         visualPromptNote:
@@ -118,7 +118,7 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
     hashtags: [
       '#tarotcouple',
       '#boidoi',
-      '#tongtailytri',
+      '#thaycumeo',
       '#checkvartinhyeu',
       '#tarotai',
       '#crush',
@@ -130,17 +130,17 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
   },
   {
     id: 'kit_healing_career_finance',
-    themeTitle: 'Thông Điệp Chữa Lành & Bước Ngoặt Tài Chính Tuần Mới',
-    readerId: 'tien_tu_chua_lanh',
-    readerName: 'Tiên Tử Chữa Lành',
-    hookTitle: 'Dừng lại hít một hơi thật sâu, Vũ Trụ gửi riêng cho bạn 3 lá bài lành vía này.',
+    themeTitle: 'Thông Điệp Ấm Áp & Bước Ngoặt Tài Chính Tuần Mới',
+    readerId: 'ba_ngoai',
+    readerName: 'Bà Ngoại',
+    hookTitle: 'Dừng lại hít một hơi thật sâu, Bà Ngoại gửi riêng cho con 3 lá bài lành vía này.',
     slides: [
       {
         slideNumber: 1,
         roleLabel: 'Slide 1: Hook 3s đầu đồng cảm',
         headline: 'Dành cho những ai đang kiệt sức vì áp lực học tập & công việc tuần qua 🌸',
         bodyText:
-          'Bạn không tình cờ nhìn thấy video này. Hãy lướt sang phải để nhận thông điệp từ Tiên Tử Chữa Lành.',
+          'Con không tình cờ nhìn thấy video này đâu. Hãy lướt sang phải để nhận lời dặn từ Bà Ngoại nhé.',
         visualPromptNote:
           'Tông màu ấm dịu cùng ánh sáng The Sun & The Star lấp lánh trên nền đêm.',
       },
@@ -149,33 +149,33 @@ const DEFAULT_TIKTOK_KITS: TikTokCarouselKit[] = [
         roleLabel: 'Slide 2: Lật 3 lá bài & Cú Twist',
         headline: 'Nine of Pentacles • The Star • Ace of Wands',
         bodyText:
-          'Mọi nỗ lực âm thầm của bạn đang chuẩn bị kết trái. Một cơ hội mới đầy cảm hứng (Ace of Wands) sẽ gõ cửa trong 7 ngày tới.',
+          'Mọi nỗ lực âm thầm của con đang chuẩn bị kết trái. Một cơ hội mới đầy cảm hứng (Ace of Wands) sẽ gõ cửa trong 7 ngày tới.',
         visualPromptNote:
-          '3 lá bài 9 Tiền, The Star, Ace of Wands tỏa hào quang xanh ngọc và vàng kim.',
+          '3 lá bài 9 Tiền, The Star, Ace of Wands tỏa hào quang ấm áp và vàng kim.',
       },
       {
         slideNumber: 3,
         roleLabel: 'Slide 3: Câu chốt hạ & Call-to-Action',
         headline:
-          '“Bạn đã đi qua những ngày bão giông ngoạn mục nhất, giờ là lúc đón nhận ánh bình minh của riêng mình.”',
+          '“Con đã đi qua những ngày bão giông ngoạn mục nhất, nhớ ăn cơm đúng bữa rồi đón ánh bình minh của riêng mình nghen.”',
         bodyText:
           'Comment “NHẬN VÍA LÀNH” và vào TarotCouple rút lá bài hàng ngày tích lũy Streak nhé ✨',
         visualPromptNote:
-          'Ảnh Story 9:16 phong cách Tiên Tử Chữa Lành cùng vật phẩm may mắn.',
+          'Ảnh Story 9:16 phong cách Bà Ngoại ấm áp cùng vật phẩm may mắn.',
       },
     ],
     captionSeo:
-      'Thông điệp chữa lành và đón vận may tài chính công việc tuần mới từ Tiên Tử Chữa Lành 🌸 Comment “NHẬN VÍA” và tự tay rút bài tại tarotcouple.vercel.app',
+      'Thông điệp chữa lành và đón vận may tài chính công việc tuần mới từ Bà Ngoại 🌸 Comment “NHẬN VÍA” và tự tay rút bài tại tarotcouple.vercel.app',
     hashtags: [
       '#tarotcouple',
-      '#tientuchualanh',
+      '#bangoai',
       '#manifestation',
       '#thongdiepvutru',
       '#tarotai',
       '#chualanh',
     ],
     capcutVoiceoverScript:
-      'Dừng lại một nhịp và hít thở thật sâu nhé. Nếu tuần vừa qua bạn cảm thấy mỏi mệt vì công việc và chuyện học hành, thì ba lá bài Chín Tiền, Ngôi Sao và Át Gậy vừa xuất hiện để nhắn rằng: mọi cố gắng thầm lặng của bạn sắp đơm hoa kết trái. Hãy dịu dàng với bản thân hơn và vào Tarot Couple đón nhận thông điệp hàng ngày của bạn nha.',
+      'Dừng lại một nhịp và hít thở thật sâu nhé con. Nếu tuần vừa qua con cảm thấy mỏi mệt vì công việc và chuyện học hành, thì ba lá bài Chín Tiền, Ngôi Sao và Át Gậy vừa xuất hiện để nhắn rằng: mọi cố gắng thầm lặng của con sắp đơm hoa kết trái. Hãy dịu dàng với bản thân hơn và vào Tarot Couple đón nhận thông điệp hàng ngày nha.',
     recommendedSoundVibe: 'Nhạc nền Healing Harp / Crystal Bowl êm dịu (Tốc độ đọc 1.0x)',
   },
 ];

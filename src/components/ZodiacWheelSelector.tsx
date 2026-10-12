@@ -32,7 +32,7 @@ export function ZodiacWheelSelector({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="text-xs font-semibold text-[#D9B36A] uppercase tracking-wider">
+        <label className="text-xs font-semibold text-[#C9A24A] uppercase tracking-wider">
           Chọn Cung Hoàng Đạo (Tùy chọn)
         </label>
         {selectedSign && (
@@ -59,8 +59,8 @@ export function ZodiacWheelSelector({
               onClick={() => onSelectSign(`${item.sign} (${item.symbol})`)}
               className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
                 isSelected
-                  ? 'bg-[#1E1933] border-[#D9B36A] shadow-[0_0_15px_rgba(217,179,106,0.3)] text-[#F8F5F0]'
-                  : 'bg-[#0B0A12]/90 border-[#262235] text-[#9E96B0] hover:text-[#F8F5F0] hover:border-[#D9B36A]/40'
+                  ? 'bg-[#1E1933] border-[#C9A24A] shadow-[0_0_15px_rgba(217,179,106,0.3)] text-[#F8F5F0]'
+                  : 'bg-[#0B0A12]/90 border-[#262235] text-[#9E96B0] hover:text-[#F8F5F0] hover:border-[#C9A24A]/40'
               }`}
             >
               <span className="text-lg mb-0.5">{item.symbol}</span>

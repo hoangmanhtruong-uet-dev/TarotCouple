@@ -36,6 +36,14 @@ import {
 } from '@/lib/quota-store';
 
 const READER_DECK_PROMPTS: Record<ReaderId, string> = {
+  ba_ngoai:
+    '22 lá: đủ để nghe điều quan trọng nhất. 78 lá: chi tiết hơn, hợp khi con muốn nghe kỹ nghen.',
+  chi_dai:
+    'Lượt đầu mở bung cả 78 lá thì tùy ý, các lượt sau muốn mở 78 lá thì cống nạp Sao cho Chị Đại nhé!',
+  ban_than:
+    '22 lá hay 78 lá đây bồ ơi? Lượt đầu free 78 lá, lượt sau thì tốn chút Sao thôi nhưng chi tiết tới từng chân tơ kẽ tóc!',
+  thay_cu_meo:
+    'Bộ 22 lá mang năng lượng cốt lõi và định hướng tổng quan. Bộ 78 lá phân tích đa chiều từng chi tiết nguyên nhân - kết quả.',
   ba_co_mo_hon:
     'Lượt đầu mở bung cả 78 lá thì tùy ý, các lượt sau muốn mở 78 lá thì cống nạp 5 Sao cho Bà Cố nhé!',
   tien_tu_chua_lanh:
@@ -136,7 +144,7 @@ export default function BoBaiSelectionPage() {
 
   // Typewriter effect
   const readerPrompt =
-    READER_DECK_PROMPTS[selectedReaderId] || READER_DECK_PROMPTS.ba_co_mo_hon;
+    READER_DECK_PROMPTS[selectedReaderId] || READER_DECK_PROMPTS.ba_ngoai;
   const [displayedPrompt, setDisplayedPrompt] = useState('');
   useEffect(() => {
     if (shouldReduceMotion) {
@@ -229,7 +237,7 @@ export default function BoBaiSelectionPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-18 left-4 right-4 z-50 max-w-md mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] text-[#0B0A12] font-bold text-xs shadow-2xl flex items-center justify-between gap-2"
+            className="fixed top-18 left-4 right-4 z-50 max-w-md mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] text-[#0B0A12] font-bold text-xs shadow-2xl flex items-center justify-between gap-2"
           >
             <span>{unlockToast}</span>
             <button
@@ -307,8 +315,8 @@ export default function BoBaiSelectionPage() {
               <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
                 Lượt: {quota.remainingToday}/3
               </span>
-              <span className="text-[10px] text-[#D9B36A] font-bold bg-[#D9B36A]/10 px-2 py-0.5 rounded-full border border-[#D9B36A]/30 flex items-center gap-1">
-                <Star className="w-2.5 h-2.5 fill-[#D9B36A]" />
+              <span className="text-[10px] text-[#C9A24A] font-bold bg-[#C9A24A]/10 px-2 py-0.5 rounded-full border border-[#C9A24A]/30 flex items-center gap-1">
+                <Star className="w-2.5 h-2.5 fill-[#C9A24A]" />
                 {quota.starsBalance ?? 10}
               </span>
             </div>
@@ -316,7 +324,7 @@ export default function BoBaiSelectionPage() {
           <p className="text-xs text-[#E5C687] italic font-serif leading-relaxed min-h-[30px]">
             &ldquo;{displayedPrompt}&rdquo;
             {displayedPrompt.length < readerPrompt.length && (
-              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#D9B36A] animate-pulse align-middle" />
+              <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#C9A24A] animate-pulse align-middle" />
             )}
           </p>
         </div>
@@ -403,7 +411,7 @@ export default function BoBaiSelectionPage() {
                   {isLocked ? 'Khóa Lượt 2 & 3 • Cần 5 Sao' : deck.badge}
                 </motion.span>
 
-                <div className="flex items-center gap-1.5 text-xs text-[#D9B36A] font-semibold">
+                <div className="flex items-center gap-1.5 text-xs text-[#C9A24A] font-semibold">
                   <Layers className="w-3.5 h-3.5" />
                   <span>{deck.cardCount} Lá</span>
                 </div>
@@ -428,7 +436,7 @@ export default function BoBaiSelectionPage() {
               {isLocked ? (
                 <div className="pt-2 border-t border-[#262235] flex items-center justify-between">
                   <span className="text-[11px] text-amber-300 flex items-center gap-1 font-semibold">
-                    <Star className="w-3.5 h-3.5 text-[#D9B36A] fill-[#D9B36A]" />
+                    <Star className="w-3.5 h-3.5 text-[#C9A24A] fill-[#C9A24A]" />
                     Mở khóa bằng Ví Sao: 5 Sao
                   </span>
                   <button
@@ -490,7 +498,7 @@ export default function BoBaiSelectionPage() {
             className={`flex-1 py-3.5 sm:py-4 rounded-2xl font-bold text-sm sm:text-base shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer ${
               isOutOfTurns
                 ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-[#F8F5F0]'
-                : 'bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] shadow-[0_4px_25px_rgba(217,179,106,0.35)] transform active:scale-98'
+                : 'bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] shadow-[0_4px_25px_rgba(217,179,106,0.35)] transform active:scale-98'
             }`}
           >
             {isOutOfTurns ? (
@@ -563,7 +571,7 @@ export default function BoBaiSelectionPage() {
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-[#262235]">
                   <span className="text-[#9E96B0]">Số dư Ví Sao hiện tại:</span>
                   <span className="text-[#F8F5F0] font-bold flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 text-[#D9B36A] fill-[#D9B36A]" />
+                    <Star className="w-3.5 h-3.5 text-[#C9A24A] fill-[#C9A24A]" />
                     {quota.starsBalance ?? 10} Sao
                   </span>
                 </div>
@@ -622,7 +630,7 @@ export default function BoBaiSelectionPage() {
                         setIsUnlockSheetOpen(false);
                         setIsWalletOpen(true);
                       }}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
                     >
                       <CreditCard className="w-4 h-4" />
                       <span>Nạp Sao bằng PayOS VietQR &rarr;</span>
@@ -772,10 +780,10 @@ export default function BoBaiSelectionPage() {
                       setIsOutOfTurnsSheetOpen(false);
                       setIsWalletOpen(true);
                     }}
-                    className="w-full p-4 rounded-2xl bg-gradient-to-r from-[#D9B36A]/10 to-[#C49A4D]/10 hover:from-[#D9B36A]/20 hover:to-[#C49A4D]/20 border border-[#D9B36A]/40 flex items-center justify-between text-left transition-all cursor-pointer"
+                    className="w-full p-4 rounded-2xl bg-gradient-to-r from-[#C9A24A]/10 to-[#C49A4D]/10 hover:from-[#C9A24A]/20 hover:to-[#C49A4D]/20 border border-[#C9A24A]/40 flex items-center justify-between text-left transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#D9B36A]/20 border border-[#D9B36A]/40 flex items-center justify-center text-[#E5C687]">
+                      <div className="w-10 h-10 rounded-xl bg-[#C9A24A]/20 border border-[#C9A24A]/40 flex items-center justify-center text-[#E5C687]">
                         <CreditCard className="w-5 h-5" />
                       </div>
                       <div>

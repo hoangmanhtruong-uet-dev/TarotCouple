@@ -18,6 +18,8 @@ import {
   Link2,
   QrCode,
   Smartphone,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import {
   ALL_TAROT_CARDS,
@@ -46,6 +48,7 @@ import type {
 } from '@/lib/api-types';
 import { TarotCardVisual } from '@/components/TarotCardVisual';
 import { CrisisSupportView } from '@/components/CrisisSupportView';
+import { CoupleResonanceBridge3D } from '@/components/CoupleResonanceBridge3D';
 
 export interface CoupleModeViewProps {
   initialRoomCode?: string | null;
@@ -326,8 +329,26 @@ export function CoupleModeView({
     }
   }, [initialRoomCode]);
 
-  const fetchExistingRoom = async (code: string) => {
+  // Polling tự động mỗi 3 giây khi Người A đang mở phòng chờ Người B rút bài
+  useEffect(() => {
+    if (!activeRoom || activeRoom.status !== 'waiting_partner' || coupleReading) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void fetchExistingRoom(activeRoom.roomCode, true);
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [activeRoom?.roomCode, activeRoom?.status, coupleReading]);
+
+  const [isCheckingPartner, setIsCheckingPartner] = useState<boolean>(false);
+
+  const fetchExistingRoom = async (code: string, isAutoPoll: boolean = false) => {
     if (!code.trim()) return;
+    if (!isAutoPoll) {
+      setIsCheckingPartner(true);
+    }
     try {
       const res = await fetch(
         `/api/couple?roomCode=${encodeURIComponent(code.trim().toUpperCase())}`
@@ -336,10 +357,56 @@ export function CoupleModeView({
         const data = await res.json();
         if (data?.room) {
           setActiveRoom(data.room);
+
+          // Nếu phòng đã hoàn thành và có kết quả chung, tự động mở kết quả
+          if (data.room.status === 'completed') {
+            const readingPayload: ReadingSuccessResponse | undefined =
+              data.reading ||
+              (data.room.readingResult
+                ? buildFallbackCoupleReading({
+                    ownerNickname: data.room.ownerNickname || ownerName || 'Người A',
+                    partnerNickname: data.room.partnerNickname || partnerName || 'Người B',
+                    birthYear,
+                    readerId: data.room.readerId || selectedReaderId,
+                    relationshipStatus: data.room.relationshipStatus || relationshipStatus,
+                    questionText:
+                      'Trải bài Bói Đôi đồng thuận (Câu hỏi riêng tư của người tạo phòng đã được bảo mật)',
+                    deckMode,
+                    ownerCardObj: data.room.ownerCard
+                      ? {
+                          cardId: data.room.ownerCard.card.id,
+                          reversed: data.room.ownerCard.reversed,
+                        }
+                      : undefined,
+                    partnerCardObj: data.room.partnerCard
+                      ? {
+                          cardId: data.room.partnerCard.card.id,
+                          reversed: data.room.partnerCard.reversed,
+                        }
+                      : undefined,
+                  })
+                : undefined);
+
+            if (readingPayload) {
+              if (data.room.readingResult) {
+                readingPayload.result = data.room.readingResult;
+              }
+              soundManager.playMysticChime();
+              setCoupleReading(readingPayload);
+              setFlippedCards([true, true, true]);
+              if (onQuotaUpdated && data.quota) {
+                onQuotaUpdated(data.quota);
+              }
+            }
+          }
         }
       }
     } catch {
       // Ignore lookup error
+    } finally {
+      if (!isAutoPoll) {
+        setIsCheckingPartner(false);
+      }
     }
   };
 
@@ -638,7 +705,7 @@ export function CoupleModeView({
       typeof window !== 'undefined'
         ? window.location.origin
         : 'https://tarotcouple.vercel.app';
-    const url = `${origin}/?coupleRoom=${activeRoom.roomCode}`;
+    const url = `${origin}/couple/${activeRoom.roomCode}`;
     const inviteText = `🔮 ${activeRoom.ownerNickname || 'Người ấy'} vừa mời bạn vào phòng Bói Đôi TarotCouple (${activeRoom.roomCode})! Vào rút 1 lá bài xem độ hợp cạ & giải mã tần số tình yêu giữa 2 đứa nhé 👉 ${url}`;
 
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -1018,14 +1085,14 @@ export function CoupleModeView({
                     </div>
 
                     {/* QR Code Section: Quét nhanh khi ngồi cạnh nhau */}
-                    <div className="p-4 rounded-2xl bg-[#09080D]/90 border border-[#D4AF37]/40 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="p-4 rounded-2xl bg-[#09080D]/90 border border-[#C9A24A]/40 flex flex-col sm:flex-row items-center gap-4">
                       <div className="w-28 h-28 p-2 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-lg">
-                        {/* Quick dynamic SVG QR generator image or visual */}
+                        {/* Quick dynamic SVG QR generator image */}
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
                             typeof window !== 'undefined'
-                              ? `${window.location.origin}/?coupleRoom=${activeRoom.roomCode}`
-                              : `https://tarotcouple.vercel.app/?coupleRoom=${activeRoom.roomCode}`
+                              ? `${window.location.origin}/couple/${activeRoom.roomCode}`
+                              : `https://tarotcouple.vercel.app/couple/${activeRoom.roomCode}`
                           )}&color=09080d&bgcolor=ffffff`}
                           alt={`QR Code phòng ${activeRoom.roomCode}`}
                           className="w-full h-full object-contain"
@@ -1034,16 +1101,40 @@ export function CoupleModeView({
                       </div>
                       <div className="space-y-1.5 text-center sm:text-left">
                         <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-[#F3E5AB]">
-                          <QrCode className="w-4 h-4 text-[#D4AF37]" />
+                          <QrCode className="w-4 h-4 text-[#C9A24A]" />
                           <span>Quét mã QR trực tiếp từ Camera</span>
                         </div>
                         <p className="text-xs text-[#9E96B0] leading-relaxed">
                           Nếu đang ngồi cạnh người ấy, hãy giơ màn hình này để người ấy mở camera quét thẳng vào phòng rút bài!
                         </p>
-                        <p className="text-[11px] text-[#D4AF37] font-mono">
-                          Link phòng: ?coupleRoom={activeRoom.roomCode}
+                        <p className="text-[11px] text-[#C9A24A] font-mono">
+                          Link phòng: /couple/{activeRoom.roomCode}
                         </p>
                       </div>
+                    </div>
+
+                    {/* Trạng thái chờ Người B & Nút kiểm tra thủ công */}
+                    <div className="p-3.5 rounded-xl bg-[#14111C] border border-[#C9A24A]/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2 text-[#9E96B0]">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C9A24A] opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C9A24A]"></span>
+                        </span>
+                        <span>Đang tự động kiểm tra mỗi 3s khi người ấy rút bài...</span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isCheckingPartner}
+                        onClick={() => void fetchExistingRoom(activeRoom.roomCode, false)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1829] hover:bg-[#282238] border border-[#C9A24A]/40 text-[#C9A24A] font-semibold text-xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isCheckingPartner ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                        <span>Kiểm tra người ấy đã rút chưa</span>
+                      </button>
                     </div>
 
                     <div className="p-3 rounded-xl bg-[#09080D]/80 border border-white/10 text-xs text-[#A39BB5] flex items-center gap-2">
@@ -1257,6 +1348,19 @@ export function CoupleModeView({
                 </p>
               </div>
             </div>
+
+            {/* 3D WebGL Couple Resonance Bridge */}
+            {coupleReading.drawnCards[0] &&
+            coupleReading.drawnCards[1] &&
+            coupleReading.drawnCards[2] ? (
+              <CoupleResonanceBridge3D
+                ownerCard={coupleReading.drawnCards[0].card}
+                partnerCard={coupleReading.drawnCards[1].card}
+                bridgeCard={coupleReading.drawnCards[2].card}
+                compatibilityScore={compatScore}
+                redFlagLevel={redFlagLevel}
+              />
+            ) : null}
           </div>
 
           {/* 3 Couple Cards 3D Row */}
@@ -1326,6 +1430,32 @@ export function CoupleModeView({
               <p className="text-xs sm:text-sm text-[#F8F5F0]">
                 {coupleReading.result.actionable_next_step}
               </p>
+            </div>
+
+            {/* Actions: Xuất ảnh Story 9:16 & Trải bài mới */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center gap-3">
+              <button
+                type="button"
+                onClick={() => onOpenStoryModal(coupleReading)}
+                className="w-full sm:flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#C9A24A] via-[#E5C687] to-[#C9A24A] text-[#09080D] font-bold text-sm shadow-[0_10px_30px_rgba(201,162,74,0.35)] hover:brightness-110 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Xuất Thẻ Story 9:16 Khoe Bạn Bè</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCoupleReading(null);
+                  setActiveRoom(null);
+                  setRoomCodeInput('');
+                  setCoopViewMode('create');
+                }}
+                className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-[#1D1829] hover:bg-[#282238] border border-[#C9A24A]/40 text-[#F8F5F0] font-semibold text-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4 text-[#C9A24A]" />
+                <span>Bói lượt mới</span>
+              </button>
             </div>
           </div>
         </motion.div>

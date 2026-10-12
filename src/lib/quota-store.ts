@@ -32,6 +32,7 @@ export const BUDGET_WARNING_RATIO = 0.8;
 
 export const DEFAULT_INITIAL_STARS = 10;
 export const DAILY_PULL_STAR_REWARD = 2;
+export const DAILY_STREAK_DAY7_REWARD = 5;
 export const CLARIFIER_STAR_COST = 5;
 export const DAILY_SPEND_CAP_VND = 50000;
 export const COUPLE_ROOM_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
@@ -42,7 +43,7 @@ export const REWARDED_AD_BONUS_STARS = 3;
 export const REWARDED_AD_ECPM_VND = 45;
 
 export const FREE_FOLLOWUPS_PER_ACCOUNT = 2; // 2 câu hỏi sâu miễn phí trọn đời tài khoản
-export const FOLLOWUP_STAR_COST = 5; // 5 Sao từ câu hỏi thứ 3 trở đi
+export const FOLLOWUP_STAR_COST = 2; // 2 Sao từ câu hỏi thứ 3 trở đi (chuẩn PDF mục 4.4)
 export const FOLLOWUP_MAX_PER_READING = 5; // Tối đa 5 câu hỏi sâu mỗi lượt bói
 export const FOLLOWUP_MAX_QUESTION_CHARS = 200; // Tối đa 200 ký tự mỗi câu hỏi
 export const FOLLOWUP_RATE_LIMIT_MS = 3000; // Giới hạn 1 câu hỏi mỗi 3 giây
@@ -536,13 +537,17 @@ export function recordDailyPullCompletion(
   }
 
   wallet.streakDays += 1;
-  wallet.starsBalance += DAILY_PULL_STAR_REWARD;
+  const reward =
+    wallet.streakDays % 7 === 0
+      ? DAILY_STREAK_DAY7_REWARD
+      : DAILY_PULL_STAR_REWARD;
+  wallet.starsBalance += reward;
   wallet.lastDailyPullDate = today;
 
   const daily = buildDailyPayload({
     date: today,
     streakDays: wallet.streakDays,
-    starsRewarded: DAILY_PULL_STAR_REWARD,
+    starsRewarded: reward,
     totalStarsBalance: wallet.starsBalance,
   });
 
@@ -552,7 +557,7 @@ export function recordDailyPullCompletion(
     date: today,
     cardId: daily.card.id,
     streakDays: wallet.streakDays,
-    starsRewarded: DAILY_PULL_STAR_REWARD,
+    starsRewarded: reward,
   });
 
   return {
@@ -1403,9 +1408,9 @@ export function buildSpiritualWrappedForClient(
     'Tín Đồ Tarot';
 
   const resolvedReaderId: ReaderId =
-    readerId || latestReading?.readerId || 'ba_co_mo_hon';
+    readerId || latestReading?.readerId || 'ba_ngoai';
   const readerObj =
-    READERS_BY_ID[resolvedReaderId] || READERS_BY_ID.ba_co_mo_hon;
+    READERS_BY_ID[resolvedReaderId] || READERS_BY_ID.ba_ngoai;
 
   // Pick signature card from latest reading or deterministic hash of clientKey
   const defaultCardIds = [3, 7, 17, 19, 2, 1, 6, 16];
@@ -1424,7 +1429,7 @@ export function buildSpiritualWrappedForClient(
 
   const archetypeMeta = ARCHETYPE_BY_CARD_ID[signatureCardObj.id] || {
     title: `Chiến Thần Tỉnh Thức • ${signatureCardObj.name_en}`,
-    auraColor: '#E5B869 (Hoàng Kim Tinh Hà)',
+    auraColor: '#C9A24A (Hoàng Kim Tinh Hà)',
   };
 
   const totalReadingsCount = Math.max(12, 11 + cachedReadings.length);
@@ -1450,9 +1455,9 @@ export function buildSpiritualWrappedForClient(
 
   const monthlySavageQuote =
     latestReading?.result.shareable_card.savage_quote ||
-    (resolvedReaderId === 'tien_tu_chua_lanh'
-      ? 'Tháng 10 khép lại mọi giông bão cũ, nhường chỗ cho phiên bản bình yên và biết yêu thương chính mình hơn.'
-      : resolvedReaderId === 'tong_tai_ly_tri'
+    (resolvedReaderId === 'ba_ngoai'
+      ? 'Tháng 10 khép lại mọi giông bão cũ, nhớ ăn cơm đúng bữa và yêu thương chính mình nhiều hơn nghen con.'
+      : resolvedReaderId === 'thay_cu_meo'
       ? 'Tổng kết Quý 4: Cắt lỗ thành công các mối quan hệ mập mờ, định giá bản thân tăng vọt 200%!'
       : 'Đầu tháng còn thức tới 2h sáng lụy mập mờ, cuối tháng đã hóa Nữ Hoàng biết đắp mặt nạ đi ngủ đúng giờ!');
 
@@ -1514,8 +1519,8 @@ export function buildCustomTikTokKitFromInput(input: {
 }): TikTokCarouselKit {
   const cached = getCachedReading(input.readingId);
   const readerId: ReaderId =
-    input.readerId || cached?.readerId || 'ba_co_mo_hon';
-  const readerObj = READERS_BY_ID[readerId] || READERS_BY_ID.ba_co_mo_hon;
+    input.readerId || cached?.readerId || 'chi_dai';
+  const readerObj = READERS_BY_ID[readerId] || READERS_BY_ID.chi_dai;
   const nickname = (input.nickname || cached?.nickname || 'Bạn Ẩn Danh')
     .trim()
     .slice(0, 32);
@@ -1529,7 +1534,7 @@ export function buildCustomTikTokKitFromInput(input: {
   const savageQuote = (
     input.savageQuote ||
     cached?.result.shareable_card.savage_quote ||
-    'Người ta cho con sự mập mờ, còn con tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng!'
+    'Người ta cho em sự mập mờ, còn em tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng!'
   )
     .trim()
     .slice(0, 200);
@@ -1581,7 +1586,7 @@ export function buildCustomTikTokKitFromInput(input: {
         roleLabel: 'Slide 3 • Câu Chốt Hạ & CTA',
         headline: `“${savageQuote}”`,
         bodyText:
-          'Vào ngay tarotcouple.vercel.app rút 3 lá miễn phí xem mình bị chửi tỉnh mộng hay được chữa lành nha! ✨',
+          'Vào ngay tarotcouple.vercel.app rút 3 lá miễn phí xem mình được tỉnh mộng hay chữa lành nha! ✨',
         visualPromptNote: 'Sử dụng trực tiếp ảnh Story 9:16 xuất từ hệ thống.',
         storyCardPreviewUrl: storyUrl,
       },
@@ -1589,7 +1594,7 @@ export function buildCustomTikTokKitFromInput(input: {
     captionSeo: `1h sáng vào xin vía ${readerObj.name} mà câu chốt hạ làm tỉnh cả ngủ 😭🔮 Ai đang suy tình duyên hay sự nghiệp vào rút thử 3 lá xem độ chuẩn nha!`,
     hashtags: [
       '#TarotCouple',
-      '#BaCoMoHon',
+      '#ChiDai',
       '#TarotTinhYeu',
       '#CheckVarTinhYeu',
       '#BoiTarotOnline',
@@ -1610,20 +1615,20 @@ export function buildTikTokCarouselKits(
     {
       id: 'kit_1am_crush_savage',
       themeTitle: '1h Sáng Hỏi Chuyện Crush & Cái Kết Tỉnh Mộng',
-      readerId: 'ba_co_mo_hon',
-      readerName: 'Bà Cố Mỏ Hỗn',
+      readerId: 'chi_dai',
+      readerName: 'Chị Đại',
       hookTitle:
-        'Hỏi Bà Cố Mỏ Hỗn lúc 1h sáng xem crush có thích mình không và cái kết bị chửi tỉnh mộng',
+        'Hỏi Chị Đại lúc 1h sáng xem crush có thích mình không và cái kết tỉnh mộng',
       slides: [
         {
           slideNumber: 1,
           roleLabel: 'Slide 1 • Hook Đêm Suy (Giữ chân 3 giây đầu)',
           headline:
-            'Hỏi Bà Cố Mỏ Hỗn lúc 1h sáng xem crush có thích mình không và cái kết bị chửi tỉnh mộng 😭🌶️',
+            'Hỏi Chị Đại lúc 1h sáng xem crush có thích mình không và cái kết tỉnh mộng 😭🌶️',
           bodyText:
             'Người ta chỉ thả tim story dạo mà mình đã kịp chọn tên cho con... Phải vào Tarot Couple xin một quẻ cho rõ trắng đen!',
           visualPromptNote:
-            'Ảnh chụp giao diện chọn Reader Bà Cố Mỏ Hỗn với tag "Độ gắt 100/10".',
+            'Ảnh chụp giao diện chọn Reader Chị Đại với tag "Thẳng thắn & thương thật".',
         },
         {
           slideNumber: 2,
@@ -1631,7 +1636,7 @@ export function buildTikTokCarouselKits(
           headline:
             'Rút trúng The Moon ngược + Seven of Swords + The Empress xuôi!',
           bodyText:
-            'Bà Cố phán thẳng: "Năng lượng bên kia đang rải thính đa kênh, chỉ có con tự biên tự diễn phim ngôn tình buồn lúc nửa đêm thôi con ơi!"',
+            'Chị Đại phán thẳng: "Năng lượng bên kia đang rải thính đa kênh, chỉ có em tự biên tự diễn phim ngôn tình buồn lúc nửa đêm thôi cưng ơi!"',
           visualPromptNote:
             'Ảnh 3 lá bài lật mở kèm phân tích từng vị trí: Năng lượng của bạn - Suy nghĩ đối phương - Kết cục gần.',
         },
@@ -1639,34 +1644,34 @@ export function buildTikTokCarouselKits(
           slideNumber: 3,
           roleLabel: 'Slide 3 • Savage Punchline + CTA',
           headline:
-            '“Người ta cho con sự mập mờ, còn con tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng.”',
+            '“Người ta cho em sự mập mờ, còn em tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng.”',
           bodyText:
             'Chụp ngay tấm Card 9:16 đăng Story dằn mặt nhẹ! Link bói miễn phí ở bio: tarotcouple.vercel.app 🔮',
           visualPromptNote:
-            'Ảnh Story Card 9:16 của Bà Cố Mỏ Hỗn với khung viền vàng huyền bí.',
+            'Ảnh Story Card 9:16 của Chị Đại với khung viền vàng huyền bí.',
           storyCardPreviewUrl:
-            '/api/story-card?persona=ba_co_mo_hon&nickname=BeHaySuy&cards=18:1,56:0,3:0&hideQuestion=1',
+            '/api/story-card?persona=chi_dai&nickname=BeHaySuy&cards=18:1,56:0,3:0&hideQuestion=1',
         },
       ],
       captionSeo:
-        'Hỏi Bà Cố Mỏ Hỗn lúc 1h sáng xem crush có thích mình không và cái kết bị chửi tỉnh mộng 😭🔥 Tag ngay đứa bạn thân đang lụy mập mờ vào nhận thông điệp vũ trụ!',
+        'Hỏi Chị Đại lúc 1h sáng xem crush có thích mình không và cái kết tỉnh mộng 😭🔥 Tag ngay đứa bạn thân đang lụy mập mờ vào nhận thông điệp vũ trụ!',
       hashtags: [
         '#TarotCouple',
-        '#BaCoMoHon',
+        '#ChiDai',
         '#Crush',
         '#MapMo',
         '#TarotVietNam',
         '#StoryCard916',
       ],
       capcutVoiceoverScript:
-        'Một giờ sáng còn thức đợi tin nhắn crush thì vào ngay Tarot Couple gặp Bà Cố Mỏ Hỗn nha mấy bà. Tự tay rút ba lá bài xong bị Bà Cố đọc vị câu nào thấm câu đó: Người ta cho con sự mập mờ, còn con tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng! Tải ảnh chín mười sáu đăng Story nét căng luôn.',
+        'Một giờ sáng còn thức đợi tin nhắn crush thì vào ngay Tarot Couple gặp Chị Đại nha mấy bà. Tự tay rút ba lá bài xong được Chị Đại đọc vị câu nào thấm câu đó: Người ta cho em sự mập mờ, còn em tự viết nguyên bộ tiểu thuyết bi kịch lúc hai giờ sáng! Tải ảnh chín mười sáu đăng Story nét căng luôn.',
       recommendedSoundVibe: 'Sound TikTok "Ơ Động Đất À" hoặc Nhạc Nền Drama Tarot',
     },
     {
       id: 'kit_couple_red_flag_85',
       themeTitle: 'Bói Đôi Check Var Tình Yêu • Red Flag 85%',
-      readerId: 'ba_co_mo_hon',
-      readerName: 'Bà Cố Mỏ Hỗn',
+      readerId: 'ban_than',
+      readerName: 'Bạn Thân',
       hookTitle: 'Bói Đôi Check Var Tình Yêu phát hiện Red Flag 85%',
       slides: [
         {
@@ -1684,7 +1689,7 @@ export function buildTikTokCarouselKits(
           roleLabel: 'Slide 2 • Đối Chiếu 2 Lá Bài & Thanh Đo Hợp Cạ',
           headline: 'Lá của mình: The Lovers • Lá đối phương: The Devil ngược!',
           bodyText:
-            'Thanh đo giải trí nhảy số ngay lập tức: 💞 Độ Hợp Cạ 74% nhưng 🚩 Red Flag chạm ngưỡng 85% vì cả hai đều thích kiểm soát ngầm!',
+            'Bạn Thân hú hét: 💞 Độ Hợp Cạ 74% nhưng 🚩 Red Flag chạm ngưỡng 85% vì cả hai đều thích kiểm soát ngầm nha!',
           visualPromptNote:
             'Ảnh kết quả Bói Đôi hiển thị thanh Couple Meter (Chỉ để giải trí).',
         },
@@ -1698,7 +1703,7 @@ export function buildTikTokCarouselKits(
           visualPromptNote:
             'Ảnh Story Card 9:16 có kèm thanh đo Độ Hợp Cạ & Red Flag.',
           storyCardPreviewUrl:
-            '/api/story-card?persona=ba_co_mo_hon&nickname=CoupleCheckVar&cards=6:0,15:1,19:0&compatScore=74&redFlagLevel=85&vibeTag=Hợp%20Cạ%20Nhưng%20Hay%20Dỗi&hideQuestion=1',
+            '/api/story-card?persona=ban_than&nickname=CoupleCheckVar&cards=6:0,15:1,19:0&compatScore=74&redFlagLevel=85&vibeTag=Hợp%20Cạ%20Nhưng%20Hay%20Dỗi&hideQuestion=1',
         },
       ],
       captionSeo:
@@ -1706,7 +1711,7 @@ export function buildTikTokCarouselKits(
       hashtags: [
         '#TarotCouple',
         '#BoiDoi',
-        '#CheckVarTinhYeu',
+        '#BanThan',
         '#RedFlag',
         '#CapDoiGenZ',
         '#TarotTinhYeu',
@@ -1717,20 +1722,20 @@ export function buildTikTokCarouselKits(
     },
     {
       id: 'kit_ceo_career_jump',
-      themeTitle: 'Xin Vía Nhảy Việc Cuối Năm Với Tổng Tài Lý Trí',
-      readerId: 'tong_tai_ly_tri',
-      readerName: 'Tổng Tài Lý Trí',
-      hookTitle: 'Xin vía nhảy việc cuối năm với Tổng Tài Lý Trí',
+      themeTitle: 'Xin Vía Nhảy Việc Cuối Năm Với Thầy Cú Mèo',
+      readerId: 'thay_cu_meo',
+      readerName: 'Thầy Cú Mèo',
+      hookTitle: 'Xin vía nhảy việc cuối năm với Thầy Cú Mèo',
       slides: [
         {
           slideNumber: 1,
           roleLabel: 'Slide 1 • Hook Dân Văn Phòng & Sinh Viên',
           headline:
-            'Xin vía nhảy việc & tăng lương cuối năm với Tổng Tài Lý Trí: Phân tích Tarot chuẩn như báo cáo tài chính 💼📈',
+            'Xin vía nhảy việc & tăng lương cuối năm với Thầy Cú Mèo: Phân tích Tarot sâu sắc và logic 💼📈',
           bodyText:
-            'Không văn vở sướt mướt, Tổng Tài đọc 3 lá bài bằng tư duy ROI, điểm cắt lỗ và chiến lược đàm phán lương cực bén!',
+            'Không văn vở sướt mướt, Thầy Cú Mèo đọc 3 lá bài bằng tư duy hệ thống, điểm mù tâm lý và chiến lược hành động cực bén!',
           visualPromptNote:
-            'Ảnh giao diện Reader Tổng Tài Lý Trí (tone xanh sapphire sang trọng).',
+            'Ảnh giao diện Reader Thầy Cú Mèo (tone xanh đêm điềm tĩnh).',
         },
         {
           slideNumber: 2,
@@ -1738,7 +1743,7 @@ export function buildTikTokCarouselKits(
           headline:
             'Gốc rễ: Eight of Pentacles • Chướng ngại: Four of Swords • Lối thoát: The Chariot!',
           bodyText:
-            'Tổng Tài chốt: "Năng lực chuyên môn của bạn đã vượt trần vị trí hiện tại. Đừng ngại bước ra khỏi vùng an toàn để đón offer xứng tầm!"',
+            'Thầy Cú Mèo chốt: "Năng lực chuyên môn của bạn đã vượt trần vị trí hiện tại. Đừng ngại bước ra khỏi vùng an toàn để đón cơ hội xứng tầm!"',
           visualPromptNote:
             'Ảnh 3 lá bài chủ đề Công việc / Học tập với lời khuyên hành động rõ ràng.',
         },
@@ -1746,52 +1751,52 @@ export function buildTikTokCarouselKits(
           slideNumber: 3,
           roleLabel: 'Slide 3 • Quote Chiến Lược & CTA',
           headline:
-            '“Quản trị tốt ranh giới và giá trị bản thân chính là khoản đầu tư sinh lời cao nhất của bạn.”',
+            '“Quản trị tốt ranh giới và giá trị bản thân chính là khoản đầu tư bền vững nhất của bạn.”',
           bodyText:
-            'Ai đang phân vân ở lại hay nhảy việc vào hỏi Tổng Tài Lý Trí ngay tại tarotcouple.vercel.app! 🚀',
+            'Ai đang phân vân ở lại hay nhảy việc vào hỏi Thầy Cú Mèo ngay tại tarotcouple.vercel.app! 🚀',
           visualPromptNote:
-            'Ảnh Story Card 9:16 tone xanh dương Tổng Tài Lý Trí.',
+            'Ảnh Story Card 9:16 tone xanh đêm Thầy Cú Mèo.',
           storyCardPreviewUrl:
-            '/api/story-card?persona=tong_tai_ly_tri&nickname=ChienThanOT&topicLabel=C%C3%B4ng%20vi%E1%BB%87c%20%26%20S%E1%BB%B1%20nghi%E1%BB%87p&cards=71:0,53:0,7:0&hideQuestion=1',
+            '/api/story-card?persona=thay_cu_meo&nickname=ChienThanOT&topicLabel=C%C3%B4ng%20vi%E1%BB%87c%20%26%20S%E1%BB%B1%20nghi%E1%BB%87p&cards=71:0,53:0,7:0&hideQuestion=1',
         },
       ],
       captionSeo:
-        'Xin vía nhảy việc cuối năm với Tổng Tài Lý Trí mà ngỡ đang đi coaching chiến lược 1-1 💼🔥 Dân văn phòng hay sinh viên sắp ra trường vào rút 3 lá định hướng ngay!',
+        'Xin vía nhảy việc cuối năm với Thầy Cú Mèo mà ngỡ đang đi coaching chiến lược 1-1 💼🔥 Dân văn phòng hay sinh viên sắp ra trường vào rút 3 lá định hướng ngay!',
       hashtags: [
         '#TarotCouple',
-        '#TongTaiLyTri',
+        '#ThayCuMeo',
         '#TarotCongViec',
         '#NhayViec',
         '#GenZCongSo',
         '#ManifestThanhCong',
       ],
       capcutVoiceoverScript:
-        'Ai đang phân vân có nên nhảy việc hay đòi tăng lương cuối năm thì vào gặp ngay Tổng Tài Lý Trí trên Tarot Couple. Không hề mê tín, Tổng Tài phân tích gốc rễ vấn đề, điểm mù và lộ trình bứt phá rõ ràng như bản kế hoạch kinh doanh luôn!',
-      recommendedSoundVibe: 'Nhạc nền Phonk Nhẹ / Corporate Boss Vibe',
+        'Ai đang phân vân có nên nhảy việc hay đòi tăng lương cuối năm thì vào gặp ngay Thầy Cú Mèo trên Tarot Couple. Không hề mê tín, Thầy Cú Mèo phân tích gốc rễ vấn đề, điểm mù và lộ trình bứt phá rõ ràng cực kỳ thuyết phục!',
+      recommendedSoundVibe: 'Nhạc nền Phonk Nhẹ / Lo-fi Focus Vibe',
     },
     {
       id: 'kit_healing_midnight_comfort',
-      themeTitle: 'Tiên Tử Chữa Lành Vỗ Về Đêm Suy',
-      readerId: 'tien_tu_chua_lanh',
-      readerName: 'Tiên Tử Chữa Lành',
-      hookTitle: 'Tiên Tử Chữa Lành vỗ về đêm suy',
+      themeTitle: 'Bà Ngoại Vỗ Về Đêm Suy',
+      readerId: 'ba_ngoai',
+      readerName: 'Bà Ngoại',
+      hookTitle: 'Bà Ngoại vỗ về đêm suy',
       slides: [
         {
           slideNumber: 1,
           roleLabel: 'Slide 1 • Hook Dịu Dàng Chữa Lành',
           headline:
-            'Dành cho những ai vừa trải qua một ngày dài mệt mỏi: Để Tiên Tử Chữa Lành vỗ về đêm suy của bạn 🌿✨',
+            'Dành cho những ai vừa trải qua một ngày dài mệt mỏi: Để Bà Ngoại vỗ về đêm suy của con nhé 🌿✨',
           bodyText:
-            'Có những đêm không cần ai phán xét đúng sai, chỉ cần một thông điệp dịu dàng giúp trái tim thở phào nhẹ nhõm.',
+            'Có những đêm không cần ai phán xét đúng sai, chỉ cần một lời dặn ấm áp giúp trái tim thở phào nhẹ nhõm.',
           visualPromptNote:
-            'Ảnh Tiên Tử Chữa Lành với hào quang xanh ngọc lục bảo êm dịu.',
+            'Ảnh Bà Ngoại với hào quang vàng ấm áp êm dịu.',
         },
         {
           slideNumber: 2,
           roleLabel: 'Slide 2 • Thông Điệp Từ The Star & Temperance',
           headline: 'Lá bài xuất hiện: The Star • Temperance • Six of Cups',
           bodyText:
-            'Tiên Tử nhắn gửi: "Mọi khoảng lặng hôm nay đều đang âm thầm chuẩn bị cho một chương mới bình yên hơn. Bạn đã cố gắng rất nhiều rồi."',
+            'Bà Ngoại nhắn gửi: "Mọi khoảng lặng hôm nay đều đang âm thầm chuẩn bị cho một chương mới bình yên hơn. Con đã cố gắng rất nhiều rồi."',
           visualPromptNote:
             'Ảnh trải bài chữa lành kèm vật phẩm độ mệnh ấm áp.',
         },
@@ -1799,27 +1804,27 @@ export function buildTikTokCarouselKits(
           slideNumber: 3,
           roleLabel: 'Slide 3 • Lời Nhắn Bình Yên & Chia Sẻ',
           headline:
-            '“Trái tim bạn xứng đáng nhận được sự dịu dàng mà bạn vẫn thường trao đi cho thế giới.”',
+            '“Trái tim con xứng đáng nhận được sự dịu dàng mà con vẫn thường trao đi cho thế giới.”',
           bodyText:
-            'Ghé trạm dừng tâm hồn tại tarotcouple.vercel.app để nhận lá bài chữa lành mỗi tối nhé 🌙💚',
+            'Ghé trạm dừng tâm hồn tại tarotcouple.vercel.app để nhận lá bài chữa lành mỗi tối nghen con 🌙💛',
           visualPromptNote:
-            'Ảnh Story Card 9:16 tone Ngọc Lục Bảo của Tiên Tử Chữa Lành.',
+            'Ảnh Story Card 9:16 tone Vàng Ấm của Bà Ngoại.',
           storyCardPreviewUrl:
-            '/api/story-card?persona=tien_tu_chua_lanh&nickname=TamHonChuaLanh&cards=17:0,14:0,41:0&hideQuestion=1',
+            '/api/story-card?persona=ba_ngoai&nickname=TamHonChuaLanh&cards=17:0,14:0,41:0&hideQuestion=1',
         },
       ],
       captionSeo:
-        'Nếu tối nay bạn thấy lòng hơi chùng xuống, hãy để Tiên Tử Chữa Lành gửi tặng bạn một cái ôm qua 3 lá bài này nhé 🌿✨ Mọi chuyện rồi sẽ ổn thôi!',
+        'Nếu tối nay bạn thấy lòng hơi chùng xuống, hãy để Bà Ngoại gửi tặng bạn một cái ôm qua 3 lá bài này nhé 🌿✨ Mọi chuyện rồi sẽ ổn thôi!',
       hashtags: [
         '#TarotCouple',
-        '#TienTuChuaLanh',
+        '#BaNgoai',
         '#ChuaLanhTamHon',
         '#TarotChuaLanh',
         '#BinhYen',
         '#ThongDiepVuTru',
       ],
       capcutVoiceoverScript:
-        'Nếu hôm nay của bạn hơi nhiều áp lực, hãy thử ghé Tarot Couple và chọn Tiên Tử Chữa Lành nhé. Không một lời trách móc, chỉ có những phân tích ấm áp giúp bạn lắng nghe cảm xúc của chính mình và ngủ một giấc thật ngon.',
+        'Nếu hôm nay của bạn hơi nhiều áp lực, hãy thử ghé Tarot Couple và chọn Bà Ngoại nhé. Không một lời trách móc, chỉ có những lời khuyên ấm áp giúp bạn lắng nghe cảm xúc của chính mình và ngủ một giấc thật ngon.',
       recommendedSoundVibe: 'Piano Chữa Lành / Tiếng Mưa Đêm & Chuông Xoay',
     },
   ];

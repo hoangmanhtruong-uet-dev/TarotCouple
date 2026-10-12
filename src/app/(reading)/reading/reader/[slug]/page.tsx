@@ -55,7 +55,7 @@ export default async function ReaderDetailPage({ params }: ReaderPageProps) {
   }
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#D9B36A] text-sm font-medium">Đang chuẩn bị lều Reader...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#C9A24A] text-sm font-medium">Đang chuẩn bị lều Reader...</div>}>
       <ReaderProfileView readerId={reader.id} currentSlug={slug} />
     </Suspense>
   );

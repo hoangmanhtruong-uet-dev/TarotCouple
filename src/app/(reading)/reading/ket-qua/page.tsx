@@ -39,6 +39,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import FollowupChatModal from '@/components/FollowupChatModal';
+import OutOfStarsSheet from '@/components/OutOfStarsSheet';
 import { ALL_TAROT_CARDS } from '@/data/tarot-cards';
 import { READERS } from '@/data/tarot-cards';
 import { getCardTopicInterpretation } from '@/data/topic-interpretations';
@@ -62,7 +63,7 @@ type SpotlightPhase = 'intro' | 'detail'; // intro = card nổi bật; detail = 
 
 function getReaderAccent(readerId?: string): string {
   const r = READERS.find((x) => x.id === readerId);
-  return r?.accent_color || '#D9B36A';
+  return r?.accent_color || '#C9A24A';
 }
 
 /**
@@ -362,7 +363,7 @@ function CardSpotlightView({
           transition={{ duration: 0.4 }}
           className="p-5 sm:p-6 rounded-2xl bg-[#14121F]/90 border border-[#262235]"
         >
-          <p className="text-xs font-bold text-[#D9B36A] uppercase tracking-wider mb-2">
+          <p className="text-xs font-bold text-[#C9A24A] uppercase tracking-wider mb-2">
             Ý nghĩa lá bài
           </p>
           <p className="text-base text-[#F8F5F0] leading-[1.6]">{coreMeaning}</p>
@@ -450,13 +451,13 @@ function VerdictView({
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-6"
       >
-        <span className="text-[10px] font-bold tracking-widest text-[#D9B36A] uppercase block mb-1">
+        <span className="text-[10px] font-bold tracking-widest text-[#C9A24A] uppercase block mb-1">
           TỔNG HỢP 3 LÁ
         </span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
           Chốt Hạ Của Vũ Trụ
         </h1>
-        <p className="text-xs text-[#D9B36A] italic mt-1 font-serif">
+        <p className="text-xs text-[#C9A24A] italic mt-1 font-serif">
           &ldquo;{result.greeting_hook}&rdquo;
         </p>
       </motion.div>
@@ -494,10 +495,10 @@ function VerdictView({
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#120F1D] border border-[#D9B36A]/40 space-y-4 mb-5 shadow-xl"
+        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172B] to-[#120F1D] border border-[#C9A24A]/40 space-y-4 mb-5 shadow-xl"
       >
         <div>
-          <span className="text-xs font-bold tracking-wider text-[#D9B36A] uppercase block mb-2">
+          <span className="text-xs font-bold tracking-wider text-[#C9A24A] uppercase block mb-2">
             CHỐT HẠ TỔNG QUAN
           </span>
           <p className="text-base text-[#F8F5F0] leading-[1.6]">{result.overall_verdict}</p>
@@ -511,13 +512,13 @@ function VerdictView({
         </div>
       </motion.div>
 
-      {/* THẺ THẮC MẮC SÂU HƠN (PHẦN C: NẰM GIỮA "HÀNH ĐỘNG NÊN LÀM NGAY" VÀ THẺ LÁ THỨ 4) */}
+      {/* THẺ THẮC MẮC SÂU HƠN */}
       <motion.div
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.38 }}
         onClick={onOpenFollowup}
-        className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#D9B36A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
+        className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#C9A24A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
       >
         <div className="flex items-center gap-3.5 relative z-10">
           <div
@@ -536,8 +537,11 @@ function VerdictView({
               <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
                 2 câu đầu miễn phí ✨
               </span>
+              <span className="text-[10px] text-[#9E96B0]">
+                Sau đó: 2 Sao / câu
+              </span>
             </div>
-            <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E5C687] transition-colors">
+            <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E8C872] transition-colors">
               Thắc Mắc Sâu Hơn Với Reader
             </h3>
             <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
@@ -545,19 +549,19 @@ function VerdictView({
             </p>
           </div>
 
-          <div className="shrink-0 text-[#D9B36A] group-hover:translate-x-1 transition-transform">
+          <div className="shrink-0 text-[#C9A24A] group-hover:translate-x-1 transition-transform">
             <ArrowRight className="w-5 h-5" />
           </div>
         </div>
       </motion.div>
 
-      {/* THẺ GỢI Ý LÁ THỨ 4 (THAY THẾ KHỐI QUOTE - BẤM CHẠM = MỞ MÀN CLARIFIER) */}
+      {/* THẺ GỢI Ý LÁ THỨ 4 */}
       <motion.div
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.45 }}
         onClick={onContinue}
-        className="group p-5 rounded-3xl bg-[#14121F]/90 border border-[#D9B36A]/40 hover:border-[#D9B36A] transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
+        className="group p-5 rounded-3xl bg-[#14121F]/90 border border-[#C9A24A]/40 hover:border-[#C9A24A] transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
         style={{
           boxShadow: `0 0 25px ${accentColor}18`,
         }}
@@ -583,20 +587,20 @@ function VerdictView({
                   }
             }
             transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-16 h-24 sm:w-18 sm:h-28 rounded-xl bg-gradient-to-br from-[#262135] to-[#120F1D] border-2 border-[#D9B36A]/70 flex flex-col items-center justify-center shrink-0 text-center relative overflow-hidden"
+            className="w-16 h-24 sm:w-18 sm:h-28 rounded-xl bg-gradient-to-br from-[#262135] to-[#120F1D] border-2 border-[#C9A24A]/70 flex flex-col items-center justify-center shrink-0 text-center relative overflow-hidden"
           >
-            <div className="text-[#D9B36A] text-lg font-serif">✦</div>
-            <div className="text-[9px] font-bold text-[#E5C687] tracking-wider uppercase mt-1">Lá 4</div>
-            <div className="absolute inset-1 rounded-lg border border-[#D9B36A]/20 pointer-events-none" />
+            <div className="text-[#C9A24A] text-lg font-serif">✦</div>
+            <div className="text-[9px] font-bold text-[#E8C872] tracking-wider uppercase mt-1">Lá 4</div>
+            <div className="absolute inset-1 rounded-lg border border-[#C9A24A]/20 pointer-events-none" />
           </motion.div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-[#D9B36A] tracking-wider uppercase bg-[#D9B36A]/10 px-2.5 py-0.5 rounded-full border border-[#D9B36A]/30">
+              <span className="text-[10px] font-bold text-[#C9A24A] tracking-wider uppercase bg-[#C9A24A]/10 px-2.5 py-0.5 rounded-full border border-[#C9A24A]/30">
                 Gợi mở bí mật · 5 Sao ⭐
               </span>
             </div>
-            <h3 className="font-display text-base font-bold text-[#F8F5F0] mb-1 group-hover:text-[#E5C687] transition-colors">
+            <h3 className="font-display text-base font-bold text-[#F8F5F0] mb-1 group-hover:text-[#E8C872] transition-colors">
               Mở Khóa Lá Bài Làm Rõ Thứ 4
             </h3>
             <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
@@ -605,13 +609,13 @@ function VerdictView({
             </p>
           </div>
 
-          <div className="shrink-0 text-[#D9B36A] group-hover:translate-x-1 transition-transform">
+          <div className="shrink-0 text-[#C9A24A] group-hover:translate-x-1 transition-transform">
             <ArrowRight className="w-5 h-5" />
           </div>
         </div>
       </motion.div>
 
-      {/* Fixed bottom actions: Ưu tiên nút Lá Thứ 4 khi chưa mở */}
+      {/* Fixed bottom actions: Nút Lá Thứ 4 */}
       <div className="fixed bottom-0 left-0 right-0 p-3.5 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)] z-30">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <button
@@ -619,8 +623,8 @@ function VerdictView({
             onClick={onContinue}
             className="flex-1 py-3.5 sm:py-4 rounded-2xl text-[#0B0A12] font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg active:scale-98"
             style={{
-              background: `linear-gradient(135deg, #D9B36A, #C49A4D)`,
-              boxShadow: '0 4px 25px rgba(217,179,106,0.35)',
+              background: `linear-gradient(135deg, #C9A24A, #A68032)`,
+              boxShadow: '0 4px 25px rgba(201,162,74,0.35)',
             }}
           >
             <Star className="w-4 h-4 fill-[#0B0A12]" />
@@ -630,9 +634,9 @@ function VerdictView({
 
           <Link
             href="/reading/story"
-            className="py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border-2 border-[#D9B36A]/70 text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            className="py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border-2 border-[#C9A24A]/70 text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
           >
-            <Share2 className="w-4 h-4 text-[#D9B36A]" />
+            <Share2 className="w-4 h-4 text-[#C9A24A]" />
             <span className="whitespace-nowrap">Xuất Story 9:16</span>
           </Link>
         </div>
@@ -684,7 +688,7 @@ function ClarifierView({
     >
       {/* Title */}
       <div className="text-center mb-6">
-        <span className="text-[10px] font-bold tracking-widest text-[#D9B36A] uppercase block mb-1">
+        <span className="text-[10px] font-bold tracking-widest text-[#C9A24A] uppercase block mb-1">
           BƯỚC TIẾP THEO
         </span>
         <h1 className="font-display text-xl sm:text-2xl font-bold text-[#F8F5F0]">
@@ -728,7 +732,7 @@ function ClarifierView({
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="p-5 rounded-3xl bg-[#14121F]/90 border border-[#D9B36A]/30 mb-5 shadow-xl"
+        className="p-5 rounded-3xl bg-[#14121F]/90 border border-[#C9A24A]/30 mb-5 shadow-xl"
       >
         <div className="flex items-center gap-2 mb-1">
           <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -776,7 +780,7 @@ function ClarifierView({
                 </p>
               )}
             </div>
-            <p className="text-sm italic text-[#D9B36A] font-serif px-1 leading-relaxed">
+            <p className="text-sm italic text-[#C9A24A] font-serif px-1 leading-relaxed">
               &ldquo;{clarifierCard.savageQuote}&rdquo;
             </p>
           </motion.div>
@@ -796,8 +800,8 @@ function ClarifierView({
                     onClick={() => setFollowupQuestion(q)}
                     className={`text-left text-xs px-3 py-2 rounded-xl border transition-all cursor-pointer ${
                       followupQuestion === q
-                        ? 'border-[#D9B36A]/60 bg-[#D9B36A]/10 text-[#E5C687]'
-                        : 'border-[#262235] bg-[#0B0A12] text-[#9E96B0] hover:border-[#D9B36A]/40'
+                        ? 'border-[#C9A24A]/60 bg-[#C9A24A]/10 text-[#E5C687]'
+                        : 'border-[#262235] bg-[#0B0A12] text-[#9E96B0] hover:border-[#C9A24A]/40'
                     }`}
                   >
                     {q}
@@ -808,7 +812,7 @@ function ClarifierView({
 
             {/* Custom question input */}
             <div>
-              <label className="text-[10px] font-semibold text-[#D9B36A] uppercase tracking-wider block mb-1.5">
+              <label className="text-[10px] font-semibold text-[#C9A24A] uppercase tracking-wider block mb-1.5">
                 Hoặc đặt câu hỏi của riêng bạn:
               </label>
               <textarea
@@ -816,7 +820,7 @@ function ClarifierView({
                 onChange={(e) => setFollowupQuestion(e.target.value)}
                 maxLength={200}
                 rows={2}
-                className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-xs text-[#F8F5F0] focus:outline-none focus:border-[#D9B36A]/60 resize-none leading-relaxed"
+                className="w-full px-4 py-3 rounded-xl bg-[#0B0A12] border border-[#262235] text-xs text-[#F8F5F0] focus:outline-none focus:border-[#C9A24A]/60 resize-none leading-relaxed"
                 placeholder="Nhập câu hỏi muốn làm rõ..."
               />
             </div>
@@ -862,7 +866,7 @@ function ClarifierView({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           onClick={onOpenFollowup}
-          className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#D9B36A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
+          className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#C9A24A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
         >
           <div className="flex items-center gap-3.5 relative z-10">
             <div
@@ -882,10 +886,10 @@ function ClarifierView({
                   2 câu đầu miễn phí ✨
                 </span>
                 <span className="text-[10px] text-[#9E96B0]">
-                  Sau đó: 5 Sao / câu
+                  Sau đó: 2 Sao / câu
                 </span>
               </div>
-              <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E5C687] transition-colors">
+              <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E8C872] transition-colors">
                 Hỏi Thêm Với {readerDisplayName}
               </h3>
               <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
@@ -893,7 +897,7 @@ function ClarifierView({
               </p>
             </div>
 
-            <div className="shrink-0 text-[#D9B36A] group-hover:translate-x-1 transition-transform">
+            <div className="shrink-0 text-[#C9A24A] group-hover:translate-x-1 transition-transform">
               <ArrowRight className="w-5 h-5" />
             </div>
           </div>
@@ -907,8 +911,8 @@ function ClarifierView({
             href="/reading/story"
             className="flex-1 py-3.5 rounded-2xl text-[#0B0A12] font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             style={{
-              background: `linear-gradient(135deg, #D9B36A, #C49A4D)`,
-              boxShadow: '0 4px 25px rgba(217,179,106,0.35)',
+              background: `linear-gradient(135deg, #C9A24A, #A68032)`,
+              boxShadow: '0 4px 25px rgba(201,162,74,0.35)',
             }}
           >
             <Share2 className="w-4 h-4" />
@@ -952,7 +956,8 @@ export default function KetQuaPage() {
   const [isDrawingClarifier, setIsDrawingClarifier] = useState(false);
   const [followupQuestion, setFollowupQuestion] = useState('');
   const [isFollowupOpen, setIsFollowupOpen] = useState(false);
-  const { updateQuota } = useQuotaSync();
+  const [showOutOfStarsSheet, setShowOutOfStarsSheet] = useState(false);
+  const { quota, updateQuota } = useQuotaSync();
 
   // Set default followup question from cliffhanger when result loads
   useEffect(() => {
@@ -967,7 +972,7 @@ export default function KetQuaPage() {
   if (!readingSuccess) {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <Sparkles className="w-12 h-12 text-[#D9B36A] mx-auto mb-4" />
+        <Sparkles className="w-12 h-12 text-[#C9A24A] mx-auto mb-4" />
         <h2 className="font-display text-xl font-bold text-[#F8F5F0] mb-2">
           Chưa Có Kết Quả Trải Bài
         </h2>
@@ -976,7 +981,7 @@ export default function KetQuaPage() {
         </p>
         <Link
           href="/reading/reader"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#D9B36A] text-[#0B0A12] font-bold text-sm shadow-md cursor-pointer"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#C9A24A] text-[#0B0A12] font-bold text-sm shadow-md cursor-pointer"
         >
           <span>Bắt Đầu Bốc Bài Ngay</span>
           <ArrowRight className="w-4 h-4" />
@@ -991,6 +996,12 @@ export default function KetQuaPage() {
   // ── Clarifier handler ─────────────────────────────────────────────────────
   const handleDrawClarifier = async () => {
     if (isDrawingClarifier) return;
+
+    if ((quota?.starsBalance ?? 0) < 5) {
+      setShowOutOfStarsSheet(true);
+      return;
+    }
+
     setIsDrawingClarifier(true);
 
     try {
@@ -1015,6 +1026,11 @@ export default function KetQuaPage() {
         }),
       });
       const data = await res.json();
+
+      if (res.status === 402 || data?.code === 'INSUFFICIENT_STARS') {
+        setShowOutOfStarsSheet(true);
+        return;
+      }
       if (data?.clarifier) {
         if (data.quota) updateQuota(data.quota);
         soundManager.playMysticChime();
@@ -1114,7 +1130,7 @@ export default function KetQuaPage() {
           )}
 
           {/* Stage label */}
-          <span className="text-[11px] font-bold text-[#D9B36A] uppercase tracking-widest mx-auto">
+          <span className="text-[11px] font-bold text-[#C9A24A] uppercase tracking-widest mx-auto">
             {stageLabels[stage]}{spotlightPhase === 'detail' ? ' — Chi Tiết' : ''}
           </span>
 
@@ -1207,7 +1223,18 @@ export default function KetQuaPage() {
             accentColor={accentColor}
             activeQuoteIdx={activeQuoteIdx}
             setActiveQuoteIdx={setActiveQuoteIdx}
-            onContinue={() => setStage('clarifier')}
+            onContinue={() => {
+              if (clarifierCard) {
+                setStage('clarifier');
+                return;
+              }
+              if ((quota?.starsBalance ?? 0) < 5) {
+                setShowOutOfStarsSheet(true);
+                return;
+              }
+              setStage('clarifier');
+              void handleDrawClarifier();
+            }}
             onOpenFollowup={() => setIsFollowupOpen(true)}
           />
         )}
@@ -1243,6 +1270,15 @@ export default function KetQuaPage() {
           accentColor={accentColor}
         />
       )}
+
+      {/* Out of stars modal sheet */}
+      <OutOfStarsSheet
+        isOpen={showOutOfStarsSheet}
+        onClose={() => setShowOutOfStarsSheet(false)}
+        requiredStars={5}
+        currentStars={quota?.starsBalance ?? 0}
+        reasonText="Bạn cần 5 Sao để mở khóa Lá Bài Làm Rõ Thứ 4."
+      />
     </div>
   );
 }

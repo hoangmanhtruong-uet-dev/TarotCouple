@@ -37,7 +37,7 @@ export function CascadeProphecyText({
             delay: showAllInstant || shouldReduceMotion ? 0 : idx * staggerDelay,
             ease: [0.22, 1, 0.36, 1],
           }}
-          className="p-4 rounded-2xl bg-[#0B0A12]/70 border border-[#262235]/80 hover:border-[#D9B36A]/30 transition-colors"
+          className="p-4 rounded-2xl bg-[#0B0A12]/70 border border-[#262235]/80 hover:border-[#C9A24A]/30 transition-colors"
         >
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-bold text-[#E5C687]">
@@ -53,7 +53,7 @@ export function CascadeProphecyText({
             {para.body}
           </p>
           {para.highlight && (
-            <p className="text-xs italic text-[#D9B36A] font-serif border-t border-[#262235]/60 pt-2">
+            <p className="text-xs italic text-[#C9A24A] font-serif border-t border-[#262235]/60 pt-2">
               &ldquo;{para.highlight}&rdquo;
             </p>
           )}

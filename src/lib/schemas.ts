@@ -11,6 +11,10 @@ export const MAX_BIRTH_YEAR = 2016; // 2026 - 2016 = 10 years old minimum
  * Reader IDs available across Phase 1 & Phase 2/3 (all 4 readers)
  */
 export const ReaderIdSchema = z.enum([
+  'ba_ngoai',
+  'chi_dai',
+  'ban_than',
+  'thay_cu_meo',
   'ba_co_mo_hon',
   'tien_tu_chua_lanh',
   'tong_tai_ly_tri',
@@ -23,8 +27,12 @@ export type ReaderId = z.infer<typeof ReaderIdSchema>;
  * - 10-15yo selecting 'ba_co_mo_hon' automatically resolves to 'ba_ngoai_vui_tinh'
  */
 export const EffectivePersonaSchema = z.enum([
-  'ba_co_mo_hon',
+  'ba_ngoai',
+  'chi_dai',
+  'ban_than',
+  'thay_cu_meo',
   'ba_ngoai_vui_tinh',
+  'ba_co_mo_hon',
   'tien_tu_chua_lanh',
   'tong_tai_ly_tri',
   'phap_su_toi_co',

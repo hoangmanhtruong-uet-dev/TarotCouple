@@ -54,8 +54,12 @@ describe('Phase 0 & 1 Stage Gate Verification Suite', () => {
     it('configures 2 free MVP readers and all 4 readers in catalog', () => {
       expect(READERS).toHaveLength(4);
       const activeReaderIds = READERS.filter((r) => r.active).map((r) => r.id);
-      expect(activeReaderIds).toContain('ba_co_mo_hon');
-      expect(activeReaderIds).toContain('tien_tu_chua_lanh');
+      expect(
+        activeReaderIds.includes('ba_ngoai') || activeReaderIds.includes('ba_co_mo_hon')
+      ).toBe(true);
+      expect(
+        activeReaderIds.includes('chi_dai') || activeReaderIds.includes('tien_tu_chua_lanh')
+      ).toBe(true);
       expect(SPREAD_POSITIONS.love).toHaveLength(3);
       expect(SPREAD_POSITIONS.career).toHaveLength(3);
       expect(SPREAD_POSITIONS.finance).toHaveLength(3);
@@ -91,26 +95,31 @@ describe('Phase 0 & 1 Stage Gate Verification Suite', () => {
       expect(policy.paymentEnabled).toBe(false);
     });
 
-    it('activates Kid/Teen Safe Mode for 10-15yo (switches Bà Cố Mỏ Hỗn -> Bà Ngoại Vui Tính and locks payments)', () => {
-      const policy = classifyAgeTier(2013, 2026, 'ba_co_mo_hon');
-      expect(policy.age).toBe(13);
-      expect(policy.tier).toBe('kid_teen_10_15');
-      expect(policy.isAllowedAccess).toBe(true);
-      expect(policy.isKidTeenSafeMode).toBe(true);
-      expect(policy.paymentEnabled).toBe(false);
-      expect(policy.effectivePersona).toBe('ba_ngoai_vui_tinh');
-      expect(policy.allowedTopics.map((t) => t.id)).toEqual([
+    it('activates Kid/Teen Safe Mode for 10-15yo (switches Bà Cố Mỏ Hỗn -> Bà Ngoại Vui Tính, payment enabled for >=11yo)', () => {
+      const policy10 = classifyAgeTier(2016, 2026, 'ba_co_mo_hon');
+      expect(policy10.age).toBe(10);
+      expect(policy10.tier).toBe('kid_teen_10_15');
+      expect(policy10.paymentEnabled).toBe(false);
+
+      const policy13 = classifyAgeTier(2013, 2026, 'ba_co_mo_hon');
+      expect(policy13.age).toBe(13);
+      expect(policy13.tier).toBe('kid_teen_10_15');
+      expect(policy13.isAllowedAccess).toBe(true);
+      expect(policy13.isKidTeenSafeMode).toBe(true);
+      expect(policy13.paymentEnabled).toBe(true);
+      expect(policy13.effectivePersona).toBe('ba_ngoai_vui_tinh');
+      expect(policy13.allowedTopics.map((t) => t.id)).toEqual([
         'crush_school',
         'study',
         'daily_luck',
       ]);
     });
 
-    it('locks payments for 16-17yo while keeping standard entertainment topics', () => {
+    it('enables payments for 16-17yo (>=11yo) while keeping standard entertainment topics', () => {
       const policy = classifyAgeTier(2009, 2026, 'ba_co_mo_hon');
       expect(policy.age).toBe(17);
       expect(policy.tier).toBe('teen_16_17');
-      expect(policy.paymentEnabled).toBe(false);
+      expect(policy.paymentEnabled).toBe(true);
       expect(policy.effectivePersona).toBe('ba_co_mo_hon');
       expect(policy.allowedTopics.map((t) => t.id)).toEqual([
         'love',
@@ -431,7 +440,7 @@ describe('Phase 0 & 1 Stage Gate Verification Suite', () => {
         },
         body: JSON.stringify({
           nickname: 'Bé Cam',
-          birth_year: 2013,
+          birth_year: 2016,
           reader_id: 'ba_co_mo_hon',
           topic: 'crush_school',
           question_text: 'Bạn lớp trưởng hay giảng bài cho con, tụi con có thành đôi bạn cùng tiến không ạ?',

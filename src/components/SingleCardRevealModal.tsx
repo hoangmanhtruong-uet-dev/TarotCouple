@@ -24,7 +24,7 @@ export function SingleCardRevealModal({
   reversed,
   positionLabel,
   readerName = 'Bà Cố Mỏ Hỗn',
-  readerAccentColor = '#D9B36A',
+  readerAccentColor = '#C9A24A',
   onNextCard,
   hasNextCard = false,
 }: SingleCardRevealModalProps) {
@@ -43,7 +43,7 @@ export function SingleCardRevealModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.88, y: 20 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="relative w-full max-w-md bg-[#120F1D] border border-[#D9B36A]/40 rounded-3xl p-6 sm:p-7 shadow-[0_0_60px_rgba(217,179,106,0.25)] overflow-hidden"
+          className="relative w-full max-w-md bg-[#120F1D] border border-[#C9A24A]/40 rounded-3xl p-6 sm:p-7 shadow-[0_0_60px_rgba(217,179,106,0.25)] overflow-hidden"
         >
           {/* Subtle Ambient Glow behind the card */}
           <div
@@ -62,14 +62,14 @@ export function SingleCardRevealModal({
 
           {/* Position Tag */}
           <div className="text-center mb-4">
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#1C172B] border border-[#D9B36A]/30 text-[#D9B36A]">
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-[#1C172B] border border-[#C9A24A]/30 text-[#C9A24A]">
               {positionLabel}
             </span>
           </div>
 
           {/* Card Presentation */}
           <div className="flex flex-col items-center mb-6">
-            <div className="relative w-36 h-56 sm:w-40 sm:h-64 rounded-2xl overflow-hidden border-2 border-[#D9B36A] shadow-[0_0_35px_rgba(217,179,106,0.35)] bg-[#0B0A12] mb-3">
+            <div className="relative w-36 h-56 sm:w-40 sm:h-64 rounded-2xl overflow-hidden border-2 border-[#C9A24A] shadow-[0_0_35px_rgba(217,179,106,0.35)] bg-[#0B0A12] mb-3">
               <img
                 src={card.rws_image_url}
                 alt={card.name_vi}
@@ -94,7 +94,7 @@ export function SingleCardRevealModal({
             <h3 className="font-display text-xl font-bold text-[#F8F5F0]">
               {card.roman}. {card.name_vi}
             </h3>
-            <p className="text-xs text-[#D9B36A] tracking-wider uppercase">
+            <p className="text-xs text-[#C9A24A] tracking-wider uppercase">
               {card.name_en} {card.suit ? `• Bộ ${card.suit}` : ''}
             </p>
           </div>
@@ -130,7 +130,7 @@ export function SingleCardRevealModal({
               <button
                 type="button"
                 onClick={onNextCard}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#D9B36A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#D9B36A] text-[#0B0A12] font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Xem Lá Kế Tiếp</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -139,7 +139,7 @@ export function SingleCardRevealModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-3.5 rounded-2xl bg-[#1C172B] hover:bg-[#27203C] border border-[#D9B36A]/40 text-[#E5C687] font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-3.5 rounded-2xl bg-[#1C172B] hover:bg-[#27203C] border border-[#C9A24A]/40 text-[#E5C687] font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Xem Toàn Bộ Lời Giải Mã</span>

@@ -109,6 +109,27 @@ export async function GET(request: Request) {
   const clientKey = resolveClientKey(request);
   const quota = getQuotaStatus(clientKey);
 
+  const { searchParams } = new URL(request.url);
+  const orderCode = searchParams.get('orderCode') || searchParams.get('order_code');
+
+  if (orderCode) {
+    const order = getPaymentOrder(orderCode);
+    if (!order) {
+      return NextResponse.json(
+        { status: 'error', code: 'ORDER_NOT_FOUND', message: 'Không tìm thấy đơn hàng.' },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(
+      {
+        status: 'ok',
+        order,
+        quota,
+      },
+      { status: 200 }
+    );
+  }
+
   return NextResponse.json(
     {
       status: 'ok',
@@ -122,7 +143,7 @@ export async function GET(request: Request) {
 /**
  * POST /api/payment
  * Creates a PayOS VietQR payment order with strict enforcement of:
- * 1. Under-18 Payment Lock (`PLAN.md` Section 8.3): Users with `age < 18` are blocked from bank/VietQR top-ups (HTTP 403 `AGE_PAYMENT_BLOCKED`).
+ * 1. Under-11 Payment Lock: Users with `age < 11` are blocked from bank/VietQR top-ups (HTTP 403 `AGE_PAYMENT_BLOCKED`).
  * 2. Responsible Daily Spend Cap (`PLAN.md` Section 7.3): Standard packages cannot exceed `50.000đ/ngày` per account (HTTP 400 `DAILY_SPEND_CAP_EXCEEDED`).
  */
 export async function POST(request: Request) {
@@ -160,14 +181,14 @@ export async function POST(request: Request) {
     return NextResponse.json(errRes, { status: 400 });
   }
 
-  // Step 1: Enforce Under-18 Payment Block per PLAN.md Section 8.3
+  // Step 1: Enforce Under-11 Payment Block
   const agePolicy = classifyAgeTier(rawBirthYear, CURRENT_REFERENCE_YEAR);
   if (!agePolicy.paymentEnabled) {
     const errRes: ReadingErrorResponse = {
       status: 'error',
       code: 'AGE_PAYMENT_BLOCKED',
       message:
-        'Tính năng nạp tiền bằng ngân hàng được khóa bảo vệ đối với người dùng dưới 18 tuổi. Bạn có thể nhận Sao miễn phí qua Điểm danh hàng ngày hoặc Chia sẻ ảnh Story!',
+        'Tính năng nạp tiền bằng ngân hàng được khóa bảo vệ đối với người dùng dưới 11 tuổi. Bạn có thể nhận Sao miễn phí qua Điểm danh hàng ngày hoặc Chia sẻ ảnh Story!',
       quota: getQuotaStatus(clientKey),
     };
     return NextResponse.json(errRes, { status: 403 });

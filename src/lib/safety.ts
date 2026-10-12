@@ -106,7 +106,10 @@ export function resolveEffectivePersona(
   readerId: ReaderId,
   ageTier: AgeTier
 ): EffectivePersona {
-  if (readerId === 'ba_co_mo_hon' && ageTier === 'kid_teen_10_15') {
+  if (
+    (readerId === 'ba_co_mo_hon' || readerId === 'chi_dai') &&
+    ageTier === 'kid_teen_10_15'
+  ) {
     return 'ba_ngoai_vui_tinh';
   }
   return readerId;
@@ -148,23 +151,25 @@ export function classifyAgeTier(
 
   const isAllowedAccess = tier !== 'under_10';
   const isKidTeenSafeMode = tier === 'kid_teen_10_15';
-  const paymentEnabled = tier === 'adult_18_plus';
-  const dailySpendCapVnd = tier === 'adult_18_plus' ? 50000 : 0;
+  const paymentEnabled = age >= 11;
+  const dailySpendCapVnd = age >= 11 ? 50000 : 0;
   const allowedTopics = isKidTeenSafeMode ? KID_TEEN_SAFE_TOPICS : STANDARD_TOPICS;
   const effectivePersona = resolveEffectivePersona(readerId, tier);
 
   let policySummaryVi = '';
   switch (tier) {
     case 'under_10':
-      policySummaryVi = 'Ứng dụng chỉ dành cho người dùng từ 10 tuổi trở lên.';
+      policySummaryVi = 'Ứng dụng chỉ dành cho người dùng từ 10 tuổi trở lên. Khóa nạp tiền.';
       break;
     case 'kid_teen_10_15':
       policySummaryVi =
-        'Chế độ Học Đường Trong Sáng (10–15 tuổi): Chủ đề học đường lành mạnh, giọng văn Bà Ngoại Vui Tính khích lệ, tắt hoàn toàn tính năng nạp tiền.';
+        age < 11
+          ? 'Chế độ Trẻ Em (<11 tuổi): Khóa tính năng nạp tiền ngân hàng, chỉ nhận Sao qua Điểm danh.'
+          : 'Chế độ Học Đường Trong Sáng (11–15 tuổi): Chủ đề học đường lành mạnh, hỗ trợ nạp Sao có trách nhiệm (trần 50k/ngày).';
       break;
     case 'teen_16_17':
       policySummaryVi =
-        'Chế độ Tuổi Teen (16–17 tuổi): Mở đầy đủ chủ đề giải trí, khóa tính năng nạp tiền ngân hàng.';
+        'Chế độ Tuổi Teen (16–17 tuổi): Mở đầy đủ chủ đề giải trí, hỗ trợ nạp Sao có trách nhiệm.';
       break;
     case 'adult_18_plus':
       policySummaryVi =

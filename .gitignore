@@ -26,6 +26,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# teamwork agent logs
+.agents/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

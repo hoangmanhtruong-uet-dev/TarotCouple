@@ -424,12 +424,13 @@ export default function FollowupChatModal({
               <input
                 ref={inputRef}
                 type="text"
+                aria-label={`Hỏi ${reading.readerDisplayName}`}
                 value={inputText}
                 maxLength={FOLLOWUP_MAX_QUESTION_CHARS}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Hỏi ${reading.readerDisplayName}... (tối đa 200 ký tự)`}
+                placeholder={`Hỏi ${reading.readerDisplayName}… (tối đa 200 ký tự)`}
                 disabled={isSending}
-                className="w-full py-2.5 pl-3.5 pr-14 rounded-2xl bg-[#14121F] border border-[#262235] focus:border-[#C9A24A] focus:outline-none text-sm text-[#F8F5F0] placeholder-[#5E5873] transition-colors"
+                className="w-full py-2.5 pl-3.5 pr-14 rounded-2xl bg-[#14121F] border border-[#262235] focus:border-[#C9A24A] focus-visible:ring-2 focus-visible:ring-[#C9A24A]/40 focus:outline-none text-sm text-[#F8F5F0] placeholder-[#5E5873] transition-colors"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#5E5873]">
                 {inputText.length}/{FOLLOWUP_MAX_QUESTION_CHARS}

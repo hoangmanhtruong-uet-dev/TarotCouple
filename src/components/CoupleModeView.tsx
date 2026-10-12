@@ -812,30 +812,34 @@ export function CoupleModeView({
             {/* Nicknames Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
+                <label htmlFor="owner-nickname-input" className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
                   1. Biệt danh của bạn (Lá số 1)
                 </label>
                 <input
+                  id="owner-nickname-input"
+                  aria-label="Biệt danh của bạn"
                   type="text"
                   maxLength={40}
                   value={ownerName}
                   onChange={(e) => setOwnerName(e.target.value)}
                   placeholder="Ví dụ: Mèo Đêm"
-                  className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB]"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB] focus-visible:ring-2 focus-visible:ring-[#D4AF37]/40"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
+                <label htmlFor="partner-nickname-input" className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
                   2. Biệt danh người ấy (Lá số 2)
                 </label>
                 <input
+                  id="partner-nickname-input"
+                  aria-label="Biệt danh người ấy"
                   type="text"
                   maxLength={40}
                   value={partnerName}
                   onChange={(e) => setPartnerName(e.target.value)}
-                  placeholder="Ví dụ: Cậu Ấy, Crush Bàn Bên..."
-                  className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB]"
+                  placeholder="Ví dụ: Cậu Ấy, Crush Bàn Bên…"
+                  className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB] focus-visible:ring-2 focus-visible:ring-[#D4AF37]/40"
                 />
               </div>
             </div>
@@ -907,15 +911,17 @@ export function CoupleModeView({
 
             {/* Context Question */}
             <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
+              <label htmlFor="couple-question-textarea" className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
                 Điều bạn muốn soi rõ nhất trong mối quan hệ này
               </label>
               <textarea
+                id="couple-question-textarea"
+                aria-label="Điều bạn muốn soi rõ nhất trong mối quan hệ này"
                 rows={2}
                 maxLength={300}
                 value={coupleQuestion}
                 onChange={(e) => setCoupleQuestion(e.target.value)}
-                className="w-full p-3.5 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB]"
+                className="w-full p-3.5 rounded-2xl bg-[#09080D] border border-[#D4AF37]/35 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB] focus-visible:ring-2 focus-visible:ring-[#D4AF37]/40"
               />
             </div>
 
@@ -1178,30 +1184,34 @@ export function CoupleModeView({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
+                    <label htmlFor="room-code-input" className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
                       Mã phòng 6 ký tự (Ví dụ: LUV892)
                     </label>
                     <input
+                      id="room-code-input"
+                      aria-label="Mã phòng 6 ký tự"
                       type="text"
                       value={roomCodeInput}
                       onChange={(e) =>
                         setRoomCodeInput(e.target.value.toUpperCase())
                       }
-                      placeholder="Nhập mã phòng..."
-                      className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/45 text-sm font-mono uppercase text-[#F3E5AB]"
+                      placeholder="Nhập mã phòng…"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/45 text-sm font-mono uppercase text-[#F3E5AB] focus:outline-none focus:border-[#F3E5AB] focus-visible:ring-2 focus-visible:ring-[#D4AF37]/40"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
+                    <label htmlFor="partner-name-b-input" className="block text-xs font-semibold uppercase tracking-wider text-[#F3E5AB]">
                       Biệt danh của bạn (Người B)
                     </label>
                     <input
+                      id="partner-name-b-input"
+                      aria-label="Biệt danh của bạn"
                       type="text"
                       value={partnerName}
                       onChange={(e) => setPartnerName(e.target.value)}
-                      placeholder="Nhập biệt danh của bạn..."
-                      className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/45 text-sm text-[#F8F5F0]"
+                      placeholder="Nhập biệt danh của bạn…"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#09080D] border border-[#D4AF37]/45 text-sm text-[#F8F5F0] focus:outline-none focus:border-[#F3E5AB] focus-visible:ring-2 focus-visible:ring-[#D4AF37]/40"
                     />
                   </div>
                 </div>

@@ -1116,7 +1116,7 @@ function sanitizeRawModelOutput(raw: unknown): unknown {
       return item;
     });
 
-    const normalizedAnalyses = [...rawAnalyses];
+    const normalizedAnalyses = [...(clone.cards_analysis as unknown[])];
     // If fewer than 3 cards, pad to 3
     while (normalizedAnalyses.length < 3) {
       const idx = normalizedAnalyses.length;

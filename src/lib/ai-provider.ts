@@ -1007,7 +1007,12 @@ export async function generateTarotReading(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const response = await ai.models.generateContent({
+      // 8-second timeout per attempt to prevent serverless function hang
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 8000)
+      );
+
+      const generatePromise = ai.models.generateContent({
         model: modelName,
         contents: userPrompt,
         config: {
@@ -1017,6 +1022,8 @@ export async function generateTarotReading(
           temperature: 0.75,
         },
       });
+
+      const response = await Promise.race([generatePromise, timeoutPromise]);
 
       totalTokensIn += response.usageMetadata?.promptTokenCount ?? 0;
       totalTokensOut += response.usageMetadata?.candidatesTokenCount ?? 0;

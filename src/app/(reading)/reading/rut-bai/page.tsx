@@ -110,9 +110,13 @@ export default function RutBaiPage() {
     setErrorMsg(null);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const res = await fetch('/api/reading', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           nickname: nickname.trim() || 'Bạn Ẩn Danh',
           birth_year: birthYear,
@@ -123,6 +127,7 @@ export default function RutBaiPage() {
           selected_indices: indices,
         }),
       });
+      clearTimeout(timeoutId);
 
       const data = (await res.json()) as ReadingApiResponse;
 

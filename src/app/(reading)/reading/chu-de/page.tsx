@@ -19,7 +19,6 @@ import {
 import {
   ASTRAL_VORTEX_VERTEX_SHADER,
   ASTRAL_VORTEX_FRAGMENT_SHADER,
-  createAstralVortexUniforms,
 } from '@/lib/three/shaders';
 import { soundManager } from '@/lib/sound-effects';
 import {
@@ -520,10 +519,15 @@ export default function ChuDeSelectionPage() {
 
     // GLSL Astral Vortex Plane
     const vortexGeom = new THREE.PlaneGeometry(6.4, 6.4, 28, 28);
-    const vortexUniforms = createAstralVortexUniforms();
-    vortexUniforms.uColorGold.value.set(readerAccentColor);
-    vortexUniforms.uColorViolet.value.set(0x38195a);
-    vortexUniforms.uColorRose.value.set(0xd43f68);
+    const vortexUniforms = {
+      uTime: { value: 0 },
+      uScrollProgress: { value: 0 },
+      uVelocity: { value: 0 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uColorGold: { value: new THREE.Color(readerAccentColor) },
+      uColorViolet: { value: new THREE.Color(0x38195a) },
+      uColorRose: { value: new THREE.Color(0xd43f68) },
+    };
 
     const vortexMat = new THREE.ShaderMaterial({
       vertexShader: ASTRAL_VORTEX_VERTEX_SHADER,

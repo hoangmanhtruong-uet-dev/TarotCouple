@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { gsap } from 'gsap';
+import * as THREE from 'three';
+import {
+  detectHardwareTier,
+  disposeThreeScene,
+  attachWebGLContextLostGuard,
+} from '@/lib/three/core';
+import {
+  ASTRAL_VORTEX_VERTEX_SHADER,
+  ASTRAL_VORTEX_FRAGMENT_SHADER,
+} from '@/lib/three/shaders';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
+import { soundManager } from '@/lib/sound-effects';
 import { useReadingStore } from '@/lib/reading-store';
 import { classifyAgeTier, scanCrisisAndInjection } from '@/lib/safety';
 import { CURRENT_REFERENCE_YEAR, type TopicId, type ReaderId } from '@/lib/schemas';
@@ -17,6 +30,10 @@ import {
   X,
   Sparkles,
   HelpCircle,
+  Shuffle,
+  Activity,
+  ShieldCheck,
+  Check,
 } from 'lucide-react';
 
 const SAMPLE_QUESTIONS_BY_TOPIC: Record<TopicId, string[]> = {
@@ -124,6 +141,259 @@ export default function NoiNiemPage() {
 
   const [isFocusedTextarea, setIsFocusedTextarea] = useState(false);
   const [usedSampleIdx, setUsedSampleIdx] = useState<number | null>(null);
+  const [sampleShuffleOffset, setSampleShuffleOffset] = useState(0);
+
+  // Refs for 3D Stage & Direct DOM Tilt
+  const webglMountRef = useRef<HTMLDivElement | null>(null);
+  const altarBoxRef = useRef<HTMLDivElement | null>(null);
+  const foilGlareRef = useRef<HTMLDivElement | null>(null);
+  const pointerBridgeRef = useRef({ x: 0, y: 0 });
+  const idleRafRef = useRef<number | null>(null);
+
+  // Single-Instance Three.js Cosmic Astral Vortex Stage (60 FPS, 48 InstancedMesh Crystals)
+  useEffect(() => {
+    if (shouldReduceMotion) return;
+    const container = webglMountRef.current;
+    if (!container) return;
+
+    const tierConfig = detectHardwareTier();
+    if (!tierConfig.enableWebGL) return;
+
+    let renderer: THREE.WebGLRenderer | null = null;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: tierConfig.tier === 'tier1',
+        powerPreference: 'high-performance',
+        stencil: false,
+      });
+    } catch {
+      return;
+    }
+
+    const w = container.clientWidth || window.innerWidth || 800;
+    const h = container.clientHeight || window.innerHeight || 900;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+    renderer.setSize(w, h);
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
+
+    const detachContextGuard = attachWebGLContextLostGuard(
+      renderer.domElement,
+      () => {}
+    );
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 20);
+    camera.position.set(0, 0, 4.2);
+
+    // GLSL Astral Vortex Plane
+    const vortexGeom = new THREE.PlaneGeometry(6.4, 6.4, 28, 28);
+    const vortexUniforms = {
+      uTime: { value: 0 },
+      uScrollProgress: { value: 0 },
+      uVelocity: { value: 0 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uColorGold: { value: new THREE.Color(readerAccentColor) },
+      uColorViolet: { value: new THREE.Color(0x38195a) },
+      uColorRose: { value: new THREE.Color(0xd43f68) },
+    };
+
+    const vortexMat = new THREE.ShaderMaterial({
+      vertexShader: ASTRAL_VORTEX_VERTEX_SHADER,
+      fragmentShader: ASTRAL_VORTEX_FRAGMENT_SHADER,
+      uniforms: vortexUniforms,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const vortexMesh = new THREE.Mesh(vortexGeom, vortexMat);
+    vortexMesh.position.set(0, 0, -1.2);
+    scene.add(vortexMesh);
+
+    // 48 Floating Sacred Crystals (1 Single GPU Draw Call)
+    const crystalCount = 48;
+    const crystalGeom = new THREE.OctahedronGeometry(0.045, 0);
+    const crystalMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf8f5f0,
+      emissive: new THREE.Color(readerAccentColor),
+      emissiveIntensity: 0.55,
+      metalness: 0.85,
+      roughness: 0.2,
+    });
+    const instancedCrystals = new THREE.InstancedMesh(
+      crystalGeom,
+      crystalMat,
+      crystalCount
+    );
+
+    const dummyObj = new THREE.Object3D();
+    const crystalSeeds = Array.from({ length: crystalCount }, (_, i) => ({
+      angle: (i / crystalCount) * Math.PI * 2,
+      radius: 1.1 + (i % 5) * 0.3,
+      yOffset: (Math.random() - 0.5) * 3.0,
+      speed: 0.25 + (i % 4) * 0.12,
+      scale: 0.45 + (i % 3) * 0.3,
+    }));
+    scene.add(instancedCrystals);
+
+    let isInViewport = true;
+    const observer =
+      typeof IntersectionObserver !== 'undefined'
+        ? new IntersectionObserver(
+            (entries) => {
+              isInViewport = entries[0]?.isIntersecting ?? true;
+            },
+            { threshold: 0.05 }
+          )
+        : null;
+    observer?.observe(container);
+
+    const handleResize = () => {
+      if (!renderer || !container) return;
+      const newW = container.clientWidth || window.innerWidth;
+      const newH = container.clientHeight || window.innerHeight;
+      camera.aspect = newW / newH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(newW, newH);
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    let rafId: number | null = null;
+    const clock = new THREE.Clock();
+
+    const animate = () => {
+      rafId = requestAnimationFrame(animate);
+      if (!isInViewport || (typeof document !== 'undefined' && document.hidden)) {
+        return;
+      }
+
+      const elapsed = clock.getElapsedTime();
+      const ptr = pointerBridgeRef.current;
+
+      vortexUniforms.uTime.value = elapsed;
+      vortexUniforms.uMouse.value.lerp(new THREE.Vector2(ptr.x, ptr.y), 0.08);
+
+      for (let i = 0; i < crystalCount; i++) {
+        const seed = crystalSeeds[i]!;
+        const angle = seed.angle + elapsed * seed.speed * 0.35;
+        dummyObj.position.set(
+          Math.cos(angle) * seed.radius + ptr.x * 0.12,
+          seed.yOffset + Math.sin(elapsed * seed.speed + i) * 0.12,
+          Math.sin(angle) * seed.radius * 0.4 - 0.5
+        );
+        dummyObj.rotation.set(elapsed * seed.speed, elapsed * 0.45, angle);
+        dummyObj.scale.setScalar(seed.scale);
+        dummyObj.updateMatrix();
+        instancedCrystals.setMatrixAt(i, dummyObj.matrix);
+      }
+      instancedCrystals.instanceMatrix.needsUpdate = true;
+
+      renderer?.render(scene, camera);
+    };
+
+    animate();
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer?.disconnect();
+      window.removeEventListener('resize', handleResize);
+      detachContextGuard();
+      disposeThreeScene(scene, renderer);
+    };
+  }, [readerAccentColor, shouldReduceMotion]);
+
+  // GSAP Kinetic Stagger Reveal on Mount
+  useEffect(() => {
+    if (shouldReduceMotion) return;
+    gsap.fromTo(
+      '[data-noi-niem-reveal]',
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power3.out' }
+    );
+  }, [shouldReduceMotion]);
+
+  // Autonomous Mobile Idle 3D Tilt on the Altar Box
+  useEffect(() => {
+    const isTouchDevice =
+      typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+    if (!isTouchDevice || shouldReduceMotion) return;
+
+    const loop = () => {
+      const now = Date.now();
+      const rotX = Math.sin(now / 1600) * 3.2;
+      const rotY = Math.cos(now / 1300) * 3.8;
+      if (altarBoxRef.current && !isFocusedTextarea) {
+        altarBoxRef.current.style.transform = `perspective(950px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+      }
+      idleRafRef.current = requestAnimationFrame(loop);
+    };
+    idleRafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (idleRafRef.current !== null) cancelAnimationFrame(idleRafRef.current);
+    };
+  }, [isFocusedTextarea, shouldReduceMotion]);
+
+  // Direct DOM 3D Tilt & Holographic Foil Glare on Pointer/Touch
+  const handleAltarPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const box = altarBoxRef.current;
+      if (!box || shouldReduceMotion) return;
+      const rect = box.getBoundingClientRect();
+      const normX = Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1));
+      const normY = Math.max(-1, Math.min(1, -((e.clientY - rect.top) / rect.height) * 2 + 1));
+      pointerBridgeRef.current = { x: normX, y: normY };
+
+      box.style.transform = `perspective(950px) rotateX(${(normY * 8).toFixed(2)}deg) rotateY(${(normX * 10).toFixed(2)}deg) scale3d(1.015, 1.015, 1.015)`;
+
+      if (foilGlareRef.current) {
+        const pctX = ((normX + 1) * 50).toFixed(1);
+        const pctY = ((1 - normY) * 50).toFixed(1);
+        foilGlareRef.current.style.opacity = '0.36';
+        foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${readerAccentColor}90 0%, transparent 65%)`;
+      }
+    },
+    [readerAccentColor, shouldReduceMotion]
+  );
+
+  const handleAltarPointerLeave = useCallback(() => {
+    if (altarBoxRef.current) altarBoxRef.current.style.transform = '';
+    if (foilGlareRef.current) foilGlareRef.current.style.opacity = '0';
+    pointerBridgeRef.current = { x: 0, y: 0 };
+  }, []);
+
+  const handleAltarTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      const box = altarBoxRef.current;
+      if (!box || shouldReduceMotion) return;
+      const rect = box.getBoundingClientRect();
+      const normX = Math.max(-1, Math.min(1, ((touch.clientX - rect.left) / rect.width) * 2 - 1));
+      const normY = Math.max(-1, Math.min(1, -((touch.clientY - rect.top) / rect.height) * 2 + 1));
+      pointerBridgeRef.current = { x: normX, y: normY };
+
+      box.style.transform = `perspective(950px) rotateX(${(normY * 8).toFixed(2)}deg) rotateY(${(normX * 10).toFixed(2)}deg) scale3d(1.015, 1.015, 1.015)`;
+
+      if (foilGlareRef.current) {
+        const pctX = ((normX + 1) * 50).toFixed(1);
+        const pctY = ((1 - normY) * 50).toFixed(1);
+        foilGlareRef.current.style.opacity = '0.36';
+        foilGlareRef.current.style.background = `radial-gradient(circle at ${pctX}% ${pctY}%, ${readerAccentColor}90 0%, transparent 65%)`;
+      }
+    },
+    [readerAccentColor, shouldReduceMotion]
+  );
+
+  // Tính toán Tần Số Năng Lượng Cảm Xúc (Emotional Resonance Hz)
+  const emotionalResonance = useMemo(() => {
+    const len = questionText.trim().length;
+    if (len === 0) return { hz: 432, label: 'Tần số thanh tịnh sẵn sàng đón nhận' };
+    if (len < 50) return { hz: 528, label: 'Tần số rung động chuyển hóa cảm xúc' };
+    if (len < 120) return { hz: 639, label: 'Tần số kết nối & gỡ nút thắt tâm tư' };
+    return { hz: 741, label: 'Tần số giải phóng & khai mở định mệnh' };
+  }, [questionText]);
 
   // Crisis check
   const crisisCheck = useMemo(() => {
@@ -175,11 +445,19 @@ export default function NoiNiemPage() {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="relative max-w-xl mx-auto px-4 pt-4 sm:pt-6 pb-36 overflow-hidden"
     >
+      {/* Single-Instance Three.js Cosmic Astral Vortex Stage (GLSL Shader + 48 InstancedMesh Crystals) */}
+      <div
+        ref={webglMountRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 w-full h-full z-0 opacity-75"
+      />
+
       {/* 1. Avatar nhỏ Reader + Câu mở đầu theo giọng Reader */}
       <motion.div
+        data-noi-niem-reveal
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-start gap-3.5 p-4 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-5 shadow-xl"
+        className="relative z-10 flex items-start gap-3.5 p-4 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-5 shadow-xl"
       >
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 shadow-inner"
@@ -211,6 +489,7 @@ export default function NoiNiemPage() {
             </div>
             <Link
               href="/reading/chu-de"
+              data-cursor="ĐỔI CHỦ ĐỀ"
               className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] transition-colors truncate shrink-0"
             >
               Chủ đề: <strong>{TOPIC_LABELS[selectedTopic] || selectedTopic}</strong> &rarr;
@@ -225,33 +504,29 @@ export default function NoiNiemPage() {
         </div>
       </motion.div>
 
-      {/* 2. Ô nhập lớn "Nỗi niềm phong ấn gửi vũ trụ" kèm viền thở breathing glow */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{
-          opacity: 1,
-          y: 0,
-          boxShadow: isFocusedTextarea
-            ? [
-                `0 0 15px ${readerAccentColor}20`,
-                `0 0 28px ${readerAccentColor}45`,
-                `0 0 15px ${readerAccentColor}20`,
-              ]
-            : '0 0 0px rgba(0,0,0,0)',
-        }}
-        transition={{
-          duration: isFocusedTextarea ? 2.2 : 0.3,
-          repeat: isFocusedTextarea ? Infinity : 0,
-          ease: 'easeInOut',
-        }}
-        className={`relative p-4 sm:p-5 rounded-2xl border transition-all mb-3 ${
-          isFocusedTextarea ? 'bg-[#141021]' : 'bg-[#0B0A12]'
-        }`}
+      {/* 2. ĐÀI PHONG ẤN NỖI NIỀM 3D (Direct DOM Tilt + Holographic Foil Glare) */}
+      <div
+        ref={altarBoxRef}
+        data-noi-niem-reveal
+        onPointerMove={handleAltarPointerMove}
+        onPointerLeave={handleAltarPointerLeave}
+        onTouchMove={handleAltarTouchMove}
+        className="relative z-10 p-4 sm:p-5 rounded-2xl border transition-all mb-3 bg-[#0B0A12]/92 shadow-2xl overflow-hidden will-change-transform select-none"
         style={{
-          borderColor: isFocusedTextarea ? readerAccentColor : '#262235',
+          borderColor: isFocusedTextarea ? readerAccentColor : `${readerAccentColor}60`,
+          boxShadow: isFocusedTextarea
+            ? `0 0 35px ${readerAccentColor}40, 0 16px 40px rgba(0,0,0,0.85)`
+            : `0 0 20px ${readerAccentColor}20, 0 12px 30px rgba(0,0,0,0.75)`,
         }}
       >
-        <div className="flex items-center justify-between mb-2.5">
+        {/* Lớp Kim Tuyến Phản Xạ Theo Chuột & Chạm (Holographic Foil Glare) */}
+        <div
+          ref={foilGlareRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-20 opacity-0 transition-opacity duration-200"
+        />
+
+        <div className="relative z-30 flex items-center justify-between mb-2.5">
           <label className="text-xs font-semibold text-[#C9A24A] uppercase tracking-wider flex items-center gap-1.5">
             <Feather className="w-3.5 h-3.5 text-[#C9A24A]" />
             <span>Nỗi Niềm Phong Ấn Gửi Vũ Trụ</span>
@@ -261,6 +536,7 @@ export default function NoiNiemPage() {
             {questionText && (
               <button
                 type="button"
+                data-cursor="XÓA"
                 onClick={() => {
                   setContextForm({ questionText: '' });
                   setUsedSampleIdx(null);
@@ -288,9 +564,9 @@ export default function NoiNiemPage() {
 
         <textarea
           value={questionText}
+          data-cursor="GÕ NỖI NIỀM"
           onFocus={(e) => {
             setIsFocusedTextarea(true);
-            // Cuộn mượt để không bị bàn phím ảo iOS che khuất
             setTimeout(() => {
               e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 300);
@@ -304,41 +580,27 @@ export default function NoiNiemPage() {
           placeholder="Kể chi tiết câu chuyện, tình huống mập mờ, phân vân hay bế tắc bạn đang gặp phải..."
           maxLength={300}
           rows={5}
-          className="relative z-10 w-full bg-transparent text-sm text-[#F8F5F0] placeholder-[#5E5873] focus:outline-none resize-none leading-relaxed"
+          className="relative z-30 w-full bg-transparent text-sm text-[#F8F5F0] placeholder-[#5E5873] focus:outline-none resize-none leading-relaxed"
         />
 
-        {/* Hạt sáng nhẹ trôi lên khi gõ/focus, không làm giật khi gõ */}
-        {isFocusedTextarea && !shouldReduceMotion && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-            {[0, 1, 2, 3].map((p) => (
-              <motion.div
-                key={p}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{
-                  opacity: [0, 0.45, 0],
-                  y: [-5, -45],
-                  x: [0, (p % 2 === 0 ? 8 : -8)],
-                }}
-                transition={{
-                  duration: 2.4 + p * 0.4,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: p * 0.45,
-                }}
-                className="absolute bottom-3 w-1.5 h-1.5 rounded-full"
-                style={{
-                  left: `${20 + p * 22}%`,
-                  backgroundColor: readerAccentColor,
-                  boxShadow: `0 0 8px ${readerAccentColor}`,
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </motion.div>
+        {/* Thanh Đo Tần Số Cảm Xúc (Emotional Resonance Meter) */}
+        <div className="relative z-30 mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[10px]">
+          <span className="flex items-center gap-1.5 text-[#9E96B0]">
+            <Activity className="w-3 h-3 text-[#C9A24A]" />
+            <span>Tần số năng lượng:</span>
+            <strong style={{ color: readerAccentColor }}>{emotionalResonance.hz} Hz</strong>
+          </span>
+          <span className="text-[#C9A24A]/90 italic truncate max-w-[240px]">
+            {emotionalResonance.label}
+          </span>
+        </div>
+      </div>
 
-      {/* 3. Công tắc "Ẩn câu hỏi khi chia sẻ ảnh Story" đặt NGAY DƯỚI ô nhập, bật sẵn */}
-      <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0B0A12]/80 border border-[#262235] mb-5">
+      {/* 3. Công tắc "Ẩn câu hỏi khi chia sẻ ảnh Story" đặt NGAY DƯỚI ô nhập */}
+      <div
+        data-noi-niem-reveal
+        className="relative z-10 flex items-center justify-between p-3.5 rounded-xl bg-[#0B0A12]/80 border border-[#262235] mb-5"
+      >
         <div className="flex items-center gap-2.5">
           <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
           <div>
@@ -360,26 +622,45 @@ export default function NoiNiemPage() {
         />
       </div>
 
-      {/* 4. Gợi ý câu hỏi nhanh LỌC THEO CHỦ ĐỀ dạng chip (đánh dấu đã dùng) */}
-      <div className="mb-6">
-        <div className="flex items-center gap-1.5 mb-2.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#C9A24A]" />
-          <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider">
-            Gợi ý câu hỏi ({TOPIC_LABELS[selectedTopic] || selectedTopic}):
-          </p>
+      {/* 4. Gợi ý câu hỏi nhanh LỌC THEO CHỦ ĐỀ dạng chip (Kèm nút Shuffle đổi gợi ý) */}
+      <div data-noi-niem-reveal className="relative z-10 mb-6">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#C9A24A]" />
+            <p className="text-[11px] font-semibold text-[#9E96B0] uppercase tracking-wider">
+              Gợi ý câu hỏi ({TOPIC_LABELS[selectedTopic] || selectedTopic}):
+            </p>
+          </div>
+
+          <button
+            type="button"
+            data-cursor="ĐỔI GỢI Ý"
+            onClick={() => {
+              soundManager.playMagneticHover();
+              setSampleShuffleOffset((prev) => (prev + 1) % Math.max(1, topicSamples.length));
+            }}
+            className="text-[10px] text-[#C9A24A] hover:text-[#F8F5F0] flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#14121F] border border-[#262235] transition-colors cursor-pointer"
+          >
+            <Shuffle className="w-2.5 h-2.5" />
+            <span>Đổi gợi ý</span>
+          </button>
         </div>
 
         <div className="space-y-2">
           {topicSamples.map((sample, idx) => {
-            const isUsed = usedSampleIdx === idx || questionText === sample;
+            const displayIdx = (idx + sampleShuffleOffset) % topicSamples.length;
+            const currentSample = topicSamples[displayIdx] || sample;
+            const isUsed = usedSampleIdx === displayIdx || questionText === currentSample;
 
             return (
               <button
-                key={idx}
+                key={`${displayIdx}-${currentSample}`}
                 type="button"
+                data-cursor="CHỌN GỢI Ý"
                 onClick={() => {
-                  setContextForm({ questionText: sample });
-                  setUsedSampleIdx(idx);
+                  soundManager.playMagneticHover();
+                  setContextForm({ questionText: currentSample });
+                  setUsedSampleIdx(displayIdx);
                 }}
                 className={`w-full text-left text-xs p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isUsed
@@ -394,7 +675,7 @@ export default function NoiNiemPage() {
                 }}
               >
                 <span className="flex-1 min-w-0 italic font-serif">
-                  &ldquo;{sample}&rdquo;
+                  &ldquo;{currentSample}&rdquo;
                 </span>
 
                 {isUsed && (
@@ -412,7 +693,7 @@ export default function NoiNiemPage() {
 
       {/* Cảnh báo hỗ trợ an toàn nếu phát hiện nội dung khủng hoảng */}
       {crisisCheck && crisisCheck.safetyFlag === 'crisis' && (
-        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-xs text-amber-200 mb-6 space-y-1">
+        <div className="relative z-10 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/40 text-xs text-amber-200 mb-6 space-y-1">
           <div className="flex items-center gap-2 font-bold text-amber-300">
             <Heart className="w-4 h-4 text-rose-400" />
             <span>Vũ Trụ luôn ở bên bạn</span>
@@ -426,13 +707,14 @@ export default function NoiNiemPage() {
         </div>
       )}
 
-      {/* 5. THANH ĐÁY CỐ ĐỊNH (CHỈ DUY NHẤT 1 CHỖ BỎ QUA Ở DƯỚI CÙNG) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
+      {/* 5. THANH ĐÁY CỐ ĐỊNH (Tối ưu GPU 60 FPS) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E0D17]/95 border-t border-[#262235] p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.8)]">
         <div className="max-w-xl mx-auto flex flex-col gap-2">
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Nút phụ: Đổi chủ đề */}
             <button
               type="button"
+              data-cursor="QUAY LẠI"
               onClick={() => router.push('/reading/chu-de')}
               className="py-3.5 px-4 rounded-2xl bg-[#14121F] hover:bg-[#1D192C] border border-[#262235] text-[#9E96B0] font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
             >
@@ -440,9 +722,10 @@ export default function NoiNiemPage() {
               <span>Đổi chủ đề</span>
             </button>
 
-            {/* Nút chính: Tiếp tục sang màn Bộ bài (Mờ khi ô trống) */}
+            {/* Nút chính: Tiếp tục sang màn Bộ bài */}
             <button
               type="button"
+              data-cursor={isQuestionEmpty ? 'CHƯA NHẬP' : 'CHỌN BỘ BÀI'}
               onClick={handleContinue}
               disabled={isQuestionEmpty}
               className={`flex-1 py-3.5 sm:py-4 rounded-2xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg whitespace-nowrap ${
@@ -460,6 +743,7 @@ export default function NoiNiemPage() {
           <div className="text-center pt-0.5">
             <button
               type="button"
+              data-cursor="BỎ QUA"
               onClick={handleSkip}
               className="text-[11px] text-[#9E96B0] hover:text-[#E5C687] underline cursor-pointer transition-colors"
             >
@@ -468,6 +752,9 @@ export default function NoiNiemPage() {
           </div>
         </div>
       </div>
+
+      {/* CustomCursorFollower */}
+      <CustomCursorFollower />
     </motion.div>
   );
 }

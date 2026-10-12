@@ -131,5 +131,14 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
     expect(boBaiContent).toContain('data-deck-card');
     expect(boBaiContent).toContain('perspective(950px)');
     expect(boBaiContent).not.toContain('backdrop-blur-md');
+
+    const noiNiemContent = fs.readFileSync(path.join(rootDir, 'src/app/(reading)/reading/noi-niem/page.tsx'), 'utf-8');
+    expect(noiNiemContent).toContain('gsap');
+    expect(noiNiemContent).toContain('CustomCursorFollower');
+    expect(noiNiemContent).toContain('ASTRAL_VORTEX_VERTEX_SHADER');
+    expect(noiNiemContent).toContain('emotionalResonance');
+    expect(noiNiemContent).toContain('foilGlareRef');
+    expect(noiNiemContent).toContain('sampleShuffleOffset');
+    expect(noiNiemContent).not.toContain('backdrop-blur-md');
   });
 });

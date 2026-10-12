@@ -29,7 +29,7 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     ai: {
       configuredKeysCount: keys.length,
-      primaryModel: 'gemini-3.5-flash-lite',
+      primaryModel: GEMINI_MODEL_CHAIN[0],
       modelChain: GEMINI_MODEL_CHAIN,
     },
     supabase: {

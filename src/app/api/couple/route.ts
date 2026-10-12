@@ -22,6 +22,7 @@ import {
   type StoredCoupleRoom,
   toPublicCoupleRoomView,
 } from '@/lib/quota-store';
+import { fetchCoupleRoomFromSupabase } from '@/lib/supabase-hybrid';
 import {
   classifyAgeTier,
   COUPLE_SPREAD_POSITIONS,
@@ -69,7 +70,15 @@ export async function GET(request: Request) {
     return NextResponse.json(errRes, { status: 400 });
   }
 
-  const room = getCoupleRoom(roomCode);
+  let room = getCoupleRoom(roomCode);
+  if (!room) {
+    const remoteRoom = await fetchCoupleRoomFromSupabase(roomCode);
+    if (remoteRoom) {
+      saveCoupleRoom(remoteRoom);
+      room = remoteRoom;
+    }
+  }
+
   if (!room) {
     const errRes: ReadingErrorResponse = {
       status: 'error',
@@ -147,7 +156,15 @@ export async function POST(request: Request) {
     const roomCode = String(
       rawBody.roomCode || rawBody.room_code || ''
     ).trim();
-    const room = getCoupleRoom(roomCode);
+    let room = getCoupleRoom(roomCode);
+    if (!room) {
+      const remoteRoom = await fetchCoupleRoomFromSupabase(roomCode);
+      if (remoteRoom) {
+        saveCoupleRoom(remoteRoom);
+        room = remoteRoom;
+      }
+    }
+
     if (!room) {
       const errRes: ReadingErrorResponse = {
         status: 'error',
@@ -216,7 +233,15 @@ export async function POST(request: Request) {
       return NextResponse.json(errRes, { status: 400 });
     }
 
-    const room = getCoupleRoom(roomCode);
+    let room = getCoupleRoom(roomCode);
+    if (!room) {
+      const remoteRoom = await fetchCoupleRoomFromSupabase(roomCode);
+      if (remoteRoom) {
+        saveCoupleRoom(remoteRoom);
+        room = remoteRoom;
+      }
+    }
+
     if (!room) {
       const errRes: ReadingErrorResponse = {
         status: 'error',

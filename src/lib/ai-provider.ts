@@ -982,6 +982,16 @@ const GEMINI_RESPONSE_SCHEMA = {
 };
 
 /**
+ * Prioritized Gemini candidate model chain
+ */
+export const GEMINI_MODEL_CHAIN = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-3-flash-preview',
+] as const;
+
+/**
  * Retrieve all configured valid GEMINI_API_KEYs (GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, etc.)
  */
 export function getValidGeminiApiKeys(): string[] {
@@ -1438,19 +1448,6 @@ export async function generateCoupleTarotReading(
     normalizeDrawnCard(params.drawnCards[2], 2, 'love', couplePositions),
   ];
 
-  const baseReading = buildContextualFallbackReading({
-    nickname: `${ownerNick} & ${partnerNick}`,
-    birthYear,
-    readerId,
-    topic: 'love',
-    questionText:
-      params.questionText ||
-      `Soi tần số kết nối giữa ${ownerNick} và ${partnerNick} (${relLabel}).`,
-    drawnCards: normalizedCards,
-    ageTier,
-    effectivePersona,
-  });
-
   const [c1, c2, c3] = normalizedCards;
   const metrics = computeCoupleEntertainmentMetrics(normalizedCards, relStatus);
 
@@ -1465,6 +1462,73 @@ export async function generateCoupleTarotReading(
       `Tình yêu đẹp nhất khi cả hai cùng nâng cấp bản thân thay vì chạy theo sự mập mờ.`
     ),
   ];
+
+  // Try live AI reading when keys exist and not running inside offline unit tests
+  if (hasValidGeminiApiKey() && !process.env.VITEST) {
+    try {
+      const coupleQuestion =
+        params.questionText ||
+        `Soi tần số kết nối giữa ${ownerNick} và ${partnerNick} (${relLabel}).`;
+
+      const liveReadingRes = await generateTarotReading({
+        nickname: `${ownerNick} & ${partnerNick}`,
+        birthYear,
+        readerId,
+        topic: 'love',
+        questionText: coupleQuestion,
+        drawnCards: normalizedCards,
+        ageTier,
+        effectivePersona,
+      });
+
+      if (!liveReadingRes.usedFallback) {
+        const coupleReading: ReadingOutput = ReadingOutputSchema.parse({
+          ...liveReadingRes.reading,
+          greeting_hook:
+            liveReadingRes.reading.greeting_hook ||
+            `Trải bài Bói Đôi (${relLabel}) giữa ${ownerNick} và ${partnerNick} đã mở! Với 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}, hãy cùng soi độ hợp cạ của hai bạn nhé!`,
+          shareable_card: {
+            ...liveReadingRes.reading.shareable_card,
+            savage_quote:
+              liveReadingRes.reading.shareable_card?.savage_quote || coupleQuotes[0],
+            savage_quotes:
+              liveReadingRes.reading.shareable_card?.savage_quotes?.length === 3
+                ? liveReadingRes.reading.shareable_card.savage_quotes
+                : coupleQuotes,
+          },
+          metrics,
+        });
+
+        return {
+          reading: coupleReading,
+          result: coupleReading,
+          effectivePersona: liveReadingRes.effectivePersona,
+          ageTier: liveReadingRes.ageTier,
+          aiModel: liveReadingRes.aiModel,
+          tokensIn: liveReadingRes.tokensIn,
+          tokensOut: liveReadingRes.tokensOut,
+          usedFallback: false,
+          retryCount: liveReadingRes.retryCount,
+        };
+      }
+    } catch (err) {
+      console.warn('[Couple AI Live Generation Error]:', err);
+      // Clean fallback below
+    }
+  }
+
+  const baseReading = buildContextualFallbackReading({
+    nickname: `${ownerNick} & ${partnerNick}`,
+    birthYear,
+    readerId,
+    topic: 'love',
+    questionText:
+      params.questionText ||
+      `Soi tần số kết nối giữa ${ownerNick} và ${partnerNick} (${relLabel}).`,
+    drawnCards: normalizedCards,
+    ageTier,
+    effectivePersona,
+  });
 
   const coupleReading: ReadingOutput = ReadingOutputSchema.parse({
     ...baseReading,
@@ -1525,6 +1589,13 @@ export interface ClarifierReadingResult {
     savageQuote: string;
     starsSpent: number;
   };
+  effectivePersona?: EffectivePersona;
+  ageTier?: AgeTier;
+  aiModel?: string;
+  tokensIn?: number;
+  tokensOut?: number;
+  usedFallback?: boolean;
+  retryCount?: number;
 }
 
 /**
@@ -1568,8 +1639,102 @@ export async function generateClarifierReading(
   let interpretation = '';
   let advice = '';
   let savageQuote = '';
+  let aiModel = 'clarifier-persona-template-v1';
+  let tokensIn = 0;
+  let tokensOut = 0;
+  let usedFallback = true;
+  let retryCount = 0;
 
-  if (effectivePersona === 'ba_ngoai') {
+  const availableKeys = getValidGeminiApiKeys();
+
+  // Try live AI generation when keys are available and outside Vitest test environment
+  if (availableKeys.length > 0 && !process.env.VITEST) {
+    const profile = PERSONA_PROFILES[effectivePersona] || PERSONA_PROFILES.ba_co_mo_hon;
+    const promptText = `
+${profile.voiceInstructions}
+
+BỐI CẢNH TRẢI BÀI TAROT:
+- Người hỏi: "${safeNick}"
+- Nhân vật Reader: "${profile.displayName}" (${effectivePersona})
+${params.originalQuestion ? `- Câu hỏi ban đầu: "${params.originalQuestion.trim().slice(0, 200)}"` : ''}
+- Câu hỏi cần làm rõ thêm: "${questionAsked}"
+
+LÁ BÀI LÀM RÕ THỨ 4 VỪA ĐƯỢC RÚT:
+- Tên lá bài: ${normalized.name_vi} (${normalized.name_en}) - ${orientVi}
+- Từ khóa năng lượng: ${primaryKw}, ${secondaryKw}
+
+NHIỆM VỤ CỦA BẠN:
+1. Hãy giải nghĩa Lá Làm Rõ này trả lời trực tiếp cho câu hỏi "${questionAsked}".
+2. Giữ ĐÚNG 100% phong cách, xưng hô và cá tính của ${profile.displayName}.
+3. Trả về cấu trúc JSON hợp lệ gồm 3 trường:
+   - "interpretation": Lời luận giải sâu sắc, đi thẳng vào câu hỏi của ${safeNick} (khoảng 80 - 140 từ).
+   - "advice": Lời khuyên hành động thiết thực trong 24-48 giờ tới (khoảng 25 - 50 từ).
+   - "savageQuote": Một câu quote ngắn gọn, đắt giá, bắt bài hoặc truyền cảm hứng, TỐI ĐA 20 TỪ.
+`.trim();
+
+    const startIdx = currentApiKeyIndex;
+    currentApiKeyIndex = (currentApiKeyIndex + 1) % availableKeys.length;
+
+    keysLoop: for (let k = 0; k < availableKeys.length; k++) {
+      const key = availableKeys[(startIdx + k) % availableKeys.length]!;
+      const ai = new GoogleGenAI({ apiKey: key });
+
+      for (const modelToTry of GEMINI_MODEL_CHAIN) {
+        try {
+          retryCount++;
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 15000)
+          );
+          const genPromise = ai.models.generateContent({
+            model: modelToTry,
+            contents: promptText,
+            config: {
+              systemInstruction: `Bạn là ${profile.displayName} — Tarot Reader AI chuyên nghiệp. Trả về đúng định dạng JSON.`,
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  interpretation: { type: Type.STRING },
+                  advice: { type: Type.STRING },
+                  savageQuote: { type: Type.STRING },
+                },
+                required: ['interpretation', 'advice', 'savageQuote'],
+              },
+              temperature: 0.75,
+            },
+          });
+
+          const response = await Promise.race([genPromise, timeoutPromise]);
+          const text = response.text?.trim();
+          if (!text) continue;
+
+          const parsed = JSON.parse(text);
+          const rawInterp = typeof parsed.interpretation === 'string' ? parsed.interpretation.trim() : '';
+          const rawAdvice = typeof parsed.advice === 'string' ? parsed.advice.trim() : '';
+          const rawQuote = typeof (parsed.savageQuote || parsed.savage_quote) === 'string'
+            ? (parsed.savageQuote || parsed.savage_quote).trim()
+            : '';
+
+          if (rawInterp.length >= 20 && rawAdvice.length >= 10 && rawQuote.length >= 5) {
+            interpretation = rawInterp.slice(0, 890);
+            advice = rawAdvice.slice(0, 400);
+            savageQuote = ensureConciseQuote(rawQuote);
+            aiModel = modelToTry;
+            tokensIn = response.usageMetadata?.promptTokenCount ?? 0;
+            tokensOut = response.usageMetadata?.candidatesTokenCount ?? 0;
+            usedFallback = false;
+            break keysLoop;
+          }
+        } catch (err) {
+          console.warn(`[Clarifier AI Warning] Model ${modelToTry} attempt failed:`, err);
+        }
+      }
+    }
+  }
+
+  // Fallback to deterministic persona template if live call was skipped or failed
+  if (!interpretation) {
+    if (effectivePersona === 'ba_ngoai') {
     interpretation = `Bà Ngoại trả lời cho con về câu hỏi "${questionAsked}" nghe ${safeNick}: Lá Làm Rõ ${normalized.name_vi} (${orientVi}) hiện ra với từ khóa "${primaryKw}" và ${secondaryKw}. Bà thấy con không việc gì phải lo lắng hay hấp tấp; điều quan trọng nhất lúc này là giữ gìn sức khỏe và lắng nghe con tim mình, cái gì an lành tự khắc sẽ tìm đến con.`;
     advice = `Hôm nay con cứ ăn ngon ngủ kỹ, đừng tự tạo áp lực cho mình, để tâm trí thảnh thơi rồi đưa ra quyết định sau.`;
     savageQuote = ensureConciseQuote(
@@ -1618,6 +1783,7 @@ export async function generateClarifierReading(
       `Lá ${normalized.name_vi} thì thầm: Câu trả lời đẹp nhất luôn bắt đầu từ sự bình yên trong trái tim bạn.`
     );
   }
+}
 
   const payload = {
     card: params.card,
@@ -1632,6 +1798,13 @@ export async function generateClarifierReading(
   return {
     ...payload,
     clarifier: payload,
+    effectivePersona,
+    ageTier: agePolicy.tier,
+    aiModel,
+    tokensIn,
+    tokensOut,
+    usedFallback,
+    retryCount,
   };
 }
 

@@ -16,6 +16,8 @@ export interface JournalEntry {
   clarifierCard?: ClarifierCardPayload;
   fullResponse: ReadingSuccessResponse;
   isFavorite?: boolean;
+  userNote?: string;
+  updatedAt?: string;
 }
 
 const STORAGE_KEY = 'tc_journal_entries_v1';
@@ -57,6 +59,8 @@ export function saveJournalEntry(reading: ReadingSuccessResponse): JournalEntry[
       clarifierCard: reading.clarifier,
       fullResponse: reading,
       isFavorite: existsIdx >= 0 ? current[existsIdx]?.isFavorite : false,
+      userNote: existsIdx >= 0 ? current[existsIdx]?.userNote : undefined,
+      updatedAt: existsIdx >= 0 ? current[existsIdx]?.updatedAt : undefined,
     };
 
     let updated: JournalEntry[];
@@ -111,3 +115,25 @@ export function clearAllJournal(): void {
     // ignore
   }
 }
+
+export function updateJournalNote(id: string, note: string): JournalEntry[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const current = getJournalEntries();
+    const updated = current.map((entry) => {
+      if (entry.id === id) {
+        return {
+          ...entry,
+          userNote: note.trim(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return entry;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+

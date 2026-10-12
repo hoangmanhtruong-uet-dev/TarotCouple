@@ -6,6 +6,18 @@
  * `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured.
  */
 
+import { MAJOR_ARCANA, TAROT_CARDS_BY_ID, type TarotCard } from '@/data/tarot-cards';
+import type { ReadingSuccessResponse } from './api-types';
+import { PERSONA_PROFILES } from './prompts';
+import type { StoredCoupleRoom } from './quota-store';
+import { RELATIONSHIP_STATUS_LABELS } from './safety';
+import type {
+  CoupleRelationshipStatus,
+  DeckMode,
+  ReaderId,
+  ReadingOutput,
+} from './schemas';
+
 export interface SupabaseConfigStatus {
   enabled: boolean;
   supabaseUrl: string | null;
@@ -271,4 +283,305 @@ export async function syncCoupleRoomHybrid(params: {
     return false;
   }
 }
+
+export interface SupabaseHealthResult {
+  mode: 'hybrid' | 'memory-only';
+  connected: boolean;
+  tablesReady: boolean;
+  missingTables: string[];
+}
+
+const CORE_SUPABASE_TABLES = ['profiles', 'readings', 'couple_rooms'];
+
+/**
+ * Checks Supabase PostgREST connectivity and table readiness via OpenAPI spec (/rest/v1/).
+ * Safely handles missing credentials, offline test environments, and timeouts without throwing.
+ */
+export async function checkSupabaseHealth(): Promise<SupabaseHealthResult> {
+  const config = getSupabaseConfigStatus();
+
+  if (!config.enabled || !config.supabaseUrl) {
+    return {
+      mode: 'memory-only',
+      connected: false,
+      tablesReady: false,
+      missingTables: [...CORE_SUPABASE_TABLES],
+    };
+  }
+
+  const serviceKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+  const baseUrl = config.supabaseUrl.replace(/\/$/, '');
+
+  try {
+    const res = await fetch(`${baseUrl}/rest/v1/`, {
+      method: 'GET',
+      headers: {
+        ...(serviceKey
+          ? { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
+          : {}),
+        Accept: 'application/openapi+json, application/json',
+      },
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (!res.ok) {
+      return {
+        mode: 'hybrid',
+        connected: false,
+        tablesReady: false,
+        missingTables: [...CORE_SUPABASE_TABLES],
+      };
+    }
+
+    const spec = (await res.json()) as {
+      definitions?: Record<string, unknown>;
+      paths?: Record<string, unknown>;
+      components?: { schemas?: Record<string, unknown> };
+    };
+
+    const hasTable = (name: string): boolean => {
+      const inDefs = Boolean(spec?.definitions && spec.definitions[name]);
+      const inPaths = Boolean(
+        spec?.paths && (spec.paths[`/${name}`] || spec.paths[name])
+      );
+      const inSchemas = Boolean(
+        spec?.components?.schemas && spec.components.schemas[name]
+      );
+      return inDefs || inPaths || inSchemas;
+    };
+
+    const missingTables = CORE_SUPABASE_TABLES.filter((t) => !hasTable(t));
+
+    return {
+      mode: 'hybrid',
+      connected: true,
+      tablesReady: missingTables.length === 0,
+      missingTables,
+    };
+  } catch {
+    return {
+      mode: 'hybrid',
+      connected: false,
+      tablesReady: false,
+      missingTables: [...CORE_SUPABASE_TABLES],
+    };
+  }
+}
+
+/**
+ * Fetches a Couple Room from Supabase PostgreSQL (`public.couple_rooms`)
+ * and reconstructs a full `StoredCoupleRoom` domain entity.
+ * Used as serverless read-through fallback when local in-memory cache misses.
+ */
+export async function fetchCoupleRoomFromSupabase(
+  roomCode: string
+): Promise<StoredCoupleRoom | null> {
+  if (!roomCode || typeof roomCode !== 'string') return null;
+  const normalizedCode = roomCode.trim().toUpperCase();
+  if (!normalizedCode) return null;
+
+  const config = getSupabaseConfigStatus();
+  if (!config.enabled || !config.supabaseUrl) return null;
+
+  const serviceKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+  const baseUrl = config.supabaseUrl.replace(/\/$/, '');
+
+  try {
+    const res = await fetch(
+      `${baseUrl}/rest/v1/couple_rooms?room_code=eq.${encodeURIComponent(normalizedCode)}&select=*`,
+      {
+        method: 'GET',
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(4000),
+      }
+    );
+
+    if (!res.ok) return null;
+
+    const rows = (await res.json()) as Array<Record<string, unknown>>;
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+
+    const row = rows[0];
+    if (!row) return null;
+
+    // 1. Reconstruct Tarot Cards
+    const ownerCardId =
+      typeof row.owner_card_id === 'number' ? row.owner_card_id : 0;
+    const ownerCardObj = TAROT_CARDS_BY_ID[ownerCardId] ?? MAJOR_ARCANA[0]!;
+    const ownerCard = {
+      card: ownerCardObj,
+      reversed: Boolean(row.owner_reversed),
+    };
+
+    let partnerCard: { card: TarotCard; reversed: boolean } | undefined =
+      undefined;
+    if (typeof row.partner_card_id === 'number') {
+      partnerCard = {
+        card: TAROT_CARDS_BY_ID[row.partner_card_id] ?? MAJOR_ARCANA[6]!,
+        reversed: Boolean(row.partner_reversed),
+      };
+    }
+
+    let connectionCard: { card: TarotCard; reversed: boolean } | undefined =
+      undefined;
+    if (typeof row.bridge_card_id === 'number') {
+      connectionCard = {
+        card: TAROT_CARDS_BY_ID[row.bridge_card_id] ?? MAJOR_ARCANA[19]!,
+        reversed: Boolean(row.bridge_reversed),
+      };
+    }
+
+    // 2. Persona & Reader ID resolution
+    const canonicalReaderId = toCanonicalDbReaderId(
+      String(row.reader_id || 'ba_ngoai')
+    );
+    const personaProfile =
+      PERSONA_PROFILES[canonicalReaderId as keyof typeof PERSONA_PROFILES];
+    const readerDisplayName = personaProfile?.displayName || 'Bà Ngoại';
+
+    // 3. Status & 48h TTL check
+    let status: 'waiting_partner' | 'completed' | 'expired' =
+      row.status === 'completed' || row.status === 'expired'
+        ? (row.status as 'completed' | 'expired')
+        : 'waiting_partner';
+
+    const nowMs = Date.now();
+    const expiresAtMs = row.expires_at
+      ? new Date(String(row.expires_at)).getTime()
+      : 0;
+    if (status === 'waiting_partner' && expiresAtMs > 0 && expiresAtMs <= nowMs) {
+      status = 'expired';
+    }
+
+    // 4. Reading Results & Responses
+    const fullReadingData = row.full_reading as
+      | Record<string, unknown>
+      | null
+      | undefined;
+    let fullReading: ReadingSuccessResponse | undefined = undefined;
+    let readingResult: ReadingOutput | undefined = undefined;
+    let readingId: string | undefined = undefined;
+
+    if (fullReadingData && typeof fullReadingData === 'object') {
+      if (fullReadingData.status === 'ok' && fullReadingData.result) {
+        fullReading = fullReadingData as unknown as ReadingSuccessResponse;
+        readingResult = fullReadingData.result as ReadingOutput;
+        readingId =
+          typeof fullReadingData.readingId === 'string'
+            ? fullReadingData.readingId
+            : undefined;
+      } else if (fullReadingData.overall_verdict || fullReadingData.cards_analysis) {
+        readingResult = fullReadingData as unknown as ReadingOutput;
+      }
+    }
+
+    if (
+      readingResult &&
+      (row.compatibility_score != null || row.red_flag_level != null)
+    ) {
+      readingResult.metrics = {
+        compatibility_score:
+          typeof row.compatibility_score === 'number'
+            ? row.compatibility_score
+            : readingResult.metrics?.compatibility_score,
+        red_flag_level:
+          typeof row.red_flag_level === 'number'
+            ? row.red_flag_level
+            : readingResult.metrics?.red_flag_level,
+        vibe_tag: readingResult.metrics?.vibe_tag || '',
+        entertainment_note: 'Chỉ để giải trí',
+      };
+    }
+
+    // 5. Relationship Status & Label
+    let relationshipStatus: CoupleRelationshipStatus = 'situationship';
+    if (
+      fullReadingData &&
+      typeof fullReadingData.relationshipStatus === 'string'
+    ) {
+      const rs = fullReadingData.relationshipStatus;
+      if (
+        rs === 'crush' ||
+        rs === 'situationship' ||
+        rs === 'dating' ||
+        rs === 'ex'
+      ) {
+        relationshipStatus = rs;
+      }
+    }
+    const relationshipLabel =
+      RELATIONSHIP_STATUS_LABELS[relationshipStatus] || 'Đang tìm hiểu';
+
+    // 6. Deck Mode
+    let deckMode: DeckMode = 'major_22';
+    if (fullReadingData && fullReadingData.deckMode === 'full_78') {
+      deckMode = 'full_78';
+    } else if (
+      ownerCardObj.id > 21 ||
+      (partnerCard && partnerCard.card.id > 21)
+    ) {
+      deckMode = 'full_78';
+    }
+
+    const storedRoom: StoredCoupleRoom = {
+      roomCode: normalizedCode,
+      mode: 'coop_invite',
+      status,
+      createdAt:
+        typeof row.created_at === 'string'
+          ? row.created_at
+          : new Date().toISOString(),
+      expiresAt:
+        typeof row.expires_at === 'string'
+          ? row.expires_at
+          : new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+      ownerClientKey:
+        typeof row.owner_id === 'string' ? row.owner_id : 'anon_owner',
+      ownerBirthYear:
+        typeof row.owner_birth_year === 'number' ? row.owner_birth_year : 2004,
+      readerId: canonicalReaderId as ReaderId,
+      readerDisplayName,
+      relationshipStatus,
+      relationshipLabel,
+      deckMode,
+      ownerNickname:
+        typeof row.owner_nickname === 'string' ? row.owner_nickname : 'Bạn',
+      ownerQuestionText:
+        typeof row.owner_question_text === 'string'
+          ? row.owner_question_text
+          : '',
+      ownerCard,
+      ownerConsentedShare: true,
+      partnerConsentedShare: true,
+      ...(row.partner_nickname
+        ? { partnerNickname: String(row.partner_nickname) }
+        : {}),
+      ...(row.partner_birth_year
+        ? { partnerBirthYear: Number(row.partner_birth_year) }
+        : {}),
+      ...(partnerCard ? { partnerCard } : {}),
+      ...(connectionCard ? { connectionCard } : {}),
+      ...(readingResult ? { readingResult } : {}),
+      ...(readingId ? { readingId } : {}),
+      ...(fullReading ? { fullReading } : {}),
+    };
+
+    return storedRoom;
+  } catch {
+    return null;
+  }
+}
+
 

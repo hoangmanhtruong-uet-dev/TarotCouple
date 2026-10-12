@@ -14,10 +14,12 @@ import {
   Coins,
 } from 'lucide-react';
 import type { UnitEconomicsSummary } from '@/lib/api-types';
+import type { HealthResponse } from '@/app/api/health/route';
 
 export interface FunnelAnalyticsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  bannerHealth?: HealthResponse | null;
 }
 
 interface FunnelApiData {
@@ -59,19 +61,22 @@ const DEFAULT_UNIT_ECONOMICS: UnitEconomicsSummary = {
 export function FunnelAnalyticsModal({
   isOpen,
   onClose,
+  bannerHealth,
 }: FunnelAnalyticsModalProps) {
   const [funnel, setFunnel] = useState<FunnelApiData | null>(null);
   const [unitEconomics, setUnitEconomics] = useState<UnitEconomicsSummary>(
     DEFAULT_UNIT_ECONOMICS
   );
+  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const fetchMetrics = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [readingRes, growthRes] = await Promise.allSettled([
+      const [readingRes, growthRes, healthRes] = await Promise.allSettled([
         fetch('/api/reading'),
         fetch('/api/growth'),
+        fetch('/api/health'),
       ]);
 
       if (readingRes.status === 'fulfilled' && readingRes.value.ok) {
@@ -85,6 +90,11 @@ export function FunnelAnalyticsModal({
           setUnitEconomics(growthData.unitEconomics as UnitEconomicsSummary);
         }
       }
+
+      if (healthRes.status === 'fulfilled' && healthRes.value.ok) {
+        const healthData = await healthRes.value.json();
+        setHealth(healthData);
+      }
     } catch {
       // Ignore network error and preserve defaults
     } finally {
@@ -97,6 +107,8 @@ export function FunnelAnalyticsModal({
       void fetchMetrics();
     }
   }, [isOpen, fetchMetrics]);
+
+  const activeHealth = bannerHealth ?? health;
 
   const counts = funnel?.counts ?? {};
   const topicBreakdown = funnel?.topicBreakdown ?? {};
@@ -270,6 +282,120 @@ export function FunnelAnalyticsModal({
 
             {/* Body */}
             <div className="p-5 sm:p-6 space-y-6 max-h-[82vh] overflow-y-auto">
+              {/* System & AI / Supabase Health Status Banner */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#171328] via-[#12101E] to-[#171328] border border-[#C9A24A]/40 shadow-lg space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#262235] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <h4 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0]">
+                      Trạng Thái Hệ Thống & AI / Supabase Health
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-[#9E96B0] font-mono">
+                    {activeHealth?.timestamp
+                      ? `Kiểm tra: ${new Date(activeHealth.timestamp).toLocaleTimeString('vi-VN')}`
+                      : 'Đang kết nối...'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* AI Engine Status */}
+                  <div className="p-3.5 rounded-xl bg-[#09080D]/90 border border-[#262235] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[#E5C687] flex items-center gap-1.5">
+                        <Cpu className="w-3.5 h-3.5 text-[#C9A24A]" />
+                        Gemini AI Engine
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          (activeHealth?.ai?.configuredKeysCount ?? 0) > 0
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/40'
+                            : 'bg-amber-500/15 text-amber-300 border-amber-400/40'
+                        }`}
+                      >
+                        {activeHealth?.ai?.configuredKeysCount ?? 0} Keys sẵn sàng
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#9E96B0]">Model chính:</span>
+                        <span className="font-mono text-[#F8F5F0] font-semibold">
+                          {activeHealth?.ai?.primaryModel || 'gemini-3.5-flash-lite'}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[#9E96B0] block">Chuỗi xoay vòng dự phòng:</span>
+                        <div className="flex items-center flex-wrap gap-1 text-[10px] font-mono">
+                          {(
+                            activeHealth?.ai?.modelChain ?? [
+                              'gemini-3.5-flash-lite',
+                              'gemini-3.1-flash-lite',
+                              'gemini-3.6-flash',
+                              'gemini-3-flash-preview',
+                            ]
+                          ).map((model, idx) => (
+                            <span
+                              key={idx}
+                              className="px-1.5 py-0.5 rounded bg-[#1C172B] border border-[#262235] text-[#E5C687]"
+                            >
+                              {idx + 1}. {model}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Supabase Status */}
+                  <div className="p-3.5 rounded-xl bg-[#09080D]/90 border border-[#262235] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[#E5C687] flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#C9A24A]" />
+                        Supabase Database
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          activeHealth?.supabase?.connected
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/40'
+                            : 'bg-amber-500/15 text-amber-300 border-amber-400/40'
+                        }`}
+                      >
+                        Chế độ: {activeHealth?.supabase?.mode === 'hybrid' ? 'Hybrid (Cloud REST)' : 'Local Memory'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#9E96B0]">Kết nối REST API:</span>
+                        <span
+                          className={`font-semibold ${
+                            activeHealth?.supabase?.connected ? 'text-emerald-300' : 'text-amber-300'
+                          }`}
+                        >
+                          {activeHealth?.supabase?.connected ? '● Kết nối thành công' : '○ Ngoại tuyến / Mock'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#9E96B0]">Trạng thái bảng:</span>
+                        <span
+                          className={`font-semibold ${
+                            activeHealth?.supabase?.tablesReady ? 'text-emerald-300' : 'text-amber-300'
+                          }`}
+                        >
+                          {activeHealth?.supabase?.tablesReady
+                            ? '✅ Sẵn sàng 6/6 bảng'
+                            : activeHealth?.supabase?.missingTables &&
+                              activeHealth.supabase.missingTables.length > 0
+                            ? `Thiếu: ${activeHealth.supabase.missingTables.join(', ')}`
+                            : 'Chưa kiểm tra'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Section 0: Phase 4 Unit Economics — Stage Gate 4 Card */}
               <div className="p-5 rounded-2xl bg-gradient-to-br from-[#1E172C] via-[#14111F] to-[#111A1B] border-2 border-[#D4AF37]/55 space-y-4 shadow-[0_14px_40px_rgba(212,175,55,0.18)]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">

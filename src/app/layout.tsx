@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/react";
 import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google";
 import PhoneFrameContainer from "@/components/PhoneFrameContainer";
 import "./globals.css";
@@ -126,6 +127,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#C9A24A]/30 selection:text-[#E5C687]">
         <PhoneFrameContainer>{children}</PhoneFrameContainer>
+        <Analytics />
       </body>
     </html>
   );

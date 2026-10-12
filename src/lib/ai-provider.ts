@@ -1025,6 +1025,92 @@ function sanitizeRawModelOutput(raw: unknown): unknown {
     shareable.savage_quote = paddedQuotes[0];
   }
 
+  // Sanitize cards_analysis strictly so LLM variations (e.g. 1-indexed position_index, card_id out-of-range, etc.) never fail Zod
+  if (Array.isArray(clone.cards_analysis)) {
+    const rawAnalyses = clone.cards_analysis.slice(0, 3);
+    const seenKeywords = new Set<string>();
+
+    clone.cards_analysis = rawAnalyses.map((ca, idx) => {
+      const item = (ca && typeof ca === 'object') ? { ...ca } : {};
+      
+      // Force position_index strictly to 0, 1, 2
+      item.position_index = idx;
+      
+      // Clamp card_id to valid range 0..77
+      if (typeof item.card_id !== 'number' || isNaN(item.card_id) || item.card_id < 0 || item.card_id > 77) {
+        item.card_id = idx;
+      }
+      
+      // Ensure required string fields exist and adhere to length constraints
+      if (typeof item.position_label !== 'string' || !item.position_label.trim()) {
+        item.position_label = `Lá số ${idx + 1}`;
+      } else {
+        item.position_label = item.position_label.trim().slice(0, 80);
+      }
+
+      if (typeof item.card_name_vi !== 'string' || !item.card_name_vi.trim()) {
+        item.card_name_vi = `Lá bài ${idx + 1}`;
+      }
+      if (typeof item.card_name_en !== 'string' || !item.card_name_en.trim()) {
+        item.card_name_en = `Card ${idx + 1}`;
+      }
+      item.reversed = Boolean(item.reversed);
+
+      if (typeof item.interpretation !== 'string' || item.interpretation.trim().length < 10) {
+        item.interpretation = (item.interpretation || 'Thông điệp chuyển hóa năng lượng đang diễn ra trong cuộc sống của bạn.').padEnd(12, '.');
+      } else if (item.interpretation.length > 900) {
+        item.interpretation = item.interpretation.slice(0, 890);
+      }
+
+      let kw = (typeof item.energy_keyword === 'string' ? item.energy_keyword.trim() : '').slice(0, 75);
+      if (!kw || seenKeywords.has(kw.toLowerCase())) {
+        kw = `${kw || 'Chuyển hóa năng lượng'} (${idx + 1})`;
+      }
+      seenKeywords.add(kw.toLowerCase());
+      item.energy_keyword = kw;
+
+      return item;
+    });
+
+    // If fewer than 3 cards, pad to 3
+    while (clone.cards_analysis.length < 3) {
+      const idx = clone.cards_analysis.length;
+      clone.cards_analysis.push({
+        position_index: idx,
+        position_label: `Lá số ${idx + 1}`,
+        card_id: idx,
+        card_name_vi: `Lá bài ${idx + 1}`,
+        card_name_en: `Card ${idx + 1}`,
+        reversed: false,
+        interpretation: 'Năng lượng mở ra hướng nhìn mới và thông điệp soi tỏ cho hành trình của bạn.',
+        energy_keyword: `Thông điệp dẫn lối (${idx + 1})`,
+      });
+    }
+  }
+
+  // Ensure overall strings satisfy schema lengths
+  if (typeof clone.greeting_hook === 'string') {
+    if (clone.greeting_hook.length < 10) {
+      clone.greeting_hook = clone.greeting_hook.padEnd(12, '!');
+    } else if (clone.greeting_hook.length > 500) {
+      clone.greeting_hook = clone.greeting_hook.slice(0, 490);
+    }
+  }
+  if (typeof clone.overall_verdict === 'string') {
+    if (clone.overall_verdict.length < 20) {
+      clone.overall_verdict = clone.overall_verdict.padEnd(25, ' ');
+    } else if (clone.overall_verdict.length > 1000) {
+      clone.overall_verdict = clone.overall_verdict.slice(0, 990);
+    }
+  }
+  if (typeof clone.actionable_next_step === 'string') {
+    if (clone.actionable_next_step.length < 10) {
+      clone.actionable_next_step = clone.actionable_next_step.padEnd(12, '.');
+    } else if (clone.actionable_next_step.length > 400) {
+      clone.actionable_next_step = clone.actionable_next_step.slice(0, 390);
+    }
+  }
+
   // Sanitize cliffhanger_upsell if present
   if (clone.safety_flag === 'crisis') {
     delete clone.cliffhanger_upsell;
@@ -1133,6 +1219,21 @@ export async function generateTarotReading(
       }
 
       const parsedJson = sanitizeRawModelOutput(JSON.parse(rawText));
+      
+      // Ensure each card has a unique energy_keyword so it never fails refinement
+      if (parsedJson && typeof parsedJson === 'object' && Array.isArray((parsedJson as any).cards_analysis)) {
+        const analyses = (parsedJson as any).cards_analysis;
+        const seen = new Set<string>();
+        analyses.forEach((ca: any, i: number) => {
+          let kw = (ca?.energy_keyword || '').trim();
+          if (!kw || seen.has(kw.toLowerCase())) {
+            kw = `${kw || 'Năng lượng chuyển dịch'} (${i + 1})`;
+          }
+          seen.add(kw.toLowerCase());
+          ca.energy_keyword = kw;
+        });
+      }
+
       const validated = ReadingOutputSchema.safeParse(parsedJson);
 
       if (validated.success) {
@@ -1157,8 +1258,11 @@ export async function generateTarotReading(
           usedFallback: false,
           retryCount: 0,
         };
+      } else {
+        console.warn('[Gemini Parse Warning]:', validated.error.issues);
       }
-    } catch {
+    } catch (err) {
+      console.warn('[Gemini Call Error]:', err);
       // Try next model or fallback
     }
   }

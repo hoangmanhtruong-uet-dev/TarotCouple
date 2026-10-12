@@ -2,6 +2,7 @@
 
 import React, { Suspense } from 'react';
 import { CoupleModeView } from '@/components/CoupleModeView';
+import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useReadingStore } from '@/lib/reading-store';
 
@@ -31,6 +32,7 @@ function CoupleIndexContent() {
           router.push('/reading/story');
         }}
       />
+      <CustomCursorFollower />
     </div>
   );
 }

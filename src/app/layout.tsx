@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 import { Be_Vietnam_Pro, Playfair_Display } from "next/font/google";
 import PhoneFrameContainer from "@/components/PhoneFrameContainer";
 import "./globals.css";

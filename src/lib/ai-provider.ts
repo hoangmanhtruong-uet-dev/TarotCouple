@@ -1004,32 +1004,39 @@ export async function generateTarotReading(
     isPromptInjection: scan.isPromptInjection,
   });
 
-  const modelName = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
+  const candidateModels = [
+    process.env.GEMINI_MODEL?.trim(),
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+  ].filter((m): m is string => Boolean(m && m.length > 0));
+
+  const uniqueModels = Array.from(new Set(candidateModels));
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-  const maxRetries = 2; // Initial attempt + up to 2 retries = 3 total attempts
   let totalTokensIn = 0;
   let totalTokensOut = 0;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      // 8-second timeout per attempt to prevent serverless function hang
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 8000)
-      );
+  for (const modelToTry of uniqueModels) {
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      try {
+        // 9-second timeout per attempt to prevent serverless function hang
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), 9000)
+        );
 
-      const generatePromise = ai.models.generateContent({
-        model: modelName,
-        contents: userPrompt,
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: 'application/json',
-          responseSchema: GEMINI_RESPONSE_SCHEMA,
-          temperature: 0.75,
-        },
-      });
+        const generatePromise = ai.models.generateContent({
+          model: modelToTry,
+          contents: userPrompt,
+          config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: 'application/json',
+            responseSchema: GEMINI_RESPONSE_SCHEMA,
+            temperature: 0.75,
+          },
+        });
 
-      const response = await Promise.race([generatePromise, timeoutPromise]);
+        const response = await Promise.race([generatePromise, timeoutPromise]);
 
       totalTokensIn += response.usageMetadata?.promptTokenCount ?? 0;
       totalTokensOut += response.usageMetadata?.candidatesTokenCount ?? 0;
@@ -1058,7 +1065,7 @@ export async function generateTarotReading(
           reading: finalReading,
           effectivePersona,
           ageTier,
-          aiModel: modelName,
+          aiModel: modelToTry,
           tokensIn: totalTokensIn,
           tokensOut: totalTokensOut,
           usedFallback: false,
@@ -1066,9 +1073,10 @@ export async function generateTarotReading(
         };
       }
     } catch {
-      // Retry on transient API or JSON parse error up to maxRetries
+      // Retry or try next model on error
     }
   }
+}
 
   // Fallback if all retries fail validation or network error occurs
   const fallbackReading = buildContextualFallbackReading({
@@ -1082,11 +1090,11 @@ export async function generateTarotReading(
     reading: fallbackReading,
     effectivePersona,
     ageTier,
-    aiModel: `${modelName}:fallback`,
+    aiModel: `${uniqueModels[0] || 'gemini'}:fallback`,
     tokensIn: totalTokensIn,
     tokensOut: totalTokensOut,
     usedFallback: true,
-    retryCount: maxRetries,
+    retryCount: 2,
   };
 }
 

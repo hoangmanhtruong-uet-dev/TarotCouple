@@ -109,7 +109,6 @@ export function WalletPayOSModal({
   const [activeOrder, setActiveOrder] = useState<PaymentOrderPayload | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState<boolean>(false);
   const [isPolling, setIsPolling] = useState<boolean>(false);
-  const [isConfirmingWebhook, setIsConfirmingWebhook] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(600);
@@ -305,83 +304,6 @@ export function WalletPayOSModal({
       });
     } finally {
       setIsCreatingOrder(false);
-    }
-  };
-
-  // Xác nhận chuyển khoản thủ công (Test webhook giả lập)
-  const handleConfirmWebhook = async () => {
-    if (!activeOrder || isConfirmingWebhook) return;
-    setIsConfirmingWebhook(true);
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch('/api/payment', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_code: activeOrder.orderCode,
-          orderCode: activeOrder.orderCode,
-          package_id: activeOrder.packageId,
-          packageId: activeOrder.packageId,
-          birth_year: birthYear,
-          birthYear,
-          action: 'confirm_webhook',
-          provider_ref: `payos_${activeOrder.orderCode}`,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || data?.status === 'error') {
-        setErrorMsg(
-          data?.message || 'Xác nhận thanh toán chưa thành công, vui lòng thử lại.'
-        );
-        return;
-      }
-
-      const updatedQuota: QuotaStatusPayload = data.quota || {
-        ...quota,
-        starsBalance: starsBalance + activeOrder.starsToCredit,
-        dailySpendVnd: dailySpendVnd + activeOrder.amountVnd,
-        dailySpendCapVnd: 50000,
-      };
-
-      onQuotaUpdated?.(updatedQuota);
-      setActiveOrder({ ...activeOrder, status: 'paid' });
-      soundManager.playMysticChime();
-      setSuccessBanner(
-        `🎉 Thanh toán VietQR PayOS thành công! Đã cộng +${activeOrder.starsToCredit} Sao ⭐ vào ví của bạn (Số dư mới: ${updatedQuota.starsBalance ?? starsBalance + activeOrder.starsToCredit} ⭐).`
-      );
-
-      // PulseWatch Real-Time Purchase Tracking
-      if (typeof window !== 'undefined' && (window as any).PulseWatch) {
-        try {
-          (window as any).PulseWatch.trackPurchase({
-            amount: activeOrder.amountVnd,
-            currency: 'VND',
-            customerName: 'Người Dùng TarotCouple',
-            planTier: activeOrder.packageName,
-            gateway: 'PayOS',
-            orderCode: activeOrder.orderCode,
-          });
-        } catch (e) {
-          console.warn('[PulseWatch Track Purchase Warning]:', e);
-        }
-      }
-    } catch {
-      const updatedQuota: QuotaStatusPayload = {
-        ...quota,
-        starsBalance: starsBalance + activeOrder.starsToCredit,
-        dailySpendVnd: dailySpendVnd + activeOrder.amountVnd,
-        dailySpendCapVnd: 50000,
-      };
-      onQuotaUpdated?.(updatedQuota);
-      setActiveOrder({ ...activeOrder, status: 'paid' });
-      setSuccessBanner(
-        `🎉 Thanh toán VietQR PayOS thành công! Đã cộng +${activeOrder.starsToCredit} Sao ⭐ vào ví của bạn.`
-      );
-    } finally {
-      setIsConfirmingWebhook(false);
     }
   };
 
@@ -809,19 +731,6 @@ export function WalletPayOSModal({
                             <RefreshCw className={`w-3.5 h-3.5 ${isPolling ? 'animate-spin' : ''}`} />
                             <span>{isPolling ? 'Đang kiểm tra...' : 'Kiểm tra trạng thái ngay'}</span>
                           </button>
-
-                          {activeOrder.provider === 'payos_sandbox' && (
-                            <button
-                              type="button"
-                              disabled={isConfirmingWebhook}
-                              onClick={() => void handleConfirmWebhook()}
-                              className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 font-semibold text-xs cursor-pointer transition-all disabled:opacity-60"
-                            >
-                              {isConfirmingWebhook
-                                ? 'Đang xác thực Webhook...'
-                                : '✅ Giả lập Xác nhận chuyển khoản (Sandbox Test)'}
-                            </button>
-                          )}
                         </div>
                       ) : (
                         <button

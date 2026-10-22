@@ -5,6 +5,7 @@ import type { DailyPullPayload } from '@/lib/api-types';
 import {
   DAILY_PULL_STAR_REWARD,
   DAILY_STREAK_DAY7_REWARD,
+  getDailyBudgetStatus,
   getQuotaStatus,
   getTodayDailyPull,
   getTodayKey,
@@ -79,6 +80,21 @@ export async function POST(request: Request) {
         quota,
       },
       { status: 200 }
+    );
+  }
+
+  // Phase 2 (H11): the global AI budget cap must gate every AI-producing route.
+  const budget = getDailyBudgetStatus();
+  if (budget.isHardCapReached) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'BUDGET_CAP_REACHED',
+        message:
+          'Ngân sách AI miễn phí trong ngày của hệ thống đã chạm trần bảo vệ. Vui lòng quay lại sau nhé!',
+        quota: getQuotaStatus(clientKey),
+      },
+      { status: 429 }
     );
   }
 

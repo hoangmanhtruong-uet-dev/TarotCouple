@@ -10,8 +10,10 @@ import {
   FOLLOWUP_MAX_QUESTION_CHARS,
   FOLLOWUP_STAR_COST,
   getCachedReading,
+  getDailyBudgetStatus,
   getFollowupMessages,
   getQuotaStatus,
+  isAdminRequest,
   recordFollowupMessageExchange,
   recordFunnelEvent,
   resolveClientKey,
@@ -33,6 +35,19 @@ export async function GET(
     return NextResponse.json(
       { status: 'error', code: 'INVALID_READING_ID', message: 'Thiếu mã lượt bói.' },
       { status: 400 }
+    );
+  }
+
+  // Ownership Check (H1, H2)
+  const reading = getCachedReading(readingId);
+  if (reading && reading.ownerId && reading.ownerId !== clientKey && !isAdminRequest(request)) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'FORBIDDEN_READING_ACCESS',
+        message: 'Bạn không có quyền xem các câu hỏi đào sâu của lượt bói này.',
+      },
+      { status: 403 }
     );
   }
 
@@ -120,6 +135,18 @@ export async function POST(
     );
   }
 
+  // Ownership Check (H1, H2): Only reading owner or authorized admin can ask deeper followup questions
+  if (reading.ownerId && reading.ownerId !== clientKey && !isAdminRequest(request)) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'FORBIDDEN_READING_ACCESS',
+        message: 'Bạn không có quyền gửi câu hỏi đào sâu trên lượt bói của người khác.',
+      },
+      { status: 403 }
+    );
+  }
+
   // 2. Crisis guardrail: Never allow follow-up in crisis sessions
   if (reading.safetyFlag === 'crisis') {
     const crisisRes: ReadingCrisisResponse = {
@@ -193,11 +220,26 @@ export async function POST(
   }
 
   // 5. Generate AI answer in Reader persona (~120 words)
+  // Phase 2 (H11): global AI budget guard.
+  const budget = getDailyBudgetStatus();
+  if (budget.isHardCapReached) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'BUDGET_CAP_REACHED',
+        message:
+          'Ngân sách AI miễn phí trong ngày của hệ thống đã chạm trần bảo vệ. Vui lòng quay lại sau nhé!',
+      },
+      { status: 429 }
+    );
+  }
+
   let answer = '';
   try {
     answer = await generateFollowupReading({
       reading,
-      question,
+      // M8: use the sanitised text, not the raw question (delimiter breakout).
+      question: scan.sanitizedText || question,
     });
   } catch (err) {
     return NextResponse.json(

@@ -1,3 +1,8 @@
+import crypto from 'crypto';
+import {
+  resolveSignedSession,
+  extractAuthenticatedUserId,
+} from './session';
 import type {
   CoupleRelationshipStatus,
   CoupleRoomPublicView,
@@ -147,6 +152,7 @@ export interface StoredCoupleRoom {
   createdAt: string;
   expiresAt: string;
   ownerClientKey: string;
+  partnerClientKey?: string;
   ownerBirthYear: number;
   readerId: ReaderId;
   readerDisplayName: string;
@@ -311,51 +317,85 @@ export function simpleHash(input: string): string {
 }
 
 /**
- * Extract client identifier from Request headers / cookies + IP hash per PLAN.md Section 8.5.
- * - In production (when `x-forwarded-for` or `x-real-ip` is present from Vercel's edge proxy),
- *   the key is bound to the server-side IP hash so clearing browser localStorage/cookies or
- *   opening an Incognito window on the same network CANNOT reset daily free turns.
- * - In local/automated test environments without proxy IP headers, falls back to `x-client-id`
- *   so multi-user unit tests remain isolated.
+ * Resolve the caller identity together with the signed-session that must be
+ * persisted. Routes that can emit a `Set-Cookie` header MUST use this helper
+ * (instead of calling `resolveClientKey` and `resolveSignedSession` separately)
+ * so the quota bucket and the issued cookie always reference the same session.
  */
-export function resolveClientKey(req?: Request): string {
-  if (!req) return 'anon_default';
+export interface ClientContext {
+  clientKey: string;
+  signedSession: ReturnType<typeof resolveSignedSession> | null;
+  isAuthenticated: boolean;
+}
 
-  const forwardedFor = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const realIp = req.headers.get('x-real-ip')?.trim();
-  const clientIp = forwardedFor || realIp;
-
-  // If Vercel/reverse-proxy provides a real client IP, bind strictly to server-side IP hash
-  if (clientIp && clientIp !== '127.0.0.1' && clientIp !== '::1') {
-    const ipHash = simpleHash(`ip:${clientIp}`);
-    return `ip_${ipHash}`;
+export function resolveClientContext(req?: Request): ClientContext {
+  if (!req) {
+    return { clientKey: 'anon_default', signedSession: null, isAuthenticated: false };
   }
 
+  // 1. Supabase Authenticated User
+  const authUserId = extractAuthenticatedUserId(req);
+  if (authUserId) {
+    return {
+      clientKey: `user_${authUserId}`,
+      signedSession: null,
+      isAuthenticated: true,
+    };
+  }
+
+  // 2. Isolated Test Harness fallback
   const explicitClientId = req.headers.get('x-client-id')?.trim();
-  const cookieHeader = req.headers.get('cookie') || '';
-  const cookieMatch = cookieHeader.match(/(?:^|;\s*)tc_client_id=([^;]+)/);
-  const cookieClientId = cookieMatch?.[1]?.trim();
+  if (explicitClientId && (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true')) {
+    const sanitized = explicitClientId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48);
+    if (sanitized) {
+      return { clientKey: sanitized, signedSession: null, isAuthenticated: false };
+    }
+  }
 
-  const userAgent = req.headers.get('user-agent')?.slice(0, 120) || 'unknown-ua';
-  const localHash = simpleHash(`local|${userAgent}`);
+  // 3. Verified Signed Anonymous Session Cookie (or stable derived session)
+  const signedSession = resolveSignedSession(req);
+  return {
+    clientKey: `anon_${signedSession.sessionId}`,
+    signedSession,
+    isAuthenticated: false,
+  };
+}
 
-  const baseId = explicitClientId || cookieClientId || 'guest';
-  const sanitizedBase = baseId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48) || 'guest';
-  return `${sanitizedBase}:${localHash}`;
+/**
+ * Extract client identifier from Request headers / cookies / session / Supabase Auth.
+ * Phase 1 Security Architecture:
+ * 1. Supabase Authenticated User takes precedence (`user_${userId}`).
+ * 2. Verified signed anonymous session cookie (`anon_${sessionId}`) via `tc_sid`.
+ * 3. In automated tests (NODE_ENV === 'test'), allows `x-client-id` for isolated parallel test suites.
+ * 4. Client-side arbitrary `x-client-id` is NEVER blindly trusted in production without valid signature.
+ */
+export function resolveClientKey(req?: Request): string {
+  return resolveClientContext(req).clientKey;
 }
 
 /**
  * Check if request is authorized to view internal founder/admin funnel & unit economics metrics.
+ * Phase 1 / H3: Strictly FAIL-CLOSED. If `ADMIN_SECRET` is unset, returns false.
  */
-export function isAdminRequest(req: Request): boolean {
+export function isAdminRequest(req?: Request): boolean {
+  if (!req) return false;
+  const configuredSecret = process.env.ADMIN_SECRET?.trim();
+  // Fail-closed default: if ADMIN_SECRET is not configured, admin access is strictly forbidden
+  if (!configuredSecret) {
+    return false;
+  }
+
   const url = new URL(req.url);
   const adminQuery = url.searchParams.get('admin');
-  const adminHeader = req.headers.get('x-admin-mode');
-  const configuredSecret = process.env.ADMIN_SECRET?.trim();
-  if (configuredSecret) {
-    return adminHeader === configuredSecret || adminQuery === configuredSecret;
-  }
-  return adminHeader === '1' || adminQuery === '1';
+  const adminHeader = req.headers.get('x-admin-secret') || req.headers.get('x-admin-mode');
+  const authHeader = req.headers.get('authorization');
+  const bearerToken = authHeader?.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : null;
+
+  return (
+    adminHeader === configuredSecret ||
+    adminQuery === configuredSecret ||
+    bearerToken === configuredSecret
+  );
 }
 
 function getOrCreateClientRecord(clientKey: string): ClientQuotaRecord {
@@ -989,22 +1029,14 @@ export function consumeQuota(
 }
 
 /**
- * Grant bonus draws (from sharing Story 9:16, watching simulated Rewarded Ad, or demo reset)
+ * Grant bonus draws (from sharing Story 9:16 or watching simulated Rewarded Ad)
  */
 export function grantBonusDraw(
   clientKey: string,
-  action: 'share_bonus' | 'reward_ad_bonus' | 'reset_demo_quota'
+  action: 'share_bonus' | 'reward_ad_bonus'
 ): QuotaStatusPayload {
   const record = getOrCreateClientRecord(clientKey);
-
-  if (action === 'reset_demo_quota') {
-    record.usedToday = 0;
-    record.bonusDraws = 20;
-    const wallet = getOrCreateWalletRecord(clientKey);
-    wallet.starsBalance = Math.max(wallet.starsBalance, 50);
-  } else {
-    record.bonusDraws = Math.min(MAX_BONUS_DRAWS_PER_DAY, record.bonusDraws + 1);
-  }
+  record.bonusDraws = Math.min(MAX_BONUS_DRAWS_PER_DAY, record.bonusDraws + 1);
 
   recordFunnelEvent('bonus_unlocked', { clientKey, action });
   if (action === 'share_bonus') {
@@ -1015,9 +1047,21 @@ export function grantBonusDraw(
 }
 
 /**
+ * Generate a secure cryptographically random shareToken for public card sharing
+ */
+export function createShareToken(readingId?: string): string {
+  const seed = readingId ? readingId.replace(/[^a-zA-Z0-9]/g, '').slice(-6) : 'tc';
+  const rand = crypto.randomBytes(8).toString('hex');
+  return `sh_${seed}_${rand}`;
+}
+
+/**
  * Cache a completed reading in memory for fast `/api/story-card?readingId=...` and `/api/clarifier` lookup
  */
-export function cacheReading(reading: ReadingSuccessResponse): void {
+export function cacheReading(reading: ReadingSuccessResponse): ReadingSuccessResponse {
+  if (!reading.shareToken) {
+    reading.shareToken = createShareToken(reading.readingId);
+  }
   const store = getStore();
   if (store.readingsCache.size >= MAX_CACHED_READINGS) {
     const oldestKey = store.readingsCache.keys().next().value;
@@ -1029,7 +1073,7 @@ export function cacheReading(reading: ReadingSuccessResponse): void {
 
   void syncReadingHybrid({
     readingId: reading.readingId,
-    userId: `usr_${reading.nickname.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'anon'}_${reading.birthYear}`,
+    userId: reading.ownerId || `usr_${reading.nickname.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'anon'}_${reading.birthYear}`,
     nickname: reading.nickname,
     birthYear: reading.birthYear,
     ageTier: reading.ageTier,
@@ -1041,6 +1085,8 @@ export function cacheReading(reading: ReadingSuccessResponse): void {
     aiResult: reading.result,
     clarifier: reading.clarifier,
   });
+
+  return reading;
 }
 
 /**
@@ -1212,7 +1258,7 @@ export function claimReferralBonus(
   friendReferralCode: string
 ): {
   success: boolean;
-  reason?: 'EMPTY_CODE' | 'SELF_REFERRAL' | 'ALREADY_REDEEMED';
+  reason?: 'EMPTY_CODE' | 'INVALID_CODE' | 'SELF_REFERRAL' | 'ALREADY_REDEEMED';
   message: string;
   starsAwarded: number;
   bonusDrawsAwarded: number;
@@ -1250,6 +1296,22 @@ export function claimReferralBonus(
     };
   }
 
+  // H4: the code must belong to a real, distinct referrer. Previously any
+  // 4+ character string (TC-AAAA, TC-BBBB, ...) minted +5 Stars forever.
+  const referrerClientKey = store.referralCodeToClientKey.get(cleanCode);
+  if (!referrerClientKey || referrerClientKey === clientKey) {
+    return {
+      success: false,
+      reason: 'INVALID_CODE',
+      message: 'Mã giới thiệu không tồn tại hoặc không hợp lệ.',
+      starsAwarded: 0,
+      bonusDrawsAwarded: 0,
+      referral: getReferralStatus(clientKey),
+      quota: getQuotaStatus(clientKey),
+      unitEconomics: getUnitEconomicsSummary(),
+    };
+  }
+
   if (ownGrowth.redeemedReferralCodes.has(cleanCode)) {
     return {
       success: false,
@@ -1275,17 +1337,11 @@ export function claimReferralBonus(
     quotaRecord.bonusDraws + 1
   );
 
-  // If the referrer exists in store, reward them +5 Stars and increment their invitedFriendsCount
-  const referrerClientKey = store.referralCodeToClientKey.get(cleanCode);
-  if (referrerClientKey && referrerClientKey !== clientKey) {
-    const referrerGrowth = getOrCreateGrowthRecord(referrerClientKey);
-    referrerGrowth.invitedFriendsCount += 1;
-    referrerGrowth.totalBonusStarsEarned += REFERRAL_BONUS_STARS;
-    addStars(referrerClientKey, REFERRAL_BONUS_STARS);
-  } else {
-    // Also increment user's connected friend counter so solo testing reflects social loop progress
-    ownGrowth.invitedFriendsCount += 1;
-  }
+  // Reward the verified referrer (+5 Stars) and increment their invite count.
+  const referrerGrowth = getOrCreateGrowthRecord(referrerClientKey);
+  referrerGrowth.invitedFriendsCount += 1;
+  referrerGrowth.totalBonusStarsEarned += REFERRAL_BONUS_STARS;
+  addStars(referrerClientKey, REFERRAL_BONUS_STARS);
 
   recordFunnelEvent('bonus_unlocked', {
     clientKey,
@@ -1463,8 +1519,14 @@ export function buildSpiritualWrappedForClient(
   readerId?: ReaderId
 ): SpiritualWrappedPayload {
   const store = getStore();
+  // Phase 1 / H2: Only derive the Wrapped profile from readings owned by the
+  // caller. Falling back to "the last cached reading" leaked another user's
+  // nickname, cards and topic to any anonymous visitor.
   const cachedReadings = Array.from(store.readingsCache.values());
-  const latestReading = cachedReadings[cachedReadings.length - 1];
+  const ownedReadings = cachedReadings.filter(
+    (reading) => reading.ownerId === clientKey
+  );
+  const latestReading = ownedReadings[ownedReadings.length - 1];
 
   const resolvedNickname =
     (nickname || latestReading?.nickname || 'Tín Đồ Tarot').trim().slice(0, 32) ||
@@ -1495,10 +1557,10 @@ export function buildSpiritualWrappedForClient(
     auraColor: '#C9A24A (Hoàng Kim Tinh Hà)',
   };
 
-  const totalReadingsCount = Math.max(12, 11 + cachedReadings.length);
+  const totalReadingsCount = Math.max(12, 11 + ownedReadings.length);
   const lateNightReadingsCount = Math.max(
     8,
-    Math.min(totalReadingsCount, 8 + cachedReadings.length)
+    Math.min(totalReadingsCount, 8 + ownedReadings.length)
   );
   const peakHourLabel = '23:45 — Giờ Suy Thượng Thừa';
 

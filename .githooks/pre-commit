@@ -1,0 +1,20 @@
+#!/bin/sh
+# Blocks commits that contain real secrets.
+# Enable once per clone: git config core.hooksPath .githooks
+# Requires gitleaks on PATH: https://github.com/gitleaks/gitleaks#installing
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "[secret-scan] gitleaks not installed - skipping (install it to enable this guard)."
+  exit 0
+fi
+
+gitleaks protect --staged --no-banner --redact --config .gitleaks.toml
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  echo ""
+  echo "[secret-scan] Commit blocked: a secret was detected in the staged changes."
+  echo "[secret-scan] Remove the secret, rotate it, then re-stage the files."
+fi
+
+exit $status

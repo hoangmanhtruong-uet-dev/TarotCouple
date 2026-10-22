@@ -154,16 +154,19 @@ export type ReadingRequest = z.infer<typeof ReadingRequestSchema>;
  * Phase 2/3: Couple Reading Request Schema (Kiểu 1: Tự soi & Kiểu 2: Mời cùng rút)
  */
 export const CoupleReadingRequestSchema = z.object({
+  action: z.enum(['solo_couple', 'create_room', 'join_room', 'consent_share']).optional(),
   mode: z
-    .enum(['solo_couple', 'coop_create', 'coop_join', 'coop_invite'])
+    .enum(['solo_couple', 'coop_create', 'coop_join', 'coop_invite', 'create_room', 'join_room', 'consent_share'])
     .optional()
     .default('solo_couple'),
   nickname: z
     .string()
     .trim()
     .min(1, 'Vui lòng nhập biệt danh của bạn.')
-    .max(40, 'Biệt danh tối đa 40 ký tự.'),
+    .max(40, 'Biệt danh tối đa 40 ký tự.')
+    .optional(),
   partner_nickname: z.string().trim().max(40).optional().default('Người ấy'),
+  partnerNickname: z.string().trim().max(40).optional(),
   birth_year: z
     .number()
     .int()
@@ -171,54 +174,87 @@ export const CoupleReadingRequestSchema = z.object({
     .max(MAX_BIRTH_YEAR)
     .optional()
     .default(2002),
+  birthYear: z.number().int().min(MIN_BIRTH_YEAR).max(MAX_BIRTH_YEAR).optional(),
   reader_id: ReaderIdSchema.optional().default('ba_co_mo_hon'),
+  readerId: ReaderIdSchema.optional(),
   relationship_status: CoupleRelationshipStatusSchema.optional().default('situationship'),
+  relationshipStatus: CoupleRelationshipStatusSchema.optional(),
   question_text: z
     .string()
     .trim()
     .max(300)
     .optional()
     .default('Tụi mình có thật sự hợp tần số hay chỉ là trạm dừng chân?'),
+  questionText: z.string().trim().max(300).optional(),
   deck_mode: DeckModeSchema.optional().default('major_22'),
+  deckMode: DeckModeSchema.optional(),
   selected_indices: z
     .array(z.number().int().min(0).max(77))
     .min(1)
     .max(3)
     .optional(),
+  selectedIndices: z.array(z.number().int().min(0).max(77)).min(1).max(3).optional(),
   selected_index: z.number().int().min(0).max(77).optional(),
+  selectedIndex: z.number().int().min(0).max(77).optional(),
   room_code: z.string().trim().max(32).optional(),
+  roomCode: z.string().trim().max(32).optional(),
   consent_share: z.boolean().optional().default(true),
+  consentShare: z.boolean().optional(),
+  ownerConsentedShare: z.boolean().optional(),
+  partnerConsentedShare: z.boolean().optional(),
+  role: z.string().trim().optional(),
 });
 export type CoupleReadingRequest = z.infer<typeof CoupleReadingRequestSchema>;
 
 /**
  * Phase 2/3: Clarifier Card Request Schema (Lá làm rõ - 5 Sao / 5.000đ)
  */
-export const ClarifierRequestSchema = z.object({
-  reading_id: z.string().trim().min(1).max(120).optional(),
-  nickname: z.string().trim().max(40).optional().default('Bạn'),
-  birth_year: z
-    .number()
-    .int()
-    .min(MIN_BIRTH_YEAR)
-    .max(MAX_BIRTH_YEAR)
-    .optional()
-    .default(2002),
-  reader_id: ReaderIdSchema.optional().default('ba_co_mo_hon'),
-  topic: TopicIdSchema.optional().default('love'),
-  original_question: z.string().trim().max(300).optional().default(''),
-  followup_question: z
-    .string()
-    .trim()
-    .min(2, 'Vui lòng chọn hoặc nhập câu hỏi làm rõ.')
-    .max(200, 'Câu hỏi làm rõ tối đa 200 ký tự.'),
-  previous_card_ids: z
-    .array(z.number().int().min(0).max(77))
-    .max(6)
-    .optional()
-    .default([]),
-  deck_mode: DeckModeSchema.optional().default('full_78'),
-});
+export const ClarifierRequestSchema = z
+  .object({
+    reading_id: z.string().trim().min(1).max(120).optional(),
+    readingId: z.string().trim().min(1).max(120).optional(),
+    nickname: z.string().trim().max(40).optional().default('Bạn'),
+    birth_year: z
+      .number()
+      .int()
+      .min(MIN_BIRTH_YEAR)
+      .max(MAX_BIRTH_YEAR)
+      .optional()
+      .default(2002),
+    birthYear: z.number().int().min(MIN_BIRTH_YEAR).max(MAX_BIRTH_YEAR).optional(),
+    reader_id: ReaderIdSchema.optional().default('ba_co_mo_hon'),
+    readerId: ReaderIdSchema.optional(),
+    topic: TopicIdSchema.optional().default('love'),
+    original_question: z.string().trim().max(300).optional().default(''),
+    originalQuestion: z.string().trim().max(300).optional(),
+    followup_question: z
+      .string()
+      .trim()
+      .min(2, 'Vui lòng chọn hoặc nhập câu hỏi làm rõ (tối thiểu 2 ký tự).')
+      .max(200, 'Câu hỏi làm rõ tối đa 200 ký tự.')
+      .optional(),
+    followupQuestion: z
+      .string()
+      .trim()
+      .min(2, 'Vui lòng chọn hoặc nhập câu hỏi làm rõ (tối thiểu 2 ký tự).')
+      .max(200, 'Câu hỏi làm rõ tối đa 200 ký tự.')
+      .optional(),
+    previous_card_ids: z
+      .array(z.number().int().min(0).max(77))
+      .max(6)
+      .optional()
+      .default([]),
+    previousCardIds: z.array(z.number().int().min(0).max(77)).max(6).optional(),
+    deck_mode: DeckModeSchema.optional().default('full_78'),
+    deckMode: DeckModeSchema.optional(),
+  })
+  .refine(
+    (data) => Boolean((data.followup_question && data.followup_question.length >= 2) || (data.followupQuestion && data.followupQuestion.length >= 2)),
+    {
+      message: 'Vui lòng chọn hoặc nhập câu hỏi làm rõ (tối thiểu 2 ký tự).',
+      path: ['followup_question'],
+    }
+  );
 export type ClarifierRequest = z.infer<typeof ClarifierRequestSchema>;
 
 /**

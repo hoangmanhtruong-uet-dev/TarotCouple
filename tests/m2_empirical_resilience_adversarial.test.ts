@@ -571,7 +571,11 @@ describe('Milestone 2 Empirical Challenger Adversarial Stress Suite', () => {
 
       const consentReq = new Request('https://test.local/api/couple', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Phase 1 ownership: consent must come from the room owner.
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'client_owner_cons',
+        },
         body: JSON.stringify({
           action: 'consent_share',
           roomCode: roomCode,

@@ -8,6 +8,7 @@ import {
   getQuotaStatus,
   getReferralStatus,
   getUnitEconomicsSummary,
+  isAdminRequest,
   recordRewardedAdView,
   resolveClientKey,
 } from '@/lib/quota-store';
@@ -38,6 +39,22 @@ export async function GET(request: Request) {
     ? getCachedReading(readingIdParam)
     : undefined;
 
+  // Ownership (H1/H2): never build a growth kit from another user's reading.
+  if (
+    customReading?.ownerId &&
+    customReading.ownerId !== clientKey &&
+    !isAdminRequest(request)
+  ) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'FORBIDDEN_READING_ACCESS',
+        message: 'Bạn không có quyền tạo nội dung từ lượt bói của người khác.',
+      },
+      { status: 403 }
+    );
+  }
+
   const wrapped = buildSpiritualWrappedForClient(
     clientKey,
     nicknameParam || customReading?.nickname,
@@ -45,7 +62,8 @@ export async function GET(request: Request) {
   );
   const tiktokKits = buildTikTokCarouselKits(customReading);
   const referral = getReferralStatus(clientKey);
-  const unitEconomics = getUnitEconomicsSummary();
+  // Admin Gate (H3): unit economics are internal business metrics.
+  const unitEconomics = isAdminRequest(request) ? getUnitEconomicsSummary() : undefined;
   const quota = getQuotaStatus(clientKey);
 
   return NextResponse.json(
@@ -94,10 +112,11 @@ export async function POST(request: Request) {
         : '';
 
     const result = claimReferralBonus(clientKey, referralCode);
+    const { unitEconomics: _claimEconomics, ...publicResult } = result;
     return NextResponse.json(
       {
         status: result.success ? 'ok' : 'error',
-        ...result,
+        ...(isAdminRequest(request) ? result : publicResult),
       },
       { status: result.success ? 200 : 400 }
     );
@@ -105,10 +124,11 @@ export async function POST(request: Request) {
 
   if (action === 'watch_rewarded_ad') {
     const result = recordRewardedAdView(clientKey);
+    const { unitEconomics: _adEconomics, ...publicResult } = result;
     return NextResponse.json(
       {
         status: result.success ? 'ok' : 'error',
-        ...result,
+        ...(isAdminRequest(request) ? result : publicResult),
       },
       { status: result.success ? 200 : 429 }
     );
@@ -117,6 +137,26 @@ export async function POST(request: Request) {
   if (action === 'generate_custom_tiktok_kit') {
     const readingId =
       typeof body.readingId === 'string' ? body.readingId : undefined;
+
+    // Ownership (H1/H2): a readingId must belong to the caller.
+    if (readingId) {
+      const ownedReading = getCachedReading(readingId);
+      if (
+        ownedReading?.ownerId &&
+        ownedReading.ownerId !== clientKey &&
+        !isAdminRequest(request)
+      ) {
+        return NextResponse.json(
+          {
+            status: 'error',
+            code: 'FORBIDDEN_READING_ACCESS',
+            message: 'Bạn không có quyền tạo nội dung từ lượt bói của người khác.',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const nickname =
       typeof body.nickname === 'string' ? body.nickname : undefined;
     const questionText =

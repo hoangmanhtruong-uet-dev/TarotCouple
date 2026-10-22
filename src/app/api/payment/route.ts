@@ -312,94 +312,17 @@ export async function POST(request: Request) {
 }
 
 /**
- * PUT /api/payment
- * PayOS Webhook / Payment Confirmation endpoint with strict Idempotency (PLAN.md Section 8.5):
- * - Verifies `orderCode` and `providerRef`.
- * - If the transaction or `providerRef` was already marked `paid`, returns `{ status: 'ok', idempotentReplay: true, order, quota }`
- *   WITHOUT crediting Stars a second time!
+ * PUT /api/payment (DEPRECATED & DISABLED - P0-3 / C3)
+ * Manual payment confirmation via client PUT is disabled for security.
+ * Official payment confirmation must go through POST /api/pay/webhook with signature verification.
  */
-export async function PUT(request: Request) {
-  let rawBody: Record<string, unknown>;
-  try {
-    rawBody = (await request.json()) as Record<string, unknown>;
-  } catch {
-    const errRes: ReadingErrorResponse = {
-      status: 'error',
-      code: 'VALIDATION_ERROR',
-      message: 'Dữ liệu xác nhận thanh toán không đúng định dạng JSON.',
-    };
-    return NextResponse.json(errRes, { status: 400 });
-  }
-
-  const clientKey = resolveClientKey(request);
-  const orderCode = String(
-    rawBody.orderCode || rawBody.order_code || ''
-  ).trim();
-  const providerRef = String(
-    rawBody.providerRef ||
-      rawBody.provider_ref ||
-      rawBody.reference ||
-      orderCode
-  ).trim();
-
-  if (!orderCode) {
-    const errRes: ReadingErrorResponse = {
-      status: 'error',
-      code: 'VALIDATION_ERROR',
-      message: 'Thiếu mã đơn hàng (orderCode) để xác nhận thanh toán.',
-    };
-    return NextResponse.json(errRes, { status: 400 });
-  }
-
-  // If a synthetic webhook test sends an orderCode that was not pre-created via POST,
-  // register a pending transaction first so idempotency still works across retries.
-  const existingOrder = getPaymentOrder(orderCode);
-  if (!existingOrder && orderCode.startsWith('TC-')) {
-    const fallbackPkgId = String(
-      rawBody.packageId || rawBody.package_id || 'dem_suy_19k'
-    ) as StarPackage['id'];
-    const pkg =
-      STAR_PACKAGES_BY_ID[fallbackPkgId] ?? STAR_PACKAGES_BY_ID.dem_suy_19k;
-    savePendingPaymentOrder({
-      orderCode,
-      clientKey,
-      birthYear: 2000,
-      packageId: pkg.id,
-      packageName: pkg.name,
-      amountVnd: pkg.priceVnd,
-      starsToCredit: pkg.stars,
-      isMonthlyPass: pkg.id === 'vip_month_69k',
-      status: 'pending',
-      qrDataText: `VIETQR:${orderCode}`,
-      vietQrImageUrl: `https://img.vietqr.io/image/MB-0000123456789-compact2.png?amount=${pkg.priceVnd}&addInfo=${encodeURIComponent(orderCode)}`,
-      checkoutUrl: `https://pay.payos.vn/web/${orderCode.toLowerCase()}`,
-      provider: 'payos_sandbox',
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  const confirmed = confirmPaymentOrderIdempotent({
-    orderCode,
-    providerRef,
-    requestClientKey: clientKey,
-  });
-
-  if (!confirmed.found || !confirmed.order || !confirmed.quota) {
-    const errRes: ReadingErrorResponse = {
-      status: 'error',
-      code: 'VALIDATION_ERROR',
-      message: 'Không tìm thấy đơn hàng thanh toán tương ứng.',
-    };
-    return NextResponse.json(errRes, { status: 404 });
-  }
-
+export async function PUT() {
   return NextResponse.json(
     {
-      status: 'ok',
-      idempotentReplay: confirmed.idempotentReplay,
-      order: confirmed.order,
-      quota: confirmed.quota,
+      status: 'error',
+      code: 'METHOD_NOT_ALLOWED',
+      message: 'Phương thức PUT /api/payment đã bị vô hiệu hóa vì lý do bảo mật. Vui lòng sử dụng Webhook chính thức của PayOS tại POST /api/pay/webhook.',
     },
-    { status: 200 }
+    { status: 405 }
   );
 }

@@ -13,16 +13,19 @@ import {
   canConsumeQuota,
   canUseFullDeck,
   consumeQuota,
+  createShareToken,
   type FunnelEventName,
   getCachedReading,
   getDailyBudgetStatus,
   getFunnelMetricsSummary,
   getQuotaStatus,
   grantBonusDraw,
+  isAdminRequest,
   recordFunnelEvent,
-  resolveClientKey,
+  resolveClientContext,
   unlockFullDeckWithStars,
 } from '@/lib/quota-store';
+import { buildSessionCookieHeader } from '@/lib/session';
 import {
   classifyAgeTier,
   CRISIS_SUPPORT_DATA,
@@ -50,33 +53,103 @@ function getTopicLabel(topicId: string): string {
 
 /**
  * GET /api/reading
- * Returns current client's daily quota status, global AI budget status, and funnel analytics summary.
- * If `?readingId=...` is passed, also includes the cached reading if available.
+ * - Returns current client's daily quota status.
+ * - Admin Gate (H3): Funnel metrics summary & daily AI budget are ONLY returned to authorized admins.
+ * - Ownership (H1, H2): Accessing `?readingId=...` enforces ownership check.
+ *   - Reading owner receives full reading (including private questionText).
+ *   - Shared viewers with valid `?shareToken=...` receive filtered public reading.
+ *   - Unauthorized third-parties are rejected with 403 Forbidden.
  */
 export async function GET(request: Request) {
-  const clientKey = resolveClientKey(request);
+  const clientContext = resolveClientContext(request);
+  const clientKey = clientContext.clientKey;
   const url = new URL(request.url);
+
+  // Persist the signed session on every response path so the identity used for
+  // the quota check is the same identity the browser will send back.
+  const attachSession = (res: NextResponse): NextResponse => {
+    const session = clientContext.signedSession;
+    if (session?.isNew) {
+      res.headers.set('Set-Cookie', buildSessionCookieHeader(session.cookieHeaderValue));
+    }
+    return res;
+  };
   const readingId = url.searchParams.get('readingId');
+  const shareToken = url.searchParams.get('shareToken');
 
   if (url.searchParams.get('track') === 'page_view') {
     recordFunnelEvent('page_view', { clientKey });
   }
 
   const quota = getQuotaStatus(clientKey);
-  const funnel = getFunnelMetricsSummary();
-  const budget = getDailyBudgetStatus();
-  const cachedReading = readingId ? getCachedReading(readingId) : undefined;
+  const isAdmin = isAdminRequest(request);
+  const funnel = isAdmin ? getFunnelMetricsSummary() : undefined;
+  const budget = isAdmin ? getDailyBudgetStatus() : undefined;
 
-  return NextResponse.json(
+  let readingPayload: unknown = undefined;
+
+  if (readingId) {
+    const cached = getCachedReading(readingId);
+    if (!cached) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          code: 'READING_NOT_FOUND',
+          message: 'Không tìm thấy lượt trải bài tương ứng.',
+        },
+        { status: 404 }
+      );
+    }
+
+    const isOwner = !cached.ownerId || cached.ownerId === clientKey || isAdmin;
+    const isValidShare = Boolean(shareToken && cached.shareToken && shareToken === cached.shareToken);
+
+    if (isOwner) {
+      readingPayload = cached;
+    } else if (isValidShare) {
+      // Filtered public view: hide questionText, birthYear, ageTier, private tokens
+      readingPayload = {
+        status: 'ok',
+        readingId: cached.readingId,
+        createdAt: cached.createdAt,
+        nickname: cached.nickname,
+        readerDisplayName: cached.readerDisplayName,
+        readerBadge: cached.readerBadge,
+        topicLabel: cached.topicLabel,
+        drawnCards: cached.drawnCards,
+        result: cached.result,
+        clarifier: cached.clarifier,
+        isSharedView: true,
+      };
+    } else {
+      return NextResponse.json(
+        {
+          status: 'error',
+          code: 'FORBIDDEN_READING_ACCESS',
+          message: 'Bạn không có quyền truy cập lượt bói này.',
+        },
+        { status: 403 }
+      );
+    }
+  }
+
+  const session = clientContext.signedSession;
+  const response = NextResponse.json(
     {
       status: 'ok',
       quota,
-      budget,
-      funnel,
-      ...(cachedReading ? { reading: cachedReading } : {}),
+      ...(budget ? { budget } : {}),
+      ...(funnel ? { funnel } : {}),
+      ...(readingPayload ? { reading: readingPayload } : {}),
     },
     { status: 200 }
   );
+
+  if (session?.isNew) {
+    response.headers.set('Set-Cookie', buildSessionCookieHeader(session.cookieHeaderValue));
+  }
+
+  return response;
 }
 
 /**
@@ -115,7 +188,8 @@ export async function POST(request: Request) {
   }
 
   const reqData = parsed.data;
-  const clientKey = resolveClientKey(request);
+  const clientContext = resolveClientContext(request);
+  const clientKey = clientContext.clientKey;
   const readingId = createReadingId();
   const createdAt = new Date().toISOString();
 
@@ -154,36 +228,33 @@ export async function POST(request: Request) {
   }
 
   // Step 3: Check client daily quota & global AI budget cap
-  const bypassQuota = request.headers.get('x-bypass-quota') === 'test';
-  if (!bypassQuota) {
-    const quotaCheck = canConsumeQuota(clientKey);
-    if (!quotaCheck.allowed) {
-      const isBudgetCap = quotaCheck.reason === 'BUDGET_CAP_REACHED';
+  const quotaCheck = canConsumeQuota(clientKey);
+  if (!quotaCheck.allowed) {
+    const isBudgetCap = quotaCheck.reason === 'BUDGET_CAP_REACHED';
+    const errRes: ReadingErrorResponse = {
+      status: 'error',
+      code: isBudgetCap ? 'BUDGET_CAP_REACHED' : 'QUOTA_EXCEEDED',
+      message: isBudgetCap
+        ? 'Ngân sách AI miễn phí trong ngày của hệ thống đã chạm trần bảo vệ. Vui lòng quay lại sau nhé!'
+        : 'Bạn đã hết lượt trải bài miễn phí hôm nay. Hãy chia sẻ ảnh Story 9:16 hoặc mở quà tặng để nhận thêm lượt nhé!',
+      quota: quotaCheck.quota,
+    };
+    return NextResponse.json(errRes, { status: 429 });
+  }
+
+  // Step 3b: Server-side Full Deck (78 cards) permission check
+  // Free accounts get 1 free 78-card reading per day. Subsequent turns require unlock with 5 Stars.
+  if (reqData.deck_mode === 'full_78') {
+    const fullDeckCheck = canUseFullDeck(clientKey);
+    if (!fullDeckCheck.allowed) {
       const errRes: ReadingErrorResponse = {
         status: 'error',
-        code: isBudgetCap ? 'BUDGET_CAP_REACHED' : 'QUOTA_EXCEEDED',
-        message: isBudgetCap
-          ? 'Ngân sách AI miễn phí trong ngày của hệ thống đã chạm trần bảo vệ. Vui lòng quay lại sau nhé!'
-          : 'Bạn đã hết lượt trải bài miễn phí hôm nay. Hãy chia sẻ ảnh Story 9:16 hoặc mở quà tặng để nhận thêm lượt nhé!',
-        quota: quotaCheck.quota,
+        code: 'FORBIDDEN_DECK_MODE',
+        message:
+          'Tài khoản miễn phí chỉ được chọn bộ 78 lá ở lượt đầu tiên trong ngày. Từ lượt thứ hai trở đi, vui lòng chọn bộ 22 lá hoặc mở khóa bộ 78 lá bằng 5 Sao.',
+        quota: getQuotaStatus(clientKey),
       };
-      return NextResponse.json(errRes, { status: 429 });
-    }
-
-    // Step 3b: Server-side Full Deck (78 cards) permission check
-    // Free accounts get 1 free 78-card reading per day. Subsequent turns require unlock with 5 Stars.
-    if (reqData.deck_mode === 'full_78') {
-      const fullDeckCheck = canUseFullDeck(clientKey);
-      if (!fullDeckCheck.allowed) {
-        const errRes: ReadingErrorResponse = {
-          status: 'error',
-          code: 'FORBIDDEN_DECK_MODE',
-          message:
-            'Tài khoản miễn phí chỉ được chọn bộ 78 lá ở lượt đầu tiên trong ngày. Từ lượt thứ hai trở đi, vui lòng chọn bộ 22 lá hoặc mở khóa bộ 78 lá bằng 5 Sao.',
-          quota: getQuotaStatus(clientKey),
-        };
-        return NextResponse.json(errRes, { status: 403 });
-      }
+      return NextResponse.json(errRes, { status: 403 });
     }
   }
 
@@ -284,15 +355,17 @@ export async function POST(request: Request) {
     }
 
     // Step 6: Deduct quota, cache reading, and return full ReadingSuccessResponse
-    const updatedQuota = bypassQuota
-      ? getQuotaStatus(clientKey)
-      : consumeQuota(clientKey, aiResult.tokensIn, aiResult.tokensOut, reqData.deck_mode);
+    const updatedQuota = consumeQuota(clientKey, aiResult.tokensIn, aiResult.tokensOut, reqData.deck_mode);
 
     const personaProfile = PERSONA_PROFILES[aiResult.effectivePersona];
+
+    const shareToken = createShareToken(readingId);
 
     const successResponse: ReadingSuccessResponse = {
       status: 'ok',
       readingId,
+      ownerId: clientKey,
+      shareToken,
       createdAt,
       nickname: reqData.nickname,
       birthYear: reqData.birth_year,
@@ -331,7 +404,12 @@ export async function POST(request: Request) {
       usedFallback: aiResult.usedFallback,
     });
 
-    return NextResponse.json(successResponse, { status: 200 });
+    const session = clientContext.signedSession;
+    const response = NextResponse.json(successResponse, { status: 200 });
+    if (session?.isNew) {
+      response.headers.set('Set-Cookie', buildSessionCookieHeader(session.cookieHeaderValue));
+    }
+    return response;
   } catch (error) {
     const errRes: ReadingErrorResponse = {
       status: 'error',
@@ -347,11 +425,13 @@ export async function POST(request: Request) {
 
 /**
  * PUT /api/reading
- * Claim bonus draws (`share_bonus`, `reward_ad_bonus`, `reset_demo_quota`)
+ * Claim bonus draws (`share_bonus`, `reward_ad_bonus`)
  * or log client-side funnel events (`share_story`, `page_view`, etc.).
  */
 export async function PUT(request: Request) {
-  const clientKey = resolveClientKey(request);
+  const clientContext = resolveClientContext(request);
+  const clientKey = clientContext.clientKey;
+  const isAdmin = isAdminRequest(request);
   let body: {
     action?: 'share_bonus' | 'reward_ad_bonus' | 'reset_demo_quota' | 'track_event' | 'unlock_full_deck';
     event?: FunnelEventName;
@@ -362,6 +442,18 @@ export async function PUT(request: Request) {
     body = await request.json();
   } catch {
     // Default to share_bonus if empty body
+  }
+
+  // P0-6 (C6): Reject reset_demo_quota with 400
+  if (body.action === 'reset_demo_quota') {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'ACTION_DISABLED',
+        message: 'Hành động reset_demo_quota đã bị vô hiệu hóa vì lý do bảo mật.',
+      },
+      { status: 400 }
+    );
   }
 
   if (body.action === 'unlock_full_deck') {
@@ -384,7 +476,7 @@ export async function PUT(request: Request) {
         action: 'unlock_full_deck',
         message: 'Đã mở khóa thành công bộ 78 lá cho lượt bốc bài tiếp theo!',
         quota: unlockRes.quota,
-        funnel: getFunnelMetricsSummary(),
+        funnel: isAdmin ? getFunnelMetricsSummary() : undefined,
       },
       { status: 200 }
     );
@@ -396,15 +488,15 @@ export async function PUT(request: Request) {
       {
         status: 'ok',
         quota: getQuotaStatus(clientKey),
-        funnel: getFunnelMetricsSummary(),
+        funnel: isAdmin ? getFunnelMetricsSummary() : undefined,
       },
       { status: 200 }
     );
   }
 
   const action =
-    body.action === 'reward_ad_bonus' || body.action === 'reset_demo_quota'
-      ? body.action
+    body.action === 'reward_ad_bonus'
+      ? 'reward_ad_bonus'
       : 'share_bonus';
 
   const updatedQuota = grantBonusDraw(clientKey, action);
@@ -413,12 +505,9 @@ export async function PUT(request: Request) {
     {
       status: 'ok',
       action,
-      message:
-        action === 'reset_demo_quota'
-          ? 'Đã làm mới lượt trải bài thử nghiệm hôm nay!'
-          : 'Chúc mừng! Vũ trụ vừa tặng thêm cho bạn +1 lượt bốc bài miễn phí hôm nay.',
+      message: 'Chúc mừng! Vũ trụ vừa tặng thêm cho bạn +1 lượt bốc bài miễn phí hôm nay.',
       quota: updatedQuota,
-      funnel: getFunnelMetricsSummary(),
+      funnel: isAdmin ? getFunnelMetricsSummary() : undefined,
     },
     { status: 200 }
   );

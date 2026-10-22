@@ -12,10 +12,14 @@ import type {
 import { PERSONA_PROFILES } from '@/lib/prompts';
 import {
   cacheReading,
+  canConsumeQuota,
+  consumeQuota,
   COUPLE_ROOM_TTL_MS,
   generateCoupleRoomCode,
   getCoupleRoom,
   getQuotaStatus,
+  createShareToken,
+  isAdminRequest,
   recordFunnelEvent,
   resolveClientKey,
   saveCoupleRoom,
@@ -31,6 +35,7 @@ import {
   scanCrisisAndInjection,
 } from '@/lib/safety';
 import {
+  CoupleReadingRequestSchema,
   CoupleRelationshipStatusSchema,
   CURRENT_REFERENCE_YEAR,
   DeckModeSchema,
@@ -134,7 +139,37 @@ export async function POST(request: Request) {
     return NextResponse.json(errRes, { status: 400 });
   }
 
+  const parsed = CoupleReadingRequestSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0]?.message || 'Dữ liệu yêu cầu Bói Đôi không hợp lệ.';
+    const errRes: ReadingErrorResponse = {
+      status: 'error',
+      code: 'VALIDATION_ERROR',
+      message: firstIssue,
+    };
+    return NextResponse.json(errRes, { status: 400 });
+  }
+
   const clientKey = resolveClientKey(request);
+
+  // Phase 2 (C7/H11): every Couple AI call must be metered like a normal
+  // reading — previously /api/couple could burn unlimited Gemini quota.
+  const quotaGuard = (): ReturnType<typeof NextResponse.json> | null => {
+    const check = canConsumeQuota(clientKey);
+    if (check.allowed) return null;
+    const isBudgetCap = check.reason === 'BUDGET_CAP_REACHED';
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: isBudgetCap ? 'BUDGET_CAP_REACHED' : 'QUOTA_EXCEEDED',
+        message: isBudgetCap
+          ? 'Ngân sách AI miễn phí trong ngày của hệ thống đã chạm trần bảo vệ. Vui lòng quay lại sau nhé!'
+          : 'Bạn đã hết lượt trải bài miễn phí hôm nay. Hãy chia sẻ ảnh Story 9:16 hoặc mở quà tặng để nhận thêm lượt nhé!',
+        quota: check.quota,
+      },
+      { status: 429 }
+    );
+  };
 
   // Normalize action / mode aliases
   const rawAction = String(
@@ -189,23 +224,24 @@ export async function POST(request: Request) {
         : typeof rawBody.consent_share === 'boolean'
         ? rawBody.consent_share
         : true;
-    const role = String(rawBody.role || '').trim();
 
-    if (typeof rawBody.ownerConsentedShare === 'boolean') {
-      room.ownerConsentedShare = rawBody.ownerConsentedShare;
+    // Phase 1 / H2: consent is not self-asserted. Only the room owner may change
+    // the owner's consent, and only the recorded partner may change theirs.
+    const isOwner = room.ownerClientKey === clientKey;
+    const isPartner = Boolean(room.partnerClientKey) && room.partnerClientKey === clientKey;
+
+    if (!isOwner && !isPartner) {
+      const errRes: ReadingErrorResponse = {
+        status: 'error',
+        code: 'FORBIDDEN_READING_ACCESS',
+        message: 'Bạn không có quyền thay đổi tuỳ chọn chia sẻ của phòng Bói Đôi này.',
+      };
+      return NextResponse.json(errRes, { status: 403 });
     }
-    if (typeof rawBody.partnerConsentedShare === 'boolean') {
-      room.partnerConsentedShare = rawBody.partnerConsentedShare;
-    }
-    if (role === 'owner') {
+
+    if (isOwner) {
       room.ownerConsentedShare = consentVal;
-    } else if (role === 'partner') {
-      room.partnerConsentedShare = consentVal;
-    } else if (
-      typeof rawBody.ownerConsentedShare !== 'boolean' &&
-      typeof rawBody.partnerConsentedShare !== 'boolean'
-    ) {
-      room.ownerConsentedShare = consentVal;
+    } else {
       room.partnerConsentedShare = consentVal;
     }
 
@@ -249,6 +285,15 @@ export async function POST(request: Request) {
         message: 'Không tìm thấy phòng Bói Đôi hoặc mã phòng không chính xác.',
       };
       return NextResponse.json(errRes, { status: 404 });
+    }
+
+    if (room.status === 'completed') {
+      const errRes: ReadingErrorResponse = {
+        status: 'error',
+        code: 'ROOM_COMPLETED',
+        message: 'Phòng Bói Đôi này đã hoàn thành trải bài.',
+      };
+      return NextResponse.json(errRes, { status: 400 });
     }
 
     if (
@@ -304,6 +349,7 @@ export async function POST(request: Request) {
       TAROT_CARDS_BY_ID[connectionDraw.card_id] ?? MAJOR_ARCANA[19]!;
 
     room.partnerNickname = partnerNickname;
+    room.partnerClientKey = clientKey;
     room.partnerCard = {
       card: partnerCardObj,
       reversed: partnerDraw.reversed,
@@ -354,6 +400,9 @@ export async function POST(request: Request) {
       room.readerId
     );
 
+    const blocked = quotaGuard();
+    if (blocked) return blocked;
+
     const coupleAi = await generateCoupleTarotReading({
       ownerNickname: room.ownerNickname,
       partnerNickname,
@@ -386,6 +435,8 @@ export async function POST(request: Request) {
       ],
     });
 
+    consumeQuota(clientKey, coupleAi.tokensIn, coupleAi.tokensOut, room.deckMode);
+
     const readingId = createCoupleReadingId();
     const createdAt = new Date().toISOString();
     const personaProfile = PERSONA_PROFILES[coupleAi.effectivePersona];
@@ -394,6 +445,8 @@ export async function POST(request: Request) {
     const readingResponse: ReadingSuccessResponse = {
       status: 'ok',
       readingId,
+      ownerId: clientKey,
+      shareToken: createShareToken(readingId),
       createdAt,
       nickname: `${room.ownerNickname} & ${partnerNickname}`,
       birthYear: room.ownerBirthYear,
@@ -679,6 +732,9 @@ export async function POST(request: Request) {
     DrawnCardClientPayload,
   ];
 
+  const blocked = quotaGuard();
+  if (blocked) return blocked;
+
   const coupleAi = await generateCoupleTarotReading({
     ownerNickname,
     partnerNickname,
@@ -696,6 +752,8 @@ export async function POST(request: Request) {
     })),
   });
 
+  consumeQuota(clientKey, coupleAi.tokensIn, coupleAi.tokensOut, deckMode);
+
   const readingId = createCoupleReadingId();
   const nowMs = Date.now();
   const createdAt = new Date(nowMs).toISOString();
@@ -706,6 +764,8 @@ export async function POST(request: Request) {
   const readingResponse: ReadingSuccessResponse = {
     status: 'ok',
     readingId,
+    ownerId: clientKey,
+    shareToken: createShareToken(readingId),
     createdAt,
     nickname: `${ownerNickname} & ${partnerNickname}`,
     birthYear: rawBirthYear,

@@ -7,6 +7,7 @@ import {
   POST as postPayment,
   PUT as putPayment,
 } from '../src/app/api/payment/route';
+import { POST as postPayOsWebhook } from '../src/app/api/pay/webhook/route';
 import { POST as postReading } from '../src/app/api/reading/route';
 import { GET as getStoryCard } from '../src/app/api/story-card/route';
 import {
@@ -346,38 +347,54 @@ describe('Phase 2 & Phase 3 Verification Suite (78 Cards, 4 Readers, Couple, Cla
     const adultPayJson = await adultPayRes.json();
     expect(adultPayJson.order.orderCode).toMatch(/^TC-/);
 
-    // First webhook confirmation credits +35 Stars (7 -> 42) and records 29.000đ daily spend
-    const confirm1Res = await putPayment(
-      new Request('http://localhost:3000/api/payment', {
-        method: 'PUT',
-        headers: clientHeaders,
-        body: JSON.stringify({
-          orderCode: adultPayJson.order.orderCode,
-          providerRef: 'PAYOS_TX_999',
-        }),
+    // P0-3: PUT /api/payment is disabled for security and MUST return 405 Method Not Allowed
+    const putDisabledRes = await putPayment();
+    expect(putDisabledRes.status).toBe(405);
+    const putDisabledJson = await putDisabledRes.json();
+    expect(putDisabledJson.code).toBe('METHOD_NOT_ALLOWED');
+
+    // Official Webhook confirmation (POST /api/pay/webhook) credits +35 Stars (7 -> 42) and records 29.000đ daily spend
+    process.env.PAYOS_SANDBOX = 'true';
+    const rawNumericCode = adultPayJson.order.orderCode.replace(/^TC-/, '');
+    const webhookPayload = {
+      code: '00',
+      desc: 'success',
+      data: {
+        orderCode: rawNumericCode,
+        amount: 29000,
+        reference: 'PAYOS_TX_999',
+      },
+    };
+
+    const confirm1Res = await postPayOsWebhook(
+      new Request('http://localhost:3000/api/pay/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload),
       })
     );
     const confirm1Json = await confirm1Res.json();
+    expect(confirm1Res.status).toBe(200);
     expect(confirm1Json.status).toBe('ok');
     expect(confirm1Json.idempotentReplay).toBe(false);
-    expect(confirm1Json.quota.starsBalance).toBe(42);
-    expect(confirm1Json.quota.dailySpendVnd).toBe(29000);
+    const updatedClientQuota = (await (await getPayment(new Request('http://localhost:3000/api/payment', { headers: clientHeaders }))).json()).quota;
+    expect(updatedClientQuota.starsBalance).toBe(42);
+    expect(updatedClientQuota.dailySpendVnd).toBe(29000);
 
     // Second duplicate webhook confirmation with same providerRef / orderCode NEVER credits twice!
-    const confirm2Res = await putPayment(
-      new Request('http://localhost:3000/api/payment', {
-        method: 'PUT',
-        headers: clientHeaders,
-        body: JSON.stringify({
-          orderCode: adultPayJson.order.orderCode,
-          providerRef: 'PAYOS_TX_999',
-        }),
+    const confirm2Res = await postPayOsWebhook(
+      new Request('http://localhost:3000/api/pay/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload),
       })
     );
     const confirm2Json = await confirm2Res.json();
+    expect(confirm2Res.status).toBe(200);
     expect(confirm2Json.status).toBe('ok');
     expect(confirm2Json.idempotentReplay).toBe(true);
-    expect(confirm2Json.quota.starsBalance).toBe(42);
+    const replayQuota = (await (await getPayment(new Request('http://localhost:3000/api/payment', { headers: clientHeaders }))).json()).quota;
+    expect(replayQuota.starsBalance).toBe(42);
 
     // 6. Responsible Daily Spend Cap: another 29.000đ package today (29k + 29k = 58k > 50k cap) is blocked!
     const capExceededRes = await postPayment(

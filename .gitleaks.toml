@@ -1,0 +1,49 @@
+# Gitleaks configuration — secret scanning for TarotCouple
+# Run locally: npx gitleaks detect --no-banner --redact
+# CI: add `gitleaks` to the pipeline as a required check.
+
+title = "TarotCouple secret scanning"
+
+[extend]
+# Use the upstream default ruleset (AWS, GCP, etc.) plus the local additions below.
+useDefault = true
+
+[[rules]]
+id = "supabase-service-role-key"
+description = "Supabase service_role JWT (bypasses RLS) must never be committed"
+regex = '''(?i)service_role'''
+entropy = 3.5
+keywords = ["service_role"]
+tags = ["supabase", "key", "jwt"]
+
+[[rules]]
+id = "supabase-anon-jwt"
+description = "Supabase JWT (anon or service role)"
+regex = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}'''
+tags = ["supabase", "jwt"]
+
+[[rules]]
+id = "google-api-key"
+description = "Google / Gemini API key"
+regex = '''AIza[0-9A-Za-z_-]{35}'''
+tags = ["google", "key"]
+
+[[rules]]
+id = "payos-secret"
+description = "PayOS checksum/api key assignment with a real value"
+regex = '''(?i)PAYOS_(CHECKSUM_KEY|API_KEY|CLIENT_ID)\s*=\s*["']?[A-Za-z0-9-]{12,}'''
+tags = ["payos", "key"]
+
+[allowlist]
+description = "Placeholders and local-only files"
+paths = [
+  '''\.env\.local$''',
+  '''node_modules/''',
+  '''\.next/''',
+  '''package-lock\.json$''',
+]
+regexes = [
+  '''your-.*-placeholder''',
+  '''PAYOS_(CHECKSUM_KEY|API_KEY|CLIENT_ID)\s*=\s*["']{2}''',
+  '''GEMINI_API_KEY(_[0-9]+)?\s*=\s*["']{2}''',
+]

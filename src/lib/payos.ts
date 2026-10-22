@@ -10,16 +10,16 @@ import { PayOS } from '@payos/node';
 export function getPayOsConfig() {
   const clientId = (
     process.env.PAYOS_CLIENT_ID ||
-    process.env.NEXT_PUBLIC_PAYOS_CLIENT_ID ||
     process.env.PAYOS_CLIENTID ||
     ''
   )
     .replace(/['"]/g, '')
     .trim();
 
+  // M3: never read secrets from NEXT_PUBLIC_* — Next inlines those into the
+  // client bundle, which would expose the API/checksum keys to every visitor.
   const apiKey = (
     process.env.PAYOS_API_KEY ||
-    process.env.NEXT_PUBLIC_PAYOS_API_KEY ||
     process.env.PAYOS_APIKEY ||
     ''
   )
@@ -28,9 +28,7 @@ export function getPayOsConfig() {
 
   const checksumKey = (
     process.env.PAYOS_CHECKSUM_KEY ||
-    process.env.NEXT_PUBLIC_PAYOS_CHECKSUM_KEY ||
     process.env.PAYOS_CHECKSUMKEY ||
-    process.env.PAYOS_CHECKSUM ||
     ''
   )
     .replace(/['"]/g, '')
@@ -219,10 +217,19 @@ export async function verifyPayOsWebhookData(webhookBody: unknown): Promise<{
     }
   }
 
-  // Sandbox simulation mode (when no live checksum key is configured)
-  const data = (payload.data || payload) as Record<string, unknown>;
+  // Sandbox simulation mode (ONLY allowed in non-production environments when explicitly enabled via PAYOS_SANDBOX === 'true')
+  if (process.env.NODE_ENV !== 'production' && process.env.PAYOS_SANDBOX === 'true') {
+    const data = (payload.data || payload) as Record<string, unknown>;
+    return {
+      verified: true,
+      data,
+    };
+  }
+
+  // Fail-closed default: if missing checksumKey or running in production without verified signature -> REJECT!
   return {
-    verified: true,
-    data,
+    verified: false,
+    data: null,
+    error: 'Missing PAYOS_CHECKSUM_KEY or unverified webhook payload in fail-closed mode.',
   };
 }

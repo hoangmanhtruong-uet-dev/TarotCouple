@@ -19,6 +19,44 @@ export default function StoryPage() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [bonusClaimed, setBonusClaimed] = useState(false);
 
+  // P0-8 (C8): Rules of Hooks - hoist useMemo calls BEFORE early return to prevent blank screen / hydration crash
+  const previewQuotes = readingSuccess?.result?.shareable_card?.savage_quotes;
+  const memoActiveQuote = (previewQuotes && previewQuotes[activeQuoteIdx]) || (previewQuotes && previewQuotes[0]) || '';
+
+  const cardsParam = useMemo(() => {
+    if (!readingSuccess) return '';
+    return readingSuccess.drawnCards
+      .map((slot) => `${slot.card.id}:${slot.reversed ? 1 : 0}`)
+      .join(',');
+  }, [readingSuccess]);
+
+  const storyImageUrl = useMemo(() => {
+    if (!readingSuccess) return '';
+    const params = new URLSearchParams({
+      readingId: readingSuccess.readingId,
+      quoteIndex: String(activeQuoteIdx),
+      hideQuestion: hideQuestionOnShare ? '1' : '0',
+      persona: readingSuccess.effectivePersona,
+      nickname: readingSuccess.nickname,
+      topicLabel: readingSuccess.topicLabel,
+      question: readingSuccess.questionText,
+      badge: readingSuccess.result.shareable_card.headline_badge,
+      quote: memoActiveQuote,
+      subAdvice: readingSuccess.result.shareable_card.sub_advice,
+      luckyItem: readingSuccess.result.shareable_card.lucky_item,
+      cards: cardsParam,
+    });
+
+    if (readingSuccess.result.metrics?.compatibility_score !== undefined) {
+      params.set('compatScore', String(readingSuccess.result.metrics.compatibility_score));
+    }
+    if (readingSuccess.result.metrics?.red_flag_level !== undefined) {
+      params.set('redFlag', String(readingSuccess.result.metrics.red_flag_level));
+    }
+
+    return `/api/story-card?${params.toString()}`;
+  }, [readingSuccess, activeQuoteIdx, hideQuestionOnShare, memoActiveQuote, cardsParam]);
+
   if (!readingSuccess) {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
@@ -41,38 +79,6 @@ export default function StoryPage() {
 
   const quotes = readingSuccess.result.shareable_card.savage_quotes;
   const activeQuote = quotes[activeQuoteIdx] || quotes[0]!;
-
-  const cardsParam = useMemo(() => {
-    return readingSuccess.drawnCards
-      .map((slot) => `${slot.card.id}:${slot.reversed ? 1 : 0}`)
-      .join(',');
-  }, [readingSuccess.drawnCards]);
-
-  const storyImageUrl = useMemo(() => {
-    const params = new URLSearchParams({
-      readingId: readingSuccess.readingId,
-      quoteIndex: String(activeQuoteIdx),
-      hideQuestion: hideQuestionOnShare ? '1' : '0',
-      persona: readingSuccess.effectivePersona,
-      nickname: readingSuccess.nickname,
-      topicLabel: readingSuccess.topicLabel,
-      question: readingSuccess.questionText,
-      badge: readingSuccess.result.shareable_card.headline_badge,
-      quote: activeQuote,
-      subAdvice: readingSuccess.result.shareable_card.sub_advice,
-      luckyItem: readingSuccess.result.shareable_card.lucky_item,
-      cards: cardsParam,
-    });
-
-    if (readingSuccess.result.metrics?.compatibility_score !== undefined) {
-      params.set('compatScore', String(readingSuccess.result.metrics.compatibility_score));
-    }
-    if (readingSuccess.result.metrics?.red_flag_level !== undefined) {
-      params.set('redFlag', String(readingSuccess.result.metrics.red_flag_level));
-    }
-
-    return `/api/story-card?${params.toString()}`;
-  }, [readingSuccess, activeQuoteIdx, hideQuestionOnShare, activeQuote, cardsParam]);
 
   const claimShareBonus = async () => {
     if (bonusClaimed) return;

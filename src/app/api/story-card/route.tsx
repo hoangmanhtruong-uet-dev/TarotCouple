@@ -1,7 +1,7 @@
 import React from 'react';
 import { ImageResponse } from 'next/og';
 import { MAJOR_ARCANA, TAROT_CARDS_BY_ID, type TarotCard } from '@/data/tarot-cards';
-import { getCachedReading, recordFunnelEvent } from '@/lib/quota-store';
+import { getCachedReading, isAdminRequest, recordFunnelEvent, resolveClientKey } from '@/lib/quota-store';
 import type { EffectivePersona } from '@/lib/schemas';
 
 export const runtime = 'nodejs';
@@ -274,6 +274,26 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const readingId = url.searchParams.get('readingId');
   const cached = getCachedReading(readingId);
+
+  // Ownership (H1/H11): readingId is exposed in shareable URLs, so a stranger
+  // must not be able to render another user's cards/question into a PNG.
+  if (cached?.ownerId) {
+    const clientKey = resolveClientKey(request);
+    const shareToken = url.searchParams.get('shareToken');
+    const isOwner = cached.ownerId === clientKey;
+    const isValidShare = Boolean(shareToken && cached.shareToken && shareToken === cached.shareToken);
+
+    if (!isOwner && !isValidShare && !isAdminRequest(request)) {
+      return new Response(
+        JSON.stringify({
+          status: 'error',
+          code: 'FORBIDDEN_READING_ACCESS',
+          message: 'Bạn không có quyền xuất ảnh từ lượt bói này.',
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
 
   const rawQuoteIdx = Number.parseInt(url.searchParams.get('quoteIndex') || '0', 10);
   const quoteIndex: 0 | 1 | 2 =
@@ -984,7 +1004,11 @@ export async function GET(request: Request) {
       height: 1920,
       ...(fonts.length > 0 ? { fonts } : {}),
       headers: {
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        // H11: when the private question is rendered the image must never land
+        // in a shared CDN cache.
+        'Cache-Control': hideQuestion
+          ? 'public, max-age=3600, s-maxage=3600'
+          : 'private, no-store',
       },
     }
   );

@@ -9,12 +9,13 @@ export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   // 1. Kiểm tra quyền truy cập đặc biệt (Bypass cho Admin)
-  const bypassSecret = process.env.MAINTENANCE_BYPASS_TOKEN || 'tarot_bypass';
+  // P0-7 (H6): Không có default token. Nếu thiếu MAINTENANCE_BYPASS_TOKEN trong env -> tắt tính năng bypass hoàn toàn.
+  const bypassSecret = process.env.MAINTENANCE_BYPASS_TOKEN?.trim();
   const queryBypass = searchParams.get('bypass');
   const hasBypassCookie = request.cookies.get('maintenance_bypass')?.value === '1';
 
-  // Nếu Admin vào với ?bypass=<token> hợp lệ -> lưu cookie và cho phép truy cập bình thường
-  if (queryBypass && queryBypass === bypassSecret) {
+  // Nếu Admin vào với ?bypass=<token> hợp lệ (và có cấu hình secret) -> lưu cookie và cho phép truy cập bình thường
+  if (bypassSecret && queryBypass && queryBypass === bypassSecret) {
     const targetUrl = request.nextUrl.clone();
     targetUrl.searchParams.delete('bypass'); // Xóa query param cho sạch URL
     const response = NextResponse.redirect(targetUrl);

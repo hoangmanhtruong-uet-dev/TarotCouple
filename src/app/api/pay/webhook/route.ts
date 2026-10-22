@@ -33,6 +33,21 @@ export async function POST(request: Request) {
   }
 
   const webhookData = verification.data;
+
+  // Requirement: Enforce code === '00' (Payment success code in PayOS)
+  const transactionCode = String(
+    (rawBody as Record<string, unknown>)?.code ?? webhookData.code ?? ''
+  ).trim();
+  if (transactionCode !== '00') {
+    return NextResponse.json(
+      {
+        status: 'error',
+        message: `Transaction code '${transactionCode}' is not successful (must be '00').`,
+      },
+      { status: 400 }
+    );
+  }
+
   const rawOrderCode = webhookData.orderCode;
   const orderCodeStr = String(rawOrderCode || '').trim();
   const providerRef = String(
@@ -51,33 +66,30 @@ export async function POST(request: Request) {
     ? orderCodeStr
     : `TC-${orderCodeStr}`;
 
-  // If order was created directly with PayOS or synthetic test
+  // Requirement: Reject unknown order with 404 (Fail-closed against synthetic fabricated orders)
   const existing = getPaymentOrder(fullOrderCode) || getPaymentOrder(orderCodeStr);
   if (!existing) {
-    const amount = Number(webhookData.amount) || 19000;
-    savePendingPaymentOrder({
-      orderCode: fullOrderCode,
-      clientKey: 'payos_webhook_user',
-      birthYear: 2000,
-      packageId: 'dem_suy_19k',
-      packageName: 'Gói Đêm Suy',
-      amountVnd: amount,
-      starsToCredit: 20,
-      isMonthlyPass: false,
-      status: 'pending',
-      qrDataText: `VIETQR:${fullOrderCode}`,
-      vietQrImageUrl: `https://img.vietqr.io/image/MB-0000123456789-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(fullOrderCode)}`,
-      checkoutUrl: `https://pay.payos.vn/web/${orderCodeStr}`,
-      provider: 'payos',
-      createdAt: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      { status: 'error', message: `Order '${fullOrderCode}' not found.` },
+      { status: 404 }
+    );
   }
 
-  const targetCode = existing ? existing.orderCode : fullOrderCode;
+  // Requirement: Verify webhook amount matches stored pending amountVnd
+  const webhookAmount = Number(webhookData.amount);
+  if (Number.isFinite(webhookAmount) && webhookAmount !== existing.amountVnd) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        message: `Amount mismatch: expected ${existing.amountVnd} VND, received ${webhookAmount} VND.`,
+      },
+      { status: 400 }
+    );
+  }
 
-  // Execute idempotent confirmation
+  // Execute idempotent confirmation using the pre-registered order (starsToCredit from registered package)
   const confirmed = confirmPaymentOrderIdempotent({
-    orderCode: targetCode,
+    orderCode: existing.orderCode,
     providerRef,
   });
 
@@ -86,7 +98,8 @@ export async function POST(request: Request) {
       success: true,
       status: 'ok',
       idempotentReplay: confirmed.idempotentReplay,
-      orderCode: targetCode,
+      orderCode: existing.orderCode,
+      starsCredited: confirmed.idempotentReplay ? 0 : existing.starsToCredit,
     },
     { status: 200 }
   );

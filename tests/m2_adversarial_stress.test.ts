@@ -518,7 +518,11 @@ describe('Milestone 2 Adversarial Stress & Edge Case Test Suite', () => {
 
       const req = new Request('http://localhost:3000/api/couple', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Phase 1 ownership: consent must come from the room owner.
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': 'owner_remote',
+        },
         body: JSON.stringify(consentPayload),
       });
 

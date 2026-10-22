@@ -6,12 +6,18 @@ import { resetAllQuotaStoreForTesting } from '../src/lib/quota-store';
 describe('Phase 4 Growth Engine & Stage Gate 4 Verification Suite', () => {
   it('1. GET /api/growth returns Spiritual Wrapped, 4 TikTok 3-Slide Kits, Referral Code, and Stage Gate 4 Unit Economics (ARPPU > Cost per Paying User)', async () => {
     resetAllQuotaStoreForTesting();
+    // H3: unit economics are internal metrics, only exposed to an authorized admin.
+    process.env.ADMIN_SECRET = 'growth_admin_test_secret_123456';
+    const adminHeaders = {
+      'x-client-id': 'growth_user_01',
+      'x-admin-secret': 'growth_admin_test_secret_123456',
+    };
 
     const req = new Request(
       'http://localhost:3000/api/growth?nickname=LinhSuy&readerId=ba_co_mo_hon',
       {
         method: 'GET',
-        headers: { 'x-client-id': 'growth_user_01' },
+        headers: adminHeaders,
       }
     );
 
@@ -129,7 +135,9 @@ describe('Phase 4 Growth Engine & Stage Gate 4 Verification Suite', () => {
     const adData = await adRes.json();
     expect(adData.quota.starsBalance).toBe(18);
     expect(adData.referral.rewardedAdsWatchedToday).toBe(1);
-    expect(adData.unitEconomics.totalAdRevenueVnd).toBeGreaterThanOrEqual(45);
+    // H3: unit economics stay private; the per-event revenue delta is public-safe.
+    expect(adData.unitEconomics).toBeUndefined();
+    expect(adData.adRevenueAddedVnd).toBe(45);
   });
 
   it('3. POST /api/growth generates custom TikTok 3-Slide kit and GET /api/wrapped-card renders 1080x1920 PNG poster', async () => {

@@ -10,6 +10,7 @@ import { ReferralAndAdModal } from '@/components/ReferralAndAdModal';
 import { LegalPrivacyModal } from '@/components/LegalPrivacyModal';
 import { useQuotaSync } from '@/lib/use-quota';
 import { useReadingStore } from '@/lib/reading-store';
+import { clearAllJournal } from '@/lib/journal-store';
 import { CURRENT_REFERENCE_YEAR } from '@/lib/schemas';
 
 export default function MeProfilePage() {
@@ -232,7 +233,9 @@ export default function MeProfilePage() {
         onClose={() => setIsLegalOpen(false)}
         onClearHistory={() => {
           try {
-            localStorage.clear();
+            // M11: only wipe app-owned data, never the whole origin.
+            clearAllJournal();
+            localStorage.removeItem('tarot-couple-reading-store');
           } catch {}
         }}
         onResetSession={() => {

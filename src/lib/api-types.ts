@@ -66,6 +66,8 @@ export interface FollowupMessagePayload {
 export interface ReadingSuccessResponse {
   status: 'ok';
   readingId: string;
+  ownerId?: string;
+  shareToken?: string;
   createdAt: string;
   nickname: string;
   birthYear: number;
@@ -120,10 +122,17 @@ export interface ReadingErrorResponse {
     | 'DAILY_SPEND_CAP_EXCEEDED'
     | 'ROOM_NOT_FOUND'
     | 'ROOM_EXPIRED'
+    | 'ROOM_COMPLETED'
     | 'INTERNAL_ERROR'
-    | 'FORBIDDEN_DECK_MODE';
+    | 'FORBIDDEN_DECK_MODE'
+    | 'FORBIDDEN_READING_ACCESS'
+    | 'METHOD_NOT_ALLOWED'
+    | 'ACTION_DISABLED'
+    | 'NOT_READING_OWNER'
+    | 'FORBIDDEN';
   message: string;
   quota?: QuotaStatusPayload;
+  room?: CoupleRoomPublicView;
 }
 
 export type ReadingApiResponse =

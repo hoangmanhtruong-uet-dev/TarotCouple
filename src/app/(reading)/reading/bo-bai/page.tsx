@@ -9,6 +9,7 @@ import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { useReadingStore } from '@/lib/reading-store';
 import { READERS } from '@/data/tarot-cards';
 import type { DeckMode, ReaderId } from '@/lib/schemas';
+import { CURRENT_REFERENCE_YEAR } from '@/lib/schemas';
 import type { QuotaStatusPayload } from '@/lib/api-types';
 import { WalletPayOSModal } from '@/components/WalletPayOSModal';
 import { DailyStreakModal } from '@/components/DailyStreakModal';
@@ -231,7 +232,7 @@ export default function BoBaiSelectionPage() {
   // Kiểm tra quyền bộ 78 lá và số lượt còn lại
   const isOutOfTurns = (quota.remainingToday ?? 3) <= 0;
   const isFullDeckLocked = !quota.canUseFullDeck;
-  const isUnder18 = birthYear ? 2026 - birthYear < 18 : false;
+  const isUnder18 = birthYear ? CURRENT_REFERENCE_YEAR - birthYear < 18 : false;
 
   useEffect(() => {
     return () => {

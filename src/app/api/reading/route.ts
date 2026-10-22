@@ -482,8 +482,38 @@ export async function PUT(request: Request) {
     );
   }
 
-  if (body.action === 'track_event' && body.event) {
-    recordFunnelEvent(body.event, { clientKey, ...(body.meta || {}) });
+  if (body.action === 'track_event') {
+    // H9: only a small, non-economic set of client events may be tracked, and
+    // metadata is whitelisted so anonymous callers cannot poison analytics or
+    // grow the in-memory maps with arbitrary keys.
+    const CLIENT_TRACKABLE_EVENTS = new Set<FunnelEventName>(['share_story', 'page_view']);
+    if (!body.event || !CLIENT_TRACKABLE_EVENTS.has(body.event)) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          code: 'VALIDATION_ERROR',
+          message: 'Sự kiện không hợp lệ.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const rawMeta =
+      body.meta && typeof body.meta === 'object'
+        ? (body.meta as Record<string, unknown>)
+        : {};
+    const safeMeta: Record<string, unknown> = {};
+    if (typeof rawMeta.topic === 'string' && rawMeta.topic.length <= 40) {
+      safeMeta.topic = rawMeta.topic;
+    }
+    if (
+      typeof rawMeta.effectivePersona === 'string' &&
+      rawMeta.effectivePersona.length <= 40
+    ) {
+      safeMeta.effectivePersona = rawMeta.effectivePersona;
+    }
+
+    recordFunnelEvent(body.event, { clientKey, ...safeMeta });
     return NextResponse.json(
       {
         status: 'ok',
@@ -494,10 +524,21 @@ export async function PUT(request: Request) {
     );
   }
 
-  const action =
-    body.action === 'reward_ad_bonus'
-      ? 'reward_ad_bonus'
-      : 'share_bonus';
+  // C4: bonus draws are only granted for the two legitimate actions. Previously
+  // any unknown/absent action fell through and minted a free draw.
+  if (body.action !== 'share_bonus' && body.action !== 'reward_ad_bonus') {
+    return NextResponse.json(
+      {
+        status: 'error',
+        code: 'VALIDATION_ERROR',
+        message: 'Hành động không hợp lệ.',
+        quota: getQuotaStatus(clientKey),
+      },
+      { status: 400 }
+    );
+  }
+
+  const action = body.action;
 
   const updatedQuota = grantBonusDraw(clientKey, action);
 

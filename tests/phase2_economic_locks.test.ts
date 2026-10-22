@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { POST as postGrowth, GET as getGrowth } from '../src/app/api/growth/route';
 import { POST as postCouple } from '../src/app/api/couple/route';
+import { PUT as putReading } from '../src/app/api/reading/route';
 import {
   consumeQuota,
   getQuotaStatus,
@@ -207,6 +208,63 @@ describe('Phase 2 — Economic abuse locks (referral + AI quota)', () => {
       expect(ownerRes.status).toBe(200);
       const ownerData = await ownerRes.json();
       expect(ownerData.room.ownerConsentedShare).toBe(true);
+    });
+  });
+
+  describe('C4/H9 — PUT /api/reading cannot mint draws or poison analytics', () => {
+    it('rejects an empty body instead of granting a share bonus', async () => {
+      const res = await putReading(
+        jsonRequest('/api/reading', 'put_farm_01', {})
+      );
+      expect(res.status).toBe(400);
+      expect(getQuotaStatus('put_farm_01').bonusDraws).toBe(0);
+    });
+
+    it('rejects unknown actions instead of falling back to share_bonus', async () => {
+      for (const action of ['free_stars', 'hack', 'reset_demo_quota']) {
+        const res = await putReading(
+          jsonRequest('/api/reading', 'put_farm_02', { action })
+        );
+        expect(res.status).toBe(400);
+      }
+      expect(getQuotaStatus('put_farm_02').bonusDraws).toBe(0);
+    });
+
+    it('still grants a bonus for the two legitimate actions', async () => {
+      const share = await putReading(
+        jsonRequest('/api/reading', 'put_legit_01', { action: 'share_bonus' })
+      );
+      expect(share.status).toBe(200);
+      expect(getQuotaStatus('put_legit_01').bonusDraws).toBe(1);
+
+      const ad = await putReading(
+        jsonRequest('/api/reading', 'put_legit_01', { action: 'reward_ad_bonus' })
+      );
+      expect(ad.status).toBe(200);
+      expect(getQuotaStatus('put_legit_01').bonusDraws).toBe(2);
+    });
+
+    it('rejects arbitrary funnel event names', async () => {
+      const res = await putReading(
+        jsonRequest('/api/reading', 'put_event_01', {
+          action: 'track_event',
+          event: 'arbitrary_poison_event',
+        })
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts whitelisted events and drops unknown metadata', async () => {
+      const res = await putReading(
+        jsonRequest('/api/reading', 'put_event_02', {
+          action: 'track_event',
+          event: 'share_story',
+          meta: { topic: 'love', junkKey: 'x'.repeat(500) },
+        })
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBe('ok');
     });
   });
 });

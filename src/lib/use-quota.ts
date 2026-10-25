@@ -9,7 +9,7 @@ const DEFAULT_QUOTA: QuotaStatusPayload = {
   dailyLimit: 3,
   bonusDraws: 0,
   remainingToday: 3,
-  starsBalance: 15,
+  starsBalance: 10,
   streakDays: 1,
   dailyPullCompletedToday: false,
   dailySpendVnd: 0,

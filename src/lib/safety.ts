@@ -36,11 +36,23 @@ export const STANDARD_TOPICS: TopicOption[] = [
     description: 'Dòng tiền, cơ hội sắp tới và thói quen chi tiêu',
     positions: ['Tình hình hiện tại', 'Điều đang cản', 'Việc nên làm'],
   },
+  {
+    id: 'self_healing',
+    label: 'Chữa lành & Bản thân',
+    description: 'Nỗi bất an nội tâm, cởi bỏ áp lực, yêu thương và tái tạo năng lượng bản thân',
+    positions: ['Tổn thương cốt lõi', 'Thói quen cần buông', 'Chìa khóa chữa lành'],
+  },
+  {
+    id: 'family',
+    label: 'Gia đình & Người thân',
+    description: 'Kỳ vọng thế hệ, khoảng cách giao tiếp và cách tìm lại sự hòa hợp',
+    positions: ['Sợi dây gắn kết', 'Khoảng cách vô hình', 'Hướng đi hòa hợp'],
+  },
 ];
 
 /**
  * Kid/Teen Safe Topics (10-15yo) per PLAN.md Section 8.3
- * Replaces adult romance with wholesome school crush/friendship and disables finance.
+ * Wholesome school crush/friendship, study, and wholesome family/self-care.
  */
 export const KID_TEEN_SAFE_TOPICS: TopicOption[] = [
   {
@@ -60,6 +72,18 @@ export const KID_TEEN_SAFE_TOPICS: TopicOption[] = [
     label: 'Vận may ngày mới',
     description: 'Thông điệp tích cực và điều bất ngờ dễ thương đang chờ đón',
     positions: ['Năng lượng chủ đạo', 'Điều bất ngờ nhỏ', 'Lời nhắn tích cực'],
+  },
+  {
+    id: 'self_healing',
+    label: 'Chăm sóc bản thân',
+    description: 'Giải tỏa áp lực bài vở, thói quen tích cực và lắng nghe cảm xúc bản thân',
+    positions: ['Tâm trạng hiện tại', 'Áp lực cần buông', 'Niềm vui mỗi ngày'],
+  },
+  {
+    id: 'family',
+    label: 'Gia đình & Bố mẹ',
+    description: 'Chia sẻ cùng bố mẹ, lắng nghe và gắn kết yêu thương trong gia đình',
+    positions: ['Tình cảm gia đình', 'Hiểu lầm nhỏ', 'Lời khuyên hòa thuận'],
   },
 ];
 

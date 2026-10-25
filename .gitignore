@@ -28,6 +28,7 @@ yarn-error.log*
 
 # teamwork agent logs
 .agents/
+.kilo/
 
 # typescript
 *.tsbuildinfo

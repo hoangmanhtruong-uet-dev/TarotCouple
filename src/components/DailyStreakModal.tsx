@@ -14,6 +14,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { ALL_TAROT_CARDS, READERS } from '@/data/tarot-cards';
+import { getCardProse } from '@/data/tarot-card-prose';
 import type {
   DailyPullPayload,
   QuotaStatusPayload,
@@ -65,6 +66,7 @@ function buildFallbackDailyPull(
   const reversed = daySeed % 5 === 0;
   const nextStreak = currentStreak + 1;
   const reward = nextStreak % 7 === 0 ? 5 : 2;
+  const prose = getCardProse(card.id);
 
   return {
     date: todayStr,
@@ -72,8 +74,8 @@ function buildFallbackDailyPull(
     reversed,
     readerId,
     headline: `Năng lượng ngày mới cho @${nickname}: ${card.name_vi}`,
-    message: reversed ? card.core_meaning_rev : card.core_meaning_up,
-    savageQuote: reversed ? card.savage_hook_rev : card.savage_hook_up,
+    message: (reversed ? prose?.core_meaning_rev : prose?.core_meaning_up) || '',
+    savageQuote: (reversed ? prose?.savage_hook_rev : prose?.savage_hook_up) || '',
     luckyNumber: ((daySeed * 7) % 89) + 10,
     luckyColor:
       LUCKY_COLORS_FALLBACK[daySeed % LUCKY_COLORS_FALLBACK.length]!,

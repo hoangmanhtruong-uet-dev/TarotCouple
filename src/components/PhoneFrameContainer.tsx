@@ -1,35 +1,33 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Monitor, Smartphone } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Monitor } from 'lucide-react';
 
 interface PhoneFrameContainerProps {
   children: React.ReactNode;
 }
 
+/**
+ * H9: read the `frame`/`device` query param from `window.location` inside an
+ * effect instead of `useSearchParams()`. `useSearchParams` at the root layout
+ * opts the entire app into client navigation and, combined with a Suspense
+ * fallback, double-mounts the whole tree (double SSG fetch). Reading the raw
+ * location keeps `children` rendered exactly once and avoids the extra mount.
+ */
 function PhoneFrameContent({ children }: PhoneFrameContainerProps) {
-  const searchParams = useSearchParams();
   const [isFrameActive, setIsFrameActive] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    // Active if ?frame=1 or ?device=iphone
-    const frameParam = searchParams.get('frame');
-    const deviceParam = searchParams.get('device');
-    const isDev = process.env.NODE_ENV === 'development';
+    const params = new URLSearchParams(window.location.search);
+    const frameParam = params.get('frame');
+    const deviceParam = params.get('device');
 
     if (frameParam === '1' || deviceParam === 'iphone') {
       setIsFrameActive(true);
     } else if (frameParam === '0') {
       setIsFrameActive(false);
     }
-  }, [searchParams]);
-
-  if (!isMounted) {
-    return <>{children}</>;
-  }
+  }, []);
 
   if (!isFrameActive) {
     return <>{children}</>;
@@ -75,9 +73,5 @@ function PhoneFrameContent({ children }: PhoneFrameContainerProps) {
 }
 
 export default function PhoneFrameContainer({ children }: PhoneFrameContainerProps) {
-  return (
-    <Suspense fallback={<>{children}</>}>
-      <PhoneFrameContent>{children}</PhoneFrameContent>
-    </Suspense>
-  );
+  return <PhoneFrameContent>{children}</PhoneFrameContent>;
 }

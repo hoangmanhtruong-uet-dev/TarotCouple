@@ -25,7 +25,9 @@ import {
   toggleJournalFavorite,
   clearAllJournal,
   updateJournalNote,
+  updateJournalReflection,
   type JournalEntry,
+  type ReflectionStatus,
 } from '@/lib/journal-store';
 import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 
@@ -123,6 +125,24 @@ export default function ReadingHistoryPage() {
     setToastMsg('Đã lưu ghi chú chiêm nghiệm thành công');
     setTimeout(() => setToastMsg(null), 2500);
     setTimeout(() => setNoteSavedFeedback(false), 2000);
+  };
+
+  const handleUpdateReflection = (id: string, status: ReflectionStatus, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const updated = updateJournalReflection(id, status);
+    setEntries(updated);
+    if (selectedEntry && selectedEntry.id === id) {
+      const target = updated.find((x) => x.id === id);
+      if (target) setSelectedEntry(target);
+    }
+    setToastMsg(
+      status === 'very_accurate'
+        ? '✦ Tuyệt vời! Cảm ơn bạn đã phản hồi: Rất đúng'
+        : status === 'partially_accurate'
+        ? '✦ Đã ghi nhận: Một phần ứng nghiệm'
+        : '✦ Đã ghi nhận: Chưa thấy ứng nghiệm'
+    );
+    setTimeout(() => setToastMsg(null), 2500);
   };
 
   const handleReplayReading = (entry: JournalEntry) => {
@@ -347,6 +367,47 @@ export default function ReadingHistoryPage() {
                 💬 <span className="italic font-serif text-[#E5C687]">&ldquo;{entry.savageQuote}&rdquo;</span>
               </p>
 
+              {/* Prediction Reflection Tracker Status on Card */}
+              <div className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-[#0E0C17] border border-[#262235] mb-3 text-[11px]">
+                <span className="text-[#9E96B0] flex items-center gap-1">
+                  <span>Ứng nghiệm:</span>
+                </span>
+                {entry.reflection ? (
+                  <span
+                    className={`font-semibold px-2 py-0.5 rounded-md border text-[10px] ${
+                      entry.reflection.status === 'very_accurate'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : entry.reflection.status === 'partially_accurate'
+                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                        : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                    }`}
+                  >
+                    {entry.reflection.status === 'very_accurate'
+                      ? '✨ Rất đúng'
+                      : entry.reflection.status === 'partially_accurate'
+                      ? '⚖️ Một phần'
+                      : '⏳ Chưa thấy'}
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleUpdateReflection(entry.id, 'very_accurate', e)}
+                      className="px-2 py-0.5 rounded bg-[#1A1629] hover:bg-emerald-500/20 text-[#A39BB5] hover:text-emerald-300 text-[10px] border border-white/5 transition-colors cursor-pointer"
+                    >
+                      Rất đúng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleUpdateReflection(entry.id, 'partially_accurate', e)}
+                      className="px-2 py-0.5 rounded bg-[#1A1629] hover:bg-amber-500/20 text-[#A39BB5] hover:text-amber-300 text-[10px] border border-white/5 transition-colors cursor-pointer"
+                    >
+                      Một phần
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Actions footer */}
               <div className="flex items-center justify-between text-xs pt-1">
                 <button
@@ -537,6 +598,49 @@ export default function ReadingHistoryPage() {
                       </>
                     )}
                   </button>
+                </div>
+              </div>
+
+              {/* Prediction Reflection Tracker (Did it happen?) */}
+              <div className="p-4 rounded-2xl bg-[#0B0A12] border border-[#C9A24A]/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#C9A24A]" />
+                    <span className="text-[10px] text-[#C9A24A] font-bold uppercase tracking-wider">
+                      Độ ứng nghiệm thực tế (Prediction Tracker)
+                    </span>
+                  </div>
+                  {selectedEntry.reflection?.evaluatedAt && (
+                    <span className="text-[9px] text-[#9E96B0]">
+                      Đã đánh giá: {new Date(selectedEntry.reflection.evaluatedAt).toLocaleDateString('vi-VN')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#D4CEE0] leading-relaxed">
+                  Trải bài này đối chiếu với thực tế cuộc sống của bạn như thế nào?
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {[
+                    { id: 'very_accurate' as const, label: '✨ Rất đúng' },
+                    { id: 'partially_accurate' as const, label: '⚖️ Một phần' },
+                    { id: 'not_yet' as const, label: '⏳ Chưa thấy' },
+                  ].map((opt) => {
+                    const isSelected = selectedEntry.reflection?.status === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => handleUpdateReflection(selectedEntry.id, opt.id)}
+                        className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#C9A24A]/25 border-[#C9A24A] text-[#F3E5AB] shadow-[0_0_15px_rgba(201,162,74,0.3)]'
+                            : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:text-[#F8F5F0] hover:bg-[#1D182A]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

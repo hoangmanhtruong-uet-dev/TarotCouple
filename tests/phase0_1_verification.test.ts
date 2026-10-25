@@ -4,6 +4,7 @@ import {
   READERS,
   SPREAD_POSITIONS,
   TAROT_CARDS_BY_ID,
+  withCardProse,
 } from '../src/data/tarot-cards';
 import {
   buildContextualFallbackReading,
@@ -29,7 +30,8 @@ describe('Phase 0 & 1 Stage Gate Verification Suite', () => {
       expect(MAJOR_ARCANA).toHaveLength(22);
 
       const seenIds = new Set<number>();
-      for (const card of MAJOR_ARCANA) {
+      for (const rawCard of MAJOR_ARCANA) {
+        const card = withCardProse(rawCard);
         expect(card.id).toBeGreaterThanOrEqual(0);
         expect(card.id).toBeLessThanOrEqual(21);
         seenIds.add(card.id);
@@ -112,6 +114,8 @@ describe('Phase 0 & 1 Stage Gate Verification Suite', () => {
         'crush_school',
         'study',
         'daily_luck',
+        'self_healing',
+        'family',
       ]);
     });
 
@@ -125,6 +129,8 @@ describe('Phase 0 & 1 Stage Gate Verification Suite', () => {
         'love',
         'career',
         'finance',
+        'self_healing',
+        'family',
       ]);
     });
 

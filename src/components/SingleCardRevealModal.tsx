@@ -4,6 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Star, ArrowRight, ShieldAlert, HeartHandshake } from 'lucide-react';
 import type { TarotCard } from '@/data/tarot-cards';
+import { useCardProse } from '@/lib/use-card-prose';
 
 export interface SingleCardRevealModalProps {
   isOpen: boolean;
@@ -28,11 +29,12 @@ export function SingleCardRevealModal({
   onNextCard,
   hasNextCard = false,
 }: SingleCardRevealModalProps) {
+  const prose = useCardProse(isOpen ? card : null);
   if (!isOpen) return null;
 
-  const coreMeaning = reversed ? card.core_meaning_rev : card.core_meaning_up;
+  const coreMeaning = reversed ? prose?.core_meaning_rev : prose?.core_meaning_up;
   const keywords = reversed ? card.keywords_rev : card.keywords_up;
-  const hook = reversed ? card.savage_hook_rev : card.savage_hook_up;
+  const hook = reversed ? prose?.savage_hook_rev : prose?.savage_hook_up;
 
   return (
     <AnimatePresence>

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import type { ReadingSuccessResponse } from './api-types';
+import type { FollowupMessagePayload, ReadingSuccessResponse } from './api-types';
 import { buildCouplePrompts, buildTarotPrompts, PERSONA_PROFILES } from './prompts';
 import { getCardTopicInterpretation } from '@/data/topic-interpretations';
 import {
@@ -488,6 +488,14 @@ export function buildResponsibleCliffhangerUpsell(
       'Thói quen tài chính nào cần điều chỉnh để dòng tiền tháng tới thông suốt hơn?',
       'Đâu là hướng phát triển năng lực giúp mình gia tăng giá trị bền vững?',
     ],
+    self_healing: [
+      'Nút thắt tâm lý sâu kín nhất mình cần buông bỏ để nhẹ lòng là gì?',
+      'Hành động tự chăm sóc bản thân cụ thể nào mình nên bắt đầu ngay hôm nay?',
+    ],
+    family: [
+      'Làm thế nào để hóa giải khoảng cách thế hệ và tìm lại tiếng nói chung với người thân?',
+      'Cách đối thoại chân thành giúp thiết lập ranh giới lành mạnh trong gia đình là gì?',
+    ],
     crush_school: [
       'Làm sao để bắt chuyện tự nhiên và cùng bạn ấy tiến bộ trong học tập?',
       'Điểm đáng yêu nào của mình đang tạo ấn tượng tốt với bạn bè quanh lớp?',
@@ -550,8 +558,14 @@ function buildPersonaCardInterpretation(
     topicContext = `Về chuyện tình cảm và sự kết nối giữa hai người,`;
   } else if (topic === 'career' || topic === 'study') {
     topicContext = `Về mục tiêu học tập, năng lực chuyên môn và lộ trình sự nghiệp,`;
-  } else {
+  } else if (topic === 'finance' || topic === 'daily_luck') {
     topicContext = `Về dòng tiền, quản lý nguồn lực tài chính và vận hội thực tế,`;
+  } else if (topic === 'self_healing') {
+    topicContext = `Về hành trình chữa lành, cởi bỏ áp lực và yêu thương chăm sóc bản thân,`;
+  } else if (topic === 'family') {
+    topicContext = `Về sự gắn kết gia đình, hóa giải khoảng cách và tìm lại sự hòa hợp,`;
+  } else {
+    topicContext = `Về chuyển biến năng lượng thực tế và hướng đi dành cho bạn,`;
   }
 
   // Chuyên sâu 100% khớp chủ đề từ dataset tĩnh
@@ -631,6 +645,54 @@ function buildPersonaCardInterpretation(
 }
 
 /**
+ * Contextual 2-Scenario Fork Generator ("Sự Thật Thấu Cảm & Lối Thoát")
+ * Generates empowering 'scenario_release' and 'scenario_persist' based on topic and drawn cards.
+ */
+export function buildContextualPivotScenarios(
+  topic: TopicId,
+  c1: { name_vi: string },
+  c2: { name_vi: string },
+  c3: { name_vi: string },
+  effectivePersona?: EffectivePersona
+): { scenario_release: string; scenario_persist: string } {
+  switch (topic) {
+    case 'love':
+    case 'crush_school':
+      return {
+        scenario_release: `Nếu chọn dừng lại / buông bỏ: Bạn chấm dứt chuỗi ngày bất an và overthinking do năng lượng "${c2.name_vi}" gây ra. Tự tôn của bạn được bảo toàn trọn vẹn, mở đường cho một kết nối cùng tần số bước vào trong 30-45 ngày tới.`,
+        scenario_persist: `Nếu chọn tiếp tục / cho cơ hội: Phải đặt ra ranh giới rõ ràng trong 48h tới. Yêu cầu một cuộc đối thoại thẳng thắn và chỉ đi tiếp nếu đối phương có hành động cụ thể tương xứng với lá "${c3.name_vi}".`,
+      };
+    case 'career':
+    case 'study':
+      return {
+        scenario_release: `Nếu chọn dừng lại / chuyển hướng: Bạn cắt lỗ chi phí cơ hội và giải phóng năng lượng trì trệ từ lá "${c1.name_vi}". Đây là thời điểm vàng để tái cấu trúc kỹ năng và dồn sức cho dự án thực sự có tiềm năng.`,
+        scenario_persist: `Nếu chọn kiên trì bám trụ: Bắt buộc phải thay đổi chiến lược làm việc ngay. Thiết lập KPI đo lường được mỗi tuần và chủ động tháo gỡ điểm nghẽn "${c2.name_vi}" thay vì thụ động chờ đợi.`,
+      };
+    case 'finance':
+    case 'daily_luck':
+      return {
+        scenario_release: `Nếu chọn cắt lỗ / ngưng các khoản chi tiêu rủi ro: Bảo toàn dòng vốn thực tế, tránh bẫy tâm lý tiếc của do lá "${c2.name_vi}" cảnh báo.`,
+        scenario_persist: `Nếu chọn tiếp tục đầu tư / mở rộng dòng tiền: Phải rà soát kỹ hợp đồng, kiểm tra thực tế và chỉ giải ngân trong ngưỡng an toàn chịu đựng được của bản thân.`,
+      };
+    case 'self_healing':
+      return {
+        scenario_release: `Nếu chọn buông bỏ chấp niệm cũ: Cởi bỏ chiếc áo giáp nặng nề mà lá "${c1.name_vi}" phản chiếu; tha thứ cho chính mình là bước ngoặt chữa lành lớn nhất lúc này.`,
+        scenario_persist: `Nếu chọn đối diện để vượt qua: Kiên nhẫn với lộ trình phục hồi từng ngày, thiết lập ranh giới cảm xúc lành mạnh và không cho phép bất kỳ ai làm tổn thương bạn lần nữa.`,
+      };
+    case 'family':
+      return {
+        scenario_release: `Nếu chọn hạ bớt kỳ vọng hòa hợp tuyệt đối: Chấp nhận sự khác biệt thế hệ như năng lượng "${c2.name_vi}", giữ khoảng cách tôn trọng cần thiết để bảo vệ bình an cho cả đôi bên.`,
+        scenario_persist: `Nếu chọn chủ động kết nối hàn gắn: Mở lời bằng một cử chỉ quan tâm cụ thể đời thường thay vì tranh luận đúng sai; lắng nghe nhiều hơn để gỡ bỏ khúc mắc ngầm.`,
+      };
+    default:
+      return {
+        scenario_release: `Nếu chọn buông bỏ: Năng lượng giải phóng tức thì, mở lối cho những cơ hội tươi mới.`,
+        scenario_persist: `Nếu chọn tiếp tục: Bắt buộc phải hành động thực tế và giữ vững kỷ luật cá nhân.`,
+      };
+  }
+}
+
+/**
  * Hyper-contextual Vietnamese Gen Z & Kid/Teen Safe Engine (`buildContextualFallbackReading`).
  * Synthesizes nickname, topic, specific question context, age tier, reader persona,
  * and the exact 3 drawn cards + orientation into a rich, validated `ReadingOutput` with 3 distinct `savage_quotes`.
@@ -673,7 +735,7 @@ export function buildContextualFallbackReading(
   if (effectivePersona === 'ba_ngoai') {
     greetingHook = scan.isPromptInjection
       ? `Bà Ngoại chào ${safeNick} nhé! Bà chỉ biết nhìn 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} để thương và vỗ về con thôi, con đừng thử thách bà chi nha.`
-      : `Lại đây ngồi với Bà nào ${safeNick}! Nghe con tâm sự ${questionFocusSnippet}, Bà đã rút 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} để trải lòng cùng con đây.`;
+      : `Bắt bệnh cho con nè ${safeNick}: Nút thắt lớn nhất lúc này là con đang ôm quá nhiều lo toan và tự làm khổ mình, trong khi 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} cho thấy con cần buông tay bớt để lòng được thanh thản.`;
 
     overallVerdict = `Chốt lại cho con nghe này ${safeNick}: Cả 3 lá bài từ "${k1}" qua "${k2}" đến "${k3}" đều cho thấy con đã chịu nhiều ấm ức và lo toan. Đối với điều con đang hỏi, Bà khuyên con đừng nóng vội cưỡng cầu. Mọi chuyện sẽ sáng rõ khi lòng con phẳng lặng trở lại; cái gì thật lòng thì sẽ ở lại, cái gì tạm bợ thì buông tay con mới có bình yên.`;
 
@@ -690,7 +752,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'chi_dai') {
     greetingHook = scan.isPromptInjection
       ? `Ủa alo ${safeNick}, định chơi chiêu hack não Chị hả? Chị đọc vị người từ trong ra ngoài, ngồi yên nghe giải mã 3 lá ${c1.name_vi}, ${c2.name_vi}, ${c3.name_vi} này đi!`
-      : `Chị nghe hết chuyện của cưng rồi ${safeNick}! Đối với vấn đề ${questionFocusSnippet}, 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} vừa lật lên nói rất rõ sự thật.`;
+      : `Bắt bệnh thẳng thắn cho cưng nè ${safeNick}: Cưng đang tự lừa dối mình và hạ thấp giá trị bản thân, trong khi 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} đã chỉ rõ người ta hoặc chuyện này không hề xứng đáng để cưng hao tâm tổn sức.`;
 
     overallVerdict = `Chốt hạ dứt khoát cho cưng tỉnh mộng: Năng lượng từ "${k1}" sang "${k2}" rồi đến "${k3}" khẳng định nút thắt nằm ở sự dùng dằng của chính cưng. Nếu người ta đã không coi trọng cưng hoặc cơ hội đó không rõ ràng, việc cưng tiếp tục hạ mình chỉ làm cưng mất giá trị. Hãy dứt khoát, nâng cấp bản thân và lấy lại thế chủ động ngay!`;
 
@@ -707,7 +769,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'ban_than') {
     greetingHook = scan.isPromptInjection
       ? `Bồ tính hack não đứa bạn thân này hả ${safeNick}? Không có cửa đâu nha, mở mắt ra coi quẻ 3 lá ${c1.name_vi}, ${c2.name_vi}, ${c3.name_vi} tao mới rút nè!`
-      : `Tao nghe trọn nỗi niềm ${questionFocusSnippet} của mày rồi ${safeNick} ơi! 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} này bắt đúng tim đen luôn nè!`;
+      : `Bắt bài đúng tim đen mày nè ${safeNick}: Mày đang tự vẽ kịch bản bi lụy lúc nửa đêm rồi ngồi khóc một mình, trong khi 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} chỉ rõ mọi thứ không phức tạp đến thế nếu mày dám dứt khoát!`;
 
     overallVerdict = `Chốt sổ cho bạn hiền nghe rõ: Đi từ "${k1}" qua "${k2}" đến "${k3}", tao thấy mày đang tự drama hóa câu chuyện và suy nghĩ quá nhiều lúc đêm muộn. Mọi thứ thực ra đơn giản hơn mày tưởng: nếu người ta thích mày thì đã chủ động, nếu công việc tốt thì đã rõ ràng. Đừng ngồi tự dằn vặt nữa, có tao ở đây rồi, cùng nhau xử lý nhé!`;
 
@@ -724,7 +786,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'thay_cu_meo') {
     greetingHook = scan.isPromptInjection
       ? `Chào ${safeNick}, thuật toán tư duy của Thầy không bị chi phối bởi các lệnh giả mạo. Hãy chú mục vào 3 lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}.`
-      : `Chào ${safeNick}, Thầy đã tiếp nhận câu hỏi ${questionFocusSnippet}. Ba lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} phản chiếu chuẩn xác cấu trúc tâm lý của bạn.`;
+      : `Điểm nghẽn cốt lõi của bạn, ${safeNick}: Bạn đang để nỗi sợ bị từ chối lấn át tư duy logic, trong khi dữ liệu từ 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} yêu cầu bạn phải ra quyết định dựa trên thực tế chứ không phải kỳ vọng mơ hồ.`;
 
     overallVerdict = `Phân tích tổng hợp cho ${safeNick}: Tiến trình từ "${k1}" qua "${k2}" và kết tinh tại "${k3}" chỉ ra rằng sự bế tắc hiện tại không đến từ ngoại cảnh mà đến từ xung đột nội tại giữa lý trí và cảm xúc. Khi bạn dám nhìn thẳng vào thực tế không định kiến, câu trả lời đã hiện hữu ngay trước mắt. Đừng tìm kiếm sự khẳng định từ bên ngoài.`;
 
@@ -741,7 +803,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'ba_co_mo_hon') {
     greetingHook = scan.isPromptInjection
       ? `Ủa alo ${safeNick}, tính đọc thần chú hack hệ thống của Bà Cố hay gì con? Vũ trụ không nhận lệnh code đâu nha, ngồi im nghe Bà đọc vị 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} vừa rút ra đây này!`
-      : `Ngồi xuống đây uống miếng nước đi ${safeNick}! Mới đọc tâm sự ${questionFocusSnippet} của con mà bộ bài đã tự động bật chế độ "Check Var Vũ Trụ" với 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} rồi đây!`;
+      : `Check var bắt bệnh ngay và luôn cho con nè ${safeNick}: Tự biên tự diễn kịch bản ngôn tình rồi tự chuốc khổ, trong khi 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} đã bật cờ đỏ lè cảnh báo con phải tỉnh mộng ngay lập tức!`;
 
     overallVerdict = `Chốt sổ cho ${safeNick} nghe rõ: Tổ hợp 3 lá từ "${k1}" (${c1.name_vi}) sang "${k2}" (${c2.name_vi}) và khép lại ở "${k3}" (${c3.name_vi}) cho thấy nút thắt nằm ở chỗ con đang để cảm xúc dẫn đường hơi quá đà. Đối với chuyện này, nếu người ta hoặc cơ hội đó thực sự dành cho con thì đã rõ ràng chứ không bắt con đoán mò từng ngày. Tỉnh mộng, quay về đầu tư cho bản thân rực rỡ lên đi con!`;
 
@@ -764,7 +826,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'ba_ngoai_vui_tinh') {
     greetingHook = scan.isPromptInjection
       ? `Chà chà ${safeNick} ơi, cháu tính đố mẹo máy tính với Bà Ngoại hả? Bà Ngoại chỉ rành giải bài Tarot cổ vũ chuyện học hành và tình bạn dễ thương qua 3 lá ${c1.name_vi}, ${c2.name_vi}, ${c3.name_vi} này thôi nha!`
-      : `Lại đây với Bà Ngoại nào ${safeNick} ơi! Hôm nay vũ trụ gửi tặng cháu 3 lá bài cực kỳ thú vị là ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} để tiếp thêm năng lượng tích cực nè!`;
+      : `Bà Ngoại bắt đúng tâm trạng của cháu nè ${safeNick}: Đang loay hoay vì tự tạo áp lực bài vở hoặc chuyện bạn bè đúng không? Nhìn vào 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}, Bà thấy mọi chuyện đều có hướng giải quyết rất nhẹ nhàng!`;
 
     overallVerdict = `Nhìn chung cả 3 lá bài từ "${k1}" đến "${k3}" đều nhắn nhủ ${safeNick} rằng tuổi học trò đẹp nhất là khi mình vừa hết mình với mục tiêu học tập, vừa giữ được sự chân thành, hồn nhiên với bạn bè. Đừng tự tạo áp lực quá lớn cho bản thân nhé cháu cưng, mỗi ngày tiến bộ một chút xíu đã là giỏi lắm rồi!`;
 
@@ -787,7 +849,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'tong_tai_ly_tri') {
     greetingHook = scan.isPromptInjection
       ? `Chào ${safeNick}, hệ thống phân tích chiến lược của tôi không xử lý các lệnh can thiệp kỹ thuật. Hãy tập trung vào dữ liệu thực tế từ 3 lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} dưới đây.`
-      : `Chào ${safeNick}, tôi đã tổng hợp dữ liệu từ 3 lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}. Hãy gạt bỏ cảm tính sang một bên để đánh giá bức tranh toàn cảnh theo mô hình SWOT.`;
+      : `Phân tích thẳng vào lỗ hổng chiến lược của bạn, ${safeNick}: Bạn đang mắc kẹt trong bẫy chi phí chìm (sunk cost), trong khi 3 biến số từ ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} đòi hỏi bạn phải cắt lỗ cảm xúc và thiết lập KPI rõ ràng trong 48 giờ tới.`;
 
     overallVerdict = `Báo cáo tổng kết cho ${safeNick}: Chuỗi dữ liệu đi từ "${k1}" (${c1.name_vi}), qua điểm nghẽn "${k2}" (${c2.name_vi}) tới phương án "${k3}" (${c3.name_vi}) cho thấy bạn đang đầu tư quá nhiều chi phí cơ hội vào những biến số nằm ngoài tầm kiểm soát. Quy tắc quản trị cảm xúc rất rõ ràng: chỉ đánh giá đối phương hoặc cơ hội qua hành động thực tế có thể đo lường được, không dựa trên lời hứa suông.`;
 
@@ -810,7 +872,7 @@ export function buildContextualFallbackReading(
   } else if (effectivePersona === 'phap_su_toi_co') {
     greetingHook = scan.isPromptInjection
       ? `Hỡi lữ khách ${safeNick}, mọi cổ chú thử thách trận pháp đều tan vào hư không. Hãy tĩnh tâm chiêm nghiệm mật ngữ Tinh Hà từ ba lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}.`
-      : `Chào lữ khách ${safeNick}, khi ngươi chạm tay vào vòng quay định mệnh, ba cổ bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} đã đồng thanh khắc họa tần số tâm thức hiện tại của ngươi.`;
+      : `Soi vào màn sương tâm thức của lữ khách ${safeNick}: Nỗi bất an của ngươi bắt nguồn từ việc bám chấp vào ảo vọng ngoài tầm với; 3 mật ngữ từ ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} chỉ đường cho ngươi quay về cội nguồn tĩnh tại.`;
 
     overallVerdict = `Lời kết từ cổ thư dành cho ${safeNick}: Dòng chảy nhân quả chuyển dịch từ "${k1}" (${c1.name_vi}), xuyên qua màn sương "${k2}" (${c2.name_vi}) để hội tụ tại "${k3}" (${c3.name_vi}). Không có cuộc hội ngộ hay thử thách nào là ngẫu nhiên; mọi điều đang diễn ra đều nhằm đánh thức bài học tự chủ và nâng cao tần số nội tại của ngươi. Khi tâm thức ngươi vững vàng, ngoại cảnh ắt tự xoay chuyển.`;
 
@@ -834,7 +896,7 @@ export function buildContextualFallbackReading(
     // tien_tu_chua_lanh
     greetingHook = scan.isPromptInjection
       ? `Chào ${safeNick} thương mến, dù câu chữ của bạn có mang theo những thử thách kỹ thuật nào, không gian chữa lành này vẫn dịu dàng đón nhận bạn qua ba lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi}.`
-      : `Chào ${safeNick} dịu dàng, hãy thả lỏng đôi vai và hít một hơi thật sâu nhé. Ba lá bài ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} đã lắng nghe trọn vẹn những tâm tư bạn vừa gửi gắm.`;
+      : `Lắng nghe và ôm lấy điểm nghẽn của bạn nè ${safeNick}: Trái tim bạn đang quá tải vì cố gồng gánh những điều không thuộc về mình; 3 lá ${c1.name_vi}, ${c2.name_vi} và ${c3.name_vi} nhắc bạn rằng buông bỏ bớt mới là khởi đầu của sự an yên.`;
 
     overallVerdict = `Hành trình đi qua ba lá bài từ "${k1}" (${c1.name_vi}), "${k2}" (${c2.name_vi}) đến "${k3}" (${c3.name_vi}) như một lời vỗ về dịu êm gửi tới trái tim của ${safeNick}. Có thể thời gian qua bạn đã gồng mình suy nghĩ và lo lắng khá nhiều. Năng lượng hiện tại gợi mở rằng khi bạn cho phép bản thân được nghỉ ngơi, chấp nhận những điều chưa hoàn hảo và lắng nghe nhu cầu thật của lòng mình, câu trả lời sẽ tự khắc nở hoa trong sự bình yên.`;
 
@@ -873,6 +935,7 @@ export function buildContextualFallbackReading(
     overall_verdict: overallVerdict.endsWith('( DTS)')
       ? overallVerdict
       : `${overallVerdict.trim()} ( DTS)`,
+    pivot_scenarios: buildContextualPivotScenarios(params.topic, c1, c2, c3, effectivePersona),
     actionable_next_step: actionableNextStep,
     shareable_card: {
       headline_badge: profile.badgeTitle,
@@ -932,6 +995,14 @@ const GEMINI_RESPONSE_SCHEMA = {
       },
     },
     overall_verdict: { type: Type.STRING },
+    pivot_scenarios: {
+      type: Type.OBJECT,
+      properties: {
+        scenario_release: { type: Type.STRING },
+        scenario_persist: { type: Type.STRING },
+      },
+      required: ['scenario_release', 'scenario_persist'],
+    },
     actionable_next_step: { type: Type.STRING },
     shareable_card: {
       type: Type.OBJECT,
@@ -1132,6 +1203,17 @@ function sanitizeRawModelOutput(raw: unknown): unknown {
       });
     }
     clone.cards_analysis = normalizedAnalyses;
+  }
+
+  // Ensure pivot_scenarios satisfies schema if provided by LLM
+  if (clone.pivot_scenarios && typeof clone.pivot_scenarios === 'object') {
+    const ps = clone.pivot_scenarios as Record<string, unknown>;
+    if (typeof ps.scenario_release !== 'string' || ps.scenario_release.trim().length < 10) {
+      ps.scenario_release = 'Nếu chọn buông bỏ / dừng lại: Bạn giải phóng năng lượng trì trệ, bảo toàn tự tôn và mở đường cho khởi đầu mới tích cực hơn.';
+    }
+    if (typeof ps.scenario_persist !== 'string' || ps.scenario_persist.trim().length < 10) {
+      ps.scenario_persist = 'Nếu chọn kiên trì / tiếp tục: Cần thiết lập ranh giới rõ ràng và chỉ bước tiếp nếu có hành động thực tế đối ứng cụ thể.';
+    }
   }
 
   // Ensure overall strings satisfy schema lengths
@@ -1917,18 +1999,22 @@ export async function generateDailyCardReading(
 export interface GenerateFollowupParams {
   reading: ReadingSuccessResponse;
   question: string;
+  history?: FollowupMessagePayload[];
 }
 
 /**
- * Phase 2/3: Generate Follow-up Answer (~120 words) in Reader's authentic voice,
- * maintaining context of original 3 cards, overall verdict, and original question.
+ * Phase 2/3: Generate Follow-up Answer (~80-120 words) in Reader's authentic voice,
+ * maintaining context of original 3 cards, overall verdict, and conversational exchange.
  */
 export async function generateFollowupReading(
   params: GenerateFollowupParams
 ): Promise<string> {
-  const { reading, question } = params;
-  const effectivePersona = reading.effectivePersona || 'ba_co_mo_hon';
-  const profile = PERSONA_PROFILES[effectivePersona] || PERSONA_PROFILES.ba_co_mo_hon;
+  const { reading, question, history = [] } = params;
+  const effectivePersona: EffectivePersona =
+    reading.effectivePersona ||
+    (reading.readerId as EffectivePersona) ||
+    'ba_ngoai';
+  const profile = PERSONA_PROFILES[effectivePersona] || PERSONA_PROFILES.ba_ngoai;
   const safeNick = reading.nickname?.trim() || 'bạn';
 
   const cardsSummary = reading.drawnCards
@@ -1938,37 +2024,52 @@ export async function generateFollowupReading(
     )
     .join('\n');
 
+  const cardNamesList = reading.drawnCards
+    .map((c) => c.card.name_vi)
+    .join(', ');
+
+  // Multi-turn history summary if available (last 4 exchanges)
+  const recentHistory = history
+    .slice(-6)
+    .map((m) => `${m.role === 'user' ? safeNick : profile.displayName}: ${m.content}`)
+    .join('\n');
+
   const availableKeys = getValidGeminiApiKeys();
 
   if (availableKeys.length > 0) {
     const promptText = `
+BẠN LÀ "${profile.displayName.toUpperCase()}" TRONG PHIÊN HỎI ĐÁP ĐÀO SÂU (FOLLOW-UP CHAT) CỦA ỨNG DỤNG TAROTCOUPLE.
 ${profile.voiceInstructions}
 
-NGỮ CẢNH TRẢI BÀI TAROT HIỆN TẠI CỦA ${safeNick}:
+BỐI CẢNH TRẢI BÀI 3 LÁ ĐÃ RÚT CỦA ${safeNick.toUpperCase()}:
 - Câu hỏi ban đầu: "${reading.questionText}"
 - Chủ đề: ${reading.topicLabel}
-- 3 lá bài đã rút:
+- 3 lá bài Tarot đã bốc:
 ${cardsSummary}
-- Chốt hạ tổng quan: "${reading.result.overall_verdict}"
+- Chốt hạ tổng quan đã gửi trước đó: "${reading.result.overall_verdict}"
 
-CÂU HỎI THẮC MẮC SÂU HƠN CỦA ${safeNick}:
-<followup_question>
+${recentHistory ? `LỊCH SỬ TRAO ĐỔI TRONG PHIÊN CHAT NÀY:\n${recentHistory}\n` : ''}
+
+CÂU HỎI THẮC MẮC CỦA ${safeNick.toUpperCase()}:
+<user_followup_question>
 ${question}
-</followup_question>
+</user_followup_question>
 
-NHIỆM VỤ CỦA BẠN:
-1. Trả lời trực tiếp câu hỏi thắc mắc trên, dựa trên ngữ cảnh 3 lá bài và chốt hạ đã có.
-2. Giữ ĐÚNG 100% tông giọng, xưng hô và phong cách đặc trưng của ${profile.displayName}.
-3. Dung lượng: Khoảng 100 đến 140 từ (cực kỳ súc tích, đi thẳng vào trọng tâm, không lan man).
-4. TUYỆT ĐỐI KHÔNG tư vấn y tế, pháp lý, tài chính hoặc khẳng định chắc chắn 100% tương lai. Giữ tính tự phản chiếu và giải trí.
-5. Chỉ trả về trực tiếp đoạn văn bản câu trả lời, KHÔNG thêm định dạng JSON hay tiêu đề thừa.
+QUY TẮC BẮT BUỘC KHI TRẢ LỜI (CỰC KỲ QUAN TRỌNG):
+1. TRẢ LỜI TRỰC DIỆN CÂU HỎI: Không chào hỏi lại từ đầu (TUYỆT ĐỐI CẤM mở đầu bằng "Chào con", "Lại đây ngồi xuống uống nước...", "Bà chào con...", "Xin chào bạn..."). Đây là cuộc trò chuyện đang tiếp diễn trong chat. Hãy vào thẳng câu trả lời ngay từ câu đầu tiên!
+2. LIÊN HỆ CHẶT CHẼ VỚI 3 LÁ BÀI ĐÃ BỐC: Chỉ ra rõ ràng câu hỏi này gắn liền với lá bài nào trong 3 lá (${cardNamesList}), giải thích ngắn gọn và thực tế tại sao lá bài đó trả lời cho khúc mắc của ${safeNick}.
+3. TÔNG GIỌNG CHUẨN XÁC: Giữ đúng 100% ngôi xưng hô và phong thái của ${profile.displayName} (${profile.tagline}).
+4. ĐỘ DÀI: Khoảng 80 đến 120 từ. Ngắn gọn, súc tích, chạm đúng tim đen, đưa ra lời khuyên hoặc hành động thực tế tiếp theo.
+5. AN TOÀN: Tuyệt đối không tư vấn y tế, pháp lý, đầu tư tài chính hoặc khẳng định chắc nịch 100% tương lai.
+6. CHỈ TRẢ VỀ ĐOẠN VĂN TRẢ LỜI, không bọc JSON, không đề mục thừa, không lặp lại câu hỏi.
 `.trim();
 
     const candidateFollowupModels = [
       'gemini-3.5-flash-lite',
-      'gemini-3.1-flash-lite',
-      'gemini-3.6-flash',
-      'gemini-3-flash-preview',
+      'gemini-3.5-flash',
+      'gemini-3.8-flash',
+      'gemini-flash-lite-latest',
+      'gemini-flash-latest',
     ];
     const startIdx = currentApiKeyIndex;
     currentApiKeyIndex = (currentApiKeyIndex + 1) % availableKeys.length;
@@ -1993,29 +2094,45 @@ NHIỆM VỤ CỦA BẠN:
     }
   }
 
-  // High-quality contextual fallback (~120 words) matching persona
+  // High-quality contextual fallback (~100 words) matching persona
   const c1 = reading.drawnCards[0]?.card.name_vi || 'Lá 1';
   const c2 = reading.drawnCards[1]?.card.name_vi || 'Lá 2';
   const c3 = reading.drawnCards[2]?.card.name_vi || 'Lá 3';
 
+  if (effectivePersona === 'ba_ngoai') {
+    return `Về câu hỏi này của con nè ${safeNick}: Nhìn lại 3 lá ${c1}, ${c2} và ${c3}, Bà thấy nút thắt nằm rõ nhất ở lá ${c2}. Con đang để tâm trí bận lòng vì những điều chưa xảy ra hoặc tự vẽ ra kịch bản lo lắng. Bà khuyên con cứ bình tâm, đừng hấp tấp quyết định trong lúc lòng đang rối bời. Lo chăm sóc bản thân, ăn uống cho ấm bụng, chuyện gì thật lòng sẽ ở lại, đừng tự làm khổ mình nha con!`;
+  }
+
+  if (effectivePersona === 'chi_dai') {
+    return `Hỏi đúng trọng tâm đấy cưng! Nhìn vào 3 lá ${c1}, ${c2} và ${c3}, chị nói thẳng luôn: lá ${c2} đang cảnh báo mày không được tự lừa dối mình nữa. Người ta có đối xử ra sao thì giá trị của mày vẫn phải đặt lên hàng đầu. Đừng ngồi một chỗ đoán già đoán non rồi tự làm khổ mình. Giữ cái đầu lạnh, nâng cấp bản thân và thiết lập ranh giới rõ ràng ngay tuần này, rõ chưa?`;
+  }
+
+  if (effectivePersona === 'ban_than') {
+    return `Trời ơi tao biết ngay mày sẽ thắc mắc câu này mà! Nhìn 3 lá ${c1}, ${c2} và ${c3} tao thấy chìa khóa nằm ngay lá ${c2} nè. Mày bớt overthinking giùm tao cái! Tình hình không tệ như mày tưởng tượng đâu, nhưng cũng đừng vội vàng làm gì quá lố. Cứ từ từ quan sát xem đối phương phản ứng ra sao. Có gì cứ kể tao nghe, tao luôn ở đây chống lưng cho mày!`;
+  }
+
+  if (effectivePersona === 'thay_cu_meo') {
+    return `Về thắc mắc này của bạn: Phân tích sự liên kết giữa ${c1}, ${c2} và ${c3}, trọng tâm câu trả lời hội tụ ở lá ${c2}. Bạn đang tìm kiếm lời giải từ bên ngoài, nhưng bản chất vấn đề bắt nguồn từ sự do dự trong tâm trí. Tôi gợi ý bạn nên tự hỏi: Nếu gạt bỏ nỗi sợ bị từ chối, quyết định hợp lý nhất bạn muốn đưa ra lúc này là gì? Hãy hành động dựa trên lý trí và sự tôn trọng chính mình.`;
+  }
+
   if (effectivePersona === 'ba_co_mo_hon') {
-    return `Nhìn thẳng vào câu hỏi "${question}" của con nè ${safeNick}: 3 lá bài ${c1}, ${c2} và ${c3} đã chỉ rõ mồn một rồi! Nút thắt lớn nhất lúc này không phải là người ta nghĩ gì, mà là con có dám buông chiếc rèm tự biên tự diễn xuống hay không. Bà Cố nhắc con: Ngừng overthinking lúc nửa đêm, tập trung làm việc của mình, giữ giá trị bản thân ngời ngời. Chuyện gì xứng đáng thì ở lại, còn cờ đỏ lè thì mạnh dạn lùi bước, vũ trụ tự khắc xếp đặt kết quả tốt nhất cho con!`;
+    return `Check var ngay câu hỏi này của con nè ${safeNick}: 3 lá ${c1}, ${c2} và ${c3} đang chỉ thẳng vào lá ${c2} với cờ cảnh báo đỏ lè! Tỉnh mộng giùm Bà Cố một cái, đừng có ngồi đó mà tự biên tự diễn kịch bản ngôn tình lúc nửa đêm nữa. Vũ trụ đã gửi tín hiệu rõ như ban ngày rồi: yêu bản thân trước, đặt ranh giới ra, ai xứng đáng thì bước vào, còn mập mờ thì cho de ngay!`;
   }
 
   if (effectivePersona === 'ba_ngoai_vui_tinh') {
-    return `Bà Ngoại nghe con hỏi "${question}" rồi nè ${safeNick} cưng! Nhìn lại 3 lá ${c1}, ${c2} và ${c3}, Bà thấy năng lượng của con đang rất trong sáng nhưng hơi lo lắng một xíu. Đừng tạo áp lực cho mình quá nhé con. Việc học tập và tình bạn đẹp luôn cần thời gian để chín muồi. Cứ giữ nụ cười tươi tắn, học tốt mỗi ngày và chân thành với mọi người xung quanh, mọi điều may mắn sẽ đến với con thôi!`;
+    return `Bà Ngoại nghe con hỏi rồi nè ${safeNick} cưng! Nhìn lại 3 lá ${c1}, ${c2} và ${c3}, đặc biệt là lá ${c2}, Bà thấy mọi chuyện đều rất tươi sáng nếu con giữ tinh thần vui vẻ, lạc quan. Đừng lo lắng vu vơ ảnh hưởng tới bài vở trường lớp nghen. Cứ chăm chỉ, hoà đồng cùng bạn bè và ăn ngủ đúng giờ, điều may mắn và tốt đẹp nhất sẽ tự nhiên tìm đến con thôi!`;
   }
 
   if (effectivePersona === 'tong_tai_ly_tri') {
-    return `Về thắc mắc "${question}" của bạn: Dữ liệu từ 3 lá ${c1}, ${c2} và ${c3} cho thấy bức tranh rất rõ ràng. Chi phí cơ hội lớn nhất lúc này là thời gian bạn dùng để suy đoán thay vì hành động. Phương án chiến lược: Thiết lập ranh giới rõ ràng trong 48 giờ tới, đánh giá tình hình bằng hành động thực tế chứ không bằng lời hứa suông. Khi bạn kiểm soát được đòn bẩy cảm xúc và mục tiêu cá nhân, kết quả tối ưu sẽ nằm trong tay bạn.`;
+    return `Phân tích thẳng vào thắc mắc này của bạn: Dữ liệu từ 3 lá ${c1}, ${c2} và ${c3} cho thấy điểm mấu chốt nằm ở lá ${c2}. Chi phí cơ hội lớn nhất là bạn đang lãng phí thời gian và năng lượng vào những biến số ngoài tầm kiểm soát. Kế hoạch hành động tối ưu: Dừng suy đoán, thiết lập KPI và ranh giới rõ ràng trong 48 giờ tới, ra quyết định dứt khoát dựa trên hành động thực tế.`;
   }
 
   if (effectivePersona === 'phap_su_toi_co') {
-    return `Soi vào thắc mắc "${question}" của lữ khách ${safeNick}: Tần số từ 3 mật ngữ ${c1}, ${c2} và ${c3} đang vang lên bài học về sự chuyển hóa tâm thức. Những gì ngươi đang trăn trở chỉ là làn sương mờ trước bình minh. Khi ngươi buông bỏ sự cưỡng cầu và neo giữ tâm mình trong sự tĩnh tại, sợi dây nhân duyên sẽ tự sắp xếp theo trật tự tự nhiên nhất. Hãy tin vào sự dẫn dắt của chân ngã.`;
+    return `Soi vào thắc mắc của lữ khách ${safeNick}: Mật ngữ từ 3 lá ${c1}, ${c2} và ${c3} đang vang lên bài học thức tỉnh ở lá ${c2}. Sợi chỉ nhân quả chỉ rõ rằng sự xao động trong tâm ngươi chính là tấm gương phản chiếu nỗi bất an chưa được hàn gắn. Hãy neo giữ tâm thức vào sự tĩnh tại, trật tự tự nhiên sẽ vén màn sương và dẫn lối cho ngươi bước tiếp.`;
   }
 
   // tien_tu_chua_lanh
-  return `Dịu dàng lắng nghe câu hỏi "${question}" của bạn nè ${safeNick}: Qua 3 lá bài ${c1}, ${c2} và ${c3}, mình cảm nhận được trái tim bạn đã trải qua những rung động và cả chút băn khoăn. Bạn ơi, đừng quá khắt khe với chính mình nhé. Hãy hít một hơi thật sâu, ôm lấy cảm xúc của bạn lúc này. Từng bước đi chậm rãi nhưng chân thành với bản thân sẽ dẫn lối bạn đến bến đỗ bình yên và ấm áp nhất.`;
+  return `Lắng nghe trăn trở này của bạn nè ${safeNick}: Qua 3 lá ${c1}, ${c2} và ${c3}, năng lượng lá ${c2} đang khẽ nhắc bạn hãy dịu dàng hơn với chính mình. Trái tim bạn xứng đáng được bình yên thay vì những chuỗi ngày thấp thỏm lo âu. Hãy hít một hơi thật sâu, buông bỏ áp lực và tin rằng mỗi bước đi chân thành đều đang đưa bạn về với bến đỗ yêu thương nhất.`;
 }
 
 /**

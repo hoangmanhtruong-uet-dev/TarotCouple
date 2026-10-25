@@ -20,13 +20,17 @@ import {
   Smartphone,
   RefreshCw,
   Loader2,
+  Receipt,
 } from 'lucide-react';
+import { AIVoiceReaderBar } from '@/components/AIVoiceReaderBar';
+import { CoupleDatingReceiptModal } from '@/components/CoupleDatingReceiptModal';
 import {
   ALL_TAROT_CARDS,
   MAJOR_ARCANA,
   READERS,
   TAROT_CARDS_BY_ID,
 } from '@/data/tarot-cards';
+import { getCardProse } from '@/data/tarot-card-prose';
 import { soundManager } from '@/lib/sound-effects';
 import {
   classifyAgeTier,
@@ -121,6 +125,10 @@ function buildFallbackCoupleReading(params: {
   const rev2 = params.partnerCardObj?.reversed ?? (seed + 1) % 4 === 0;
   const rev3 = (seed + 2) % 5 === 0;
 
+  const p1 = getCardProse(c1.id);
+  const p2 = getCardProse(c2.id);
+  const p3 = getCardProse(c3.id);
+
   const compatScore = 68 + (seed % 26); // 68% - 93%
   const redFlagLevel = 12 + ((seed * 3) % 45); // 12% - 56%
   const vibeTag =
@@ -167,7 +175,8 @@ function buildFallbackCoupleReading(params: {
   ];
 
   const primaryQuote =
-    rev2 ? c2.savage_hook_rev : c3.savage_hook_up;
+    (rev2 ? p2?.savage_hook_rev : p3?.savage_hook_up) ||
+    'Hãy lắng nghe trực giác và đối thoại chân thành.';
 
   return {
     status: 'ok',
@@ -200,7 +209,7 @@ function buildFallbackCoupleReading(params: {
           card_name_vi: c1.name_vi,
           card_name_en: c1.name_en,
           reversed: rev1,
-          interpretation: rev1 ? c1.core_meaning_rev : c1.core_meaning_up,
+          interpretation: (rev1 ? p1?.core_meaning_rev : p1?.core_meaning_up) || '',
           energy_keyword: (rev1 ? c1.keywords_rev[0] : c1.keywords_up[0]) || 'Chân thành',
         },
         {
@@ -210,7 +219,7 @@ function buildFallbackCoupleReading(params: {
           card_name_vi: c2.name_vi,
           card_name_en: c2.name_en,
           reversed: rev2,
-          interpretation: rev2 ? c2.core_meaning_rev : c2.core_meaning_up,
+          interpretation: (rev2 ? p2?.core_meaning_rev : p2?.core_meaning_up) || '',
           energy_keyword: (rev2 ? c2.keywords_rev[0] : c2.keywords_up[0]) || 'Ngập ngừng',
         },
         {
@@ -220,7 +229,7 @@ function buildFallbackCoupleReading(params: {
           card_name_vi: c3.name_vi,
           card_name_en: c3.name_en,
           reversed: rev3,
-          interpretation: rev3 ? c3.core_meaning_rev : c3.core_meaning_up,
+          interpretation: (rev3 ? p3?.core_meaning_rev : p3?.core_meaning_up) || '',
           energy_keyword: (rev3 ? c3.keywords_rev[0] : c3.keywords_up[0]) || 'Chuyển giao',
         },
       ],
@@ -232,8 +241,8 @@ function buildFallbackCoupleReading(params: {
         savage_quote: primaryQuote,
         savage_quotes: [
           primaryQuote,
-          c1.savage_hook_up,
-          c3.healing_hook_up,
+          p1?.savage_hook_up || 'Hãy yêu thương chính mình trước tiên.',
+          p3?.healing_hook_up || 'Chậm lại một nhịp để cảm nhận sự bình yên.',
         ],
         sub_advice: `Độ Hợp Cạ: ${compatScore}% • Red Flag: ${redFlagLevel}% (Chỉ để giải trí)`,
         lucky_item: 'Buổi hẹn cà phê tối hoặc bản nhạc Lofi',
@@ -300,6 +309,7 @@ export function CoupleModeView({
     true,
   ]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
 
   // Co-op Room 48h (Kiểu 2) State
   const [coopViewMode, setCoopViewMode] = useState<'create' | 'join'>(
@@ -1259,6 +1269,15 @@ export function CoupleModeView({
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
+                  onClick={() => setShowReceiptModal(true)}
+                  className="px-4 py-3 rounded-2xl bg-[#1C182A] hover:bg-[#27223B] border border-[#C9A24A]/40 text-[#F3E5AB] font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4 inline mr-1.5 text-[#C9A24A]" />
+                  🧾 Hóa Đơn Tình Duyên
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => onOpenStoryModal(coupleReading)}
                   className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#D4AF37] text-[#09080D] font-bold text-xs sm:text-sm shadow-[0_8px_25px_rgba(212,175,55,0.35)] hover:brightness-110 transition-all cursor-pointer"
                 >
@@ -1276,6 +1295,21 @@ export function CoupleModeView({
                 </button>
               </div>
             </div>
+
+            {/* AI Voice Reader Bar for Couple Mode */}
+            <AIVoiceReaderBar
+              readerId={selectedReaderId || 'ba_ngoai'}
+              nickname={coupleReading.nickname}
+              topicLabel={`Bói Đôi • ${RELATIONSHIP_STATUS_LABELS[relationshipStatus]}`}
+              overallVerdict={coupleReading.result.overall_verdict}
+              savageQuote={coupleReading.result.shareable_card.savage_quote}
+              cards={coupleReading.drawnCards.map((d) => ({
+                name_vi: d.card.name_vi,
+                reversed: d.reversed,
+                position_label: d.position_label,
+              }))}
+              className="my-3"
+            />
 
             {/* Dual Meters: Độ Hợp Cạ (%) & Máy Đo Red Flag 🚩 (%) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1470,6 +1504,25 @@ export function CoupleModeView({
           </div>
         </motion.div>
       ) : null}
+      {/* Couple Dating Receipt Modal */}
+      {coupleReading && (
+        <CoupleDatingReceiptModal
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          ownerNickname={ownerName}
+          partnerNickname={partnerName}
+          relationshipLabel={RELATIONSHIP_STATUS_LABELS[relationshipStatus]}
+          compatScore={compatScore}
+          redFlagLevel={redFlagLevel}
+          readerName={READERS.find((r) => r.id === selectedReaderId)?.name || 'Cô Sáu'}
+          vibeTag={vibeTag}
+          verdictSnippet={coupleReading.result.overall_verdict}
+          savageQuote={coupleReading.result.shareable_card.savage_quote}
+          c1Name={coupleReading.drawnCards[0]?.card.name_vi || 'Lá 1'}
+          c2Name={coupleReading.drawnCards[1]?.card.name_vi || 'Lá 2'}
+          c3Name={coupleReading.drawnCards[2]?.card.name_vi || 'Lá 3'}
+        />
+      )}
     </div>
   );
 }

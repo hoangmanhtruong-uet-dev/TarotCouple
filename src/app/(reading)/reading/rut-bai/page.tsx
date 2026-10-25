@@ -42,6 +42,30 @@ const DECODING_QUOTES_BY_READER: Record<string, string[]> = {
     'Trật tự vũ trụ đang dần hiển lộ qua các vì sao...',
     'Thông điệp minh triết đã được đúc kết hoàn chỉnh...',
   ],
+  ba_co_mo_hon: [
+    'Bà Cố đang soi căn duyên tiền định cho con đây...',
+    'Đừng có giấu Bà Cố, các lá bài hiện rõ mồn một rồi...',
+    'Tâm thành thì ứng, định mệnh chuẩn bị mở lối...',
+    'Xong rồi đó, để Bà Cố phán cho nghe nghe chưa con!',
+  ],
+  tien_tu_chua_lanh: [
+    'Thả lỏng hơi thở, để năng lượng vũ trụ bao bọc bạn...',
+    'Những tổn thương cũ đang dần được các lá bài vỗ về...',
+    'Ánh sáng chữa lành đang chiếu rọi vào từng nút thắt...',
+    'Thông điệp bình yên và nguồn cảm hứng đã thành hình...',
+  ],
+  tong_tai_ly_tri: [
+    'Đang phân tích các biến số và ma trận xác suất...',
+    'Lọc bỏ yếu tố cảm tính, tập trung vào dữ kiện thực tế...',
+    'Chiến lược tối ưu đang dần được định hình rõ nét...',
+    'Báo cáo chiến lược định mệnh đã sẵn sàng bàn giao...',
+  ],
+  phap_su_toi_co: [
+    'Vòng tròn ma thuật đang phong ấn các dòng năng lượng...',
+    'Các cổ tự bắt đầu cộng hưởng với trực giác của bạn...',
+    'Màn sương bí ẩn đang tan dần trước mắt ta...',
+    'Lời sấm truyền ngàn năm đã được khai mở trọn vẹn...',
+  ],
 };
 
 export default function RutBaiPage() {
@@ -200,6 +224,20 @@ export default function RutBaiPage() {
       picked.push(pool.splice(randIdx, 1)[0]!);
     }
     setSelectedFanIndices(picked);
+  };
+
+  // Vũ trụ chọn hộ & Bốc ngay từ giai đoạn Riffle (Fast-Track)
+  const handleQuickDrawAndReveal = () => {
+    soundManager.playCardSlide();
+    const pool = Array.from({ length: totalDeckCards }, (_, idx) => idx);
+    const picked: number[] = [];
+    while (picked.length < 3) {
+      const randIdx = Math.floor(Math.random() * pool.length);
+      picked.push(pool.splice(randIdx, 1)[0]!);
+    }
+    const tuple: [number, number, number] = [picked[0]!, picked[1]!, picked[2]!];
+    setSelectedFanIndices(tuple);
+    startRevealSequence(tuple);
   };
 
   // 3. HIỆU ỨNG LẬT BÀI 3D XEN KẼ 350ms (0ms -> 350ms -> 700ms)
@@ -513,13 +551,24 @@ export default function RutBaiPage() {
               )}
             </motion.button>
 
-            <button
-              type="button"
-              onClick={() => setStage('fan')}
-              className="text-xs text-[#9E96B0] hover:text-[#C9A24A] transition-colors cursor-pointer"
-            >
-              Bỏ qua nghi thức, xòe bài ngay &rarr;
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleQuickDrawAndReveal}
+                className="px-4 py-2 rounded-xl bg-[#14111C] hover:bg-[#1D1829] border border-[#C9A24A]/40 text-xs font-semibold text-[#C9A24A] transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Vũ Trụ Chọn Hộ &amp; Bốc Ngay &rarr;</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStage('fan')}
+                className="text-xs text-[#9E96B0] hover:text-[#C9A24A] transition-colors cursor-pointer"
+              >
+                Tự tay xòe bài &rarr;
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -686,7 +735,7 @@ export default function RutBaiPage() {
           <div className="flex items-center justify-between max-w-md mx-auto pt-2">
             <button
               type="button"
-              onClick={() => router.push('/reading/bo-bai')}
+              onClick={() => router.push('/reading/chu-de?step=3')}
               disabled={stage === 'revealing'}
               className="px-4 py-3 rounded-xl bg-[#14111C] hover:bg-[#1D1829] border border-[#262235] text-xs font-semibold text-[#9E96B0] transition-colors cursor-pointer disabled:opacity-50"
             >

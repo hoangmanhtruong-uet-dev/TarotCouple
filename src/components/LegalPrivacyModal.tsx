@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   PhoneCall,
 } from 'lucide-react';
+import { useModalA11y } from '@/lib/use-modal-a11y';
 
 export interface LegalPrivacyModalProps {
   isOpen: boolean;
@@ -27,6 +28,9 @@ export function LegalPrivacyModal({
   onResetSession,
 }: LegalPrivacyModalProps) {
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  // M4: Escape-to-close + body scroll lock + Tab focus trap while open
+  const dialogRef = useModalA11y(isOpen, onClose);
 
   const handleClearLocalHistory = () => {
     onClearHistory();
@@ -53,6 +57,7 @@ export function LegalPrivacyModal({
           role="dialog"
           aria-modal="true"
           aria-label="Điều khoản sử dụng và Chính sách quyền riêng tư"
+          ref={dialogRef}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 14 }}

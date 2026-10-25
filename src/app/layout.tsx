@@ -103,27 +103,30 @@ export const metadata: Metadata = {
   },
 };
 
+const TRACKER_SERVER = process.env.NEXT_PUBLIC_TRACKER_SERVER?.replace(/\/$/, '');
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const trackerServer =
-    process.env.NEXT_PUBLIC_TRACKER_SERVER || "http://localhost:4000";
-  const trackerScriptUrl = `${trackerServer.replace(/\/$/, "")}/tracker.js`;
-
   return (
     <html
       lang="vi"
       className={`${beVietnamPro.variable} ${playfair.variable} dark`}
     >
       <head>
-        {/* PulseWatch Real-Time Analytics & Error Monitoring */}
-        <Script
-          src={trackerScriptUrl}
-          data-server={trackerServer}
-          strategy="afterInteractive"
-        />
+        {/* PulseWatch Real-Time Analytics & Error Monitoring.
+            M1: only inject the tracker when an explicit HTTPS endpoint is
+            configured — never fall back to a hardcoded http://localhost URL,
+            which would inject mixed content (and is dead in production). */}
+        {TRACKER_SERVER ? (
+          <Script
+            src={`${TRACKER_SERVER}/tracker.js`}
+            data-server={TRACKER_SERVER}
+            strategy="afterInteractive"
+          />
+        ) : null}
       </head>
       <body className="min-h-dvh bg-[#0B0A12] text-[#F8F5F0] antialiased selection:bg-[#C9A24A]/30 selection:text-[#E5C687]">
         <PhoneFrameContainer>{children}</PhoneFrameContainer>

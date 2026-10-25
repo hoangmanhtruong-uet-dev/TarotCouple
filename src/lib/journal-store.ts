@@ -1,6 +1,14 @@
 import type { ReadingSuccessResponse, ClarifierCardPayload, DrawnCardClientPayload } from './api-types';
 import type { ReaderId, TopicId } from './schemas';
 
+export type ReflectionStatus = 'very_accurate' | 'partially_accurate' | 'not_yet';
+
+export interface JournalReflection {
+  status: ReflectionStatus;
+  feedback?: string;
+  evaluatedAt: string;
+}
+
 export interface JournalEntry {
   id: string; // readingId
   createdAt: string;
@@ -17,6 +25,7 @@ export interface JournalEntry {
   fullResponse: ReadingSuccessResponse;
   isFavorite?: boolean;
   userNote?: string;
+  reflection?: JournalReflection;
   updatedAt?: string;
 }
 
@@ -33,6 +42,16 @@ export function getJournalEntries(): JournalEntry[] {
   } catch {
     return [];
   }
+}
+
+export function getJournalEntryById(id: string): JournalEntry | undefined {
+  const entries = getJournalEntries();
+  return entries.find((e) => e.id === id);
+}
+
+export function getLatestJournalEntry(): JournalEntry | undefined {
+  const entries = getJournalEntries();
+  return entries[0];
 }
 
 export function saveJournalEntry(reading: ReadingSuccessResponse): JournalEntry[] {
@@ -60,6 +79,7 @@ export function saveJournalEntry(reading: ReadingSuccessResponse): JournalEntry[
       fullResponse: reading,
       isFavorite: existsIdx >= 0 ? current[existsIdx]?.isFavorite : false,
       userNote: existsIdx >= 0 ? current[existsIdx]?.userNote : undefined,
+      reflection: existsIdx >= 0 ? current[existsIdx]?.reflection : undefined,
       updatedAt: existsIdx >= 0 ? current[existsIdx]?.updatedAt : undefined,
     };
 
@@ -125,6 +145,35 @@ export function updateJournalNote(id: string, note: string): JournalEntry[] {
         return {
           ...entry,
           userNote: note.trim(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return entry;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+export function updateJournalReflection(
+  id: string,
+  status: ReflectionStatus,
+  feedback?: string
+): JournalEntry[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const current = getJournalEntries();
+    const updated = current.map((entry) => {
+      if (entry.id === id) {
+        return {
+          ...entry,
+          reflection: {
+            status,
+            feedback: feedback?.trim() || undefined,
+            evaluatedAt: new Date().toISOString(),
+          },
           updatedAt: new Date().toISOString(),
         };
       }

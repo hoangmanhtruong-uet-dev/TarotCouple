@@ -24,6 +24,7 @@ import {
 } from '@/lib/three/shaders';
 import { createReaderAltarTotemGroup } from '@/components/HeroTarotDeck3D';
 import { soundManager } from '@/lib/sound-effects';
+import { useModalA11y, isEditableTarget } from '@/lib/use-modal-a11y';
 import {
   Sparkles,
   X,
@@ -112,6 +113,9 @@ export default function ReaderIntroModal({
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const [currentIdx, setCurrentIdx] = useState(0);
+
+  // M4: Escape-to-close + body scroll lock + Tab focus trap while open
+  const dialogRef = useModalA11y(isOpen, onClose);
 
   // Refs for Zero-Rerender 3D WebGL Stage & Direct DOM Tilt/GSAP Choreography
   const webglMountRef = useRef<HTMLDivElement | null>(null);
@@ -516,6 +520,7 @@ export default function ReaderIntroModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -602,6 +607,7 @@ export default function ReaderIntroModal({
       role="dialog"
       aria-modal="true"
       aria-label={`Giới thiệu Reader ${reader.name}`}
+      ref={dialogRef}
       onWheel={handleWheel}
       onTouchStart={(e) => {
         touchStartXRef.current = e.touches[0]?.clientX ?? null;

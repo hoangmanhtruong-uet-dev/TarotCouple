@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { READERS } from '@/data/tarot-cards';
 import { SLUG_TO_READER_ID, ALL_READER_SLUGS } from '@/lib/reader-slugs';
-import ReaderProfileView from '@/components/ReaderProfileView';
+import ReaderProfileViewLazy from '@/components/ReaderProfileViewLazy';
 
 interface ReaderPageProps {
   params: Promise<{ slug: string }>;
@@ -56,7 +56,7 @@ export default async function ReaderDetailPage({ params }: ReaderPageProps) {
 
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#09080D] flex items-center justify-center text-[#C9A24A] text-sm font-medium">Đang chuẩn bị lều Reader...</div>}>
-      <ReaderProfileView readerId={reader.id} currentSlug={slug} />
+      <ReaderProfileViewLazy readerId={reader.id} currentSlug={slug} />
     </Suspense>
   );
 }

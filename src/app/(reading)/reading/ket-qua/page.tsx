@@ -11,9 +11,9 @@
  *   STAGE 4: "clarifier"  — Lời khuyên ngắn + Lá làm rõ thứ 4
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   motion,
   AnimatePresence,
@@ -41,17 +41,30 @@ import {
   HelpCircle,
   Copy,
   Check,
+  Bookmark,
+  LayoutGrid,
+  ListOrdered,
 } from 'lucide-react';
 import FollowupChatModal from '@/components/FollowupChatModal';
 import OutOfStarsSheet from '@/components/OutOfStarsSheet';
-import { ALL_TAROT_CARDS } from '@/data/tarot-cards';
+import { AIVoiceReaderBar } from '@/components/AIVoiceReaderBar';
+import InteractiveFollowupCard from '@/components/reading/InteractiveFollowupCard';
+import HeroClarifierCard from '@/components/reading/HeroClarifierCard';
+import { ALL_TAROT_CARDS, withCardProse } from '@/data/tarot-cards';
 import { READERS } from '@/data/tarot-cards';
 import { getCardTopicInterpretation } from '@/data/topic-interpretations';
+import { buildContextualPivotScenarios } from '@/lib/ai-provider';
 import { useQuotaSync } from '@/lib/use-quota';
-import { saveJournalEntry } from '@/lib/journal-store';
+import {
+  saveJournalEntry,
+  getJournalEntryById,
+  getLatestJournalEntry,
+  updateJournalReflection,
+  type ReflectionStatus,
+} from '@/lib/journal-store';
 import { soundManager } from '@/lib/sound-effects';
 import type { ClarifierCardPayload, DrawnCardClientPayload } from '@/lib/api-types';
-import type { ReadingOutput, CardAnalysis } from '@/lib/schemas';
+import type { ReadingOutput, CardAnalysis, ReaderId } from '@/lib/schemas';
 
 // ─── Stage Types ─────────────────────────────────────────────────────────────
 type Stage = 'reveal_1' | 'reveal_2' | 'reveal_3' | 'verdict' | 'clarifier';
@@ -300,7 +313,8 @@ function CardSpotlightView({
     (topic as any) || 'love'
   );
 
-  const rawCoreMeaning = drawn.reversed ? drawn.card.core_meaning_rev : drawn.card.core_meaning_up;
+  const cardWithProse = withCardProse(drawn.card);
+  const rawCoreMeaning = (drawn.reversed ? cardWithProse.core_meaning_rev : cardWithProse.core_meaning_up) || '';
   const coreMeaning = specializedData?.meaning || formatTopicCoreMeaning(rawCoreMeaning, topic);
   const specializedAdvice = specializedData?.advice;
 
@@ -440,6 +454,10 @@ function VerdictView({
   questionText,
   nickname,
   usedFallback,
+  readerId,
+  topicLabel,
+  topic,
+  clarifierCard,
 }: {
   drawnCards: [DrawnCardClientPayload, DrawnCardClientPayload, DrawnCardClientPayload];
   result: ReadingOutput;
@@ -448,14 +466,76 @@ function VerdictView({
   activeQuoteIdx: 0 | 1 | 2;
   setActiveQuoteIdx: (i: 0 | 1 | 2) => void;
   onContinue: () => void;
-  onOpenFollowup: () => void;
+  onOpenFollowup: (initialQuestion?: string) => void;
   onRedrawCards?: () => void;
   questionText?: string;
   nickname?: string;
   usedFallback?: boolean;
+  readerId?: ReaderId;
+  topicLabel?: string;
+  topic?: string;
+  clarifierCard?: ClarifierCardPayload | null;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const [copiedVerdict, setCopiedVerdict] = useState(false);
+  const [isActionPinned, setIsActionPinned] = useState(false);
+  const [userReaction, setUserReaction] = useState<'accurate' | 'empowered' | 'reflecting' | null>(null);
+
+  const pivotScenarios = result.pivot_scenarios || buildContextualPivotScenarios(
+    (topic as any) || 'love',
+    drawnCards[0].card,
+    drawnCards[1].card,
+    drawnCards[2].card,
+    readerId as any
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const pinned = localStorage.getItem('tc_guidance_48h_v1');
+        if (pinned) {
+          const parsed = JSON.parse(pinned);
+          if (parsed?.action === result.actionable_next_step) {
+            setIsActionPinned(true);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [result.actionable_next_step]);
+
+  const handlePinAction = () => {
+    soundManager.playCrispClick();
+    if (typeof window !== 'undefined') {
+      try {
+        const payload = {
+          savedAt: new Date().toISOString(),
+          readerDisplayName,
+          topic,
+          action: result.actionable_next_step,
+          verdict: finalVerdictText,
+        };
+        localStorage.setItem('tc_guidance_48h_v1', JSON.stringify(payload));
+        setIsActionPinned(true);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleSelectReaction = (type: 'accurate' | 'empowered' | 'reflecting') => {
+    soundManager.playCrispClick();
+    setUserReaction(type);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`tc_reaction_${result.greeting_hook.slice(0, 20)}`, type);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
   const quotes = result.shareable_card.savage_quotes;
   const selectedQuote = quotes[activeQuoteIdx] || quotes[0]!;
 
@@ -489,63 +569,131 @@ function VerdictView({
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className="max-w-xl mx-auto px-4 pt-4 pb-36"
     >
-      {/* Title */}
+      {/* Title & Topic Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-6"
+        className="text-center mb-5"
       >
         <span className="text-[10px] font-bold tracking-widest text-[#C9A24A] uppercase block mb-1">
-          TỔNG HỢP 3 LÁ
+          TỔNG HỢP 3 LÁ • {topicLabel?.toUpperCase() || 'TAROT'}
         </span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#F8F5F0]">
           Chốt Hạ Của Vũ Trụ
         </h1>
-        <p className="text-xs text-[#C9A24A] italic mt-1 font-serif">
+      </motion.div>
+
+      {/* AI Voice Reader Bar */}
+      <AIVoiceReaderBar
+        readerId={readerId || 'ba_ngoai'}
+        nickname={nickname || 'Bạn'}
+        topicLabel={topicLabel || 'Tình Duyên'}
+        overallVerdict={finalVerdictText}
+        savageQuote={selectedQuote}
+        cards={drawnCards.map((d) => ({
+          name_vi: d.card.name_vi,
+          reversed: d.reversed,
+          position_label: d.position_label,
+        }))}
+        className="mb-5"
+      />
+
+      {/* KHỐI 1: ⚡ BẮT BỆNH CỐT LÕI (THE HARD TRUTH) */}
+      <motion.div
+        initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#171424] via-[#120F1D] to-[#0E0D17] border border-[#C9A24A]/40 mb-4 shadow-xl"
+        style={{ borderLeft: `4px solid ${accentColor}` }}
+      >
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold tracking-wider text-[#E5C687] uppercase flex items-center gap-1.5 font-serif">
+              <span className="text-amber-400">⚡</span> KHỐI 1: BẮT BỆNH CỐT LÕI
+            </span>
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider uppercase">
+              Đi thẳng vào tim đen
+            </span>
+          </div>
+        </div>
+
+        <p className="font-serif text-sm sm:text-base text-[#F8F5F0] leading-[1.7] italic">
           &ldquo;{result.greeting_hook}&rdquo;
         </p>
 
         {questionText && questionText.trim().length > 3 && (
-          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#14121F] border border-[#262235] text-left max-w-md">
+          <div className="mt-3 pt-3 border-t border-[#262235] flex items-center gap-2 text-xs">
             <span className="text-[10px] font-bold text-[#E5C687] shrink-0 uppercase tracking-wider">
-              Tâm sự của {nickname || 'bạn'}:
+              Khúc mắc của {nickname || 'bạn'}:
             </span>
-            <span className="text-xs text-[#9E96B0] truncate italic">
+            <span className="text-[11px] text-[#9E96B0] truncate italic">
               &ldquo;{questionText.trim()}&rdquo;
             </span>
           </div>
         )}
       </motion.div>
 
-      {/* 3 mini cards recap */}
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        {drawnCards.map((drawn, i) => (
-          <motion.div
-            key={i}
-            initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="flex flex-col items-center p-2.5 rounded-2xl bg-[#14121F]/80 border border-[#262235]"
-          >
-            <div className="w-full h-28 rounded-xl overflow-hidden mb-2 border" style={{ borderColor: accentColor + '40' }}>
-              <img
-                src={drawn.card.rws_image_url}
-                alt={drawn.card.name_vi}
-                className={`w-full h-full object-cover ${drawn.reversed ? 'rotate-180' : ''}`}
-              />
-            </div>
-            <p className="text-[10px] font-bold text-[#F8F5F0] text-center leading-tight">{drawn.card.name_vi}</p>
-            <span
-              className="text-[9px] mt-0.5"
-              style={{ color: accentColor }}
-            >
-              {drawn.reversed ? '↓ Ngược' : '↑ Xuôi'}
-            </span>
-          </motion.div>
-        ))}
-      </div>
+      {/* KHỐI 2: 🃏 3 LÁ BÀI GIẢI MÃ (CARD INSIGHTS) */}
+      <motion.div
+        initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="p-5 sm:p-6 rounded-3xl bg-[#14121F]/90 border border-[#262235] mb-4 space-y-3.5 shadow-xl"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold tracking-wider text-[#E5C687] uppercase flex items-center gap-1.5 font-serif">
+            <span>🃏</span> KHỐI 2: GIẢI MÃ 3 LÁ GÃY GỌN
+          </span>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#1C172B] border border-[#2E2840] text-[#9E96B0]">
+            Không lý thuyết sáo rỗng
+          </span>
+        </div>
 
-      {/* Chốt hạ tổng quan */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {drawnCards.map((drawn, i) => {
+            const cardAnalysis = result.cards_analysis?.[i];
+            const cleanInterpretation = cardAnalysis?.interpretation
+              ?.replace(/^ở vị trí.*?lá.*?:/i, '')
+              ?.replace(/\n\n📌 Trọng tâm:.*$/s, '')
+              ?.trim() || '';
+
+            return (
+              <div
+                key={i}
+                className="p-3 rounded-2xl bg-[#0E0D17]/80 border border-[#262235] flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-full h-32 rounded-xl overflow-hidden mb-2 border relative" style={{ borderColor: accentColor + '40' }}>
+                    <img
+                      src={drawn.card.rws_image_url}
+                      alt={drawn.card.name_vi}
+                      className={`w-full h-full object-cover ${drawn.reversed ? 'rotate-180' : ''}`}
+                    />
+                    <span
+                      className="absolute bottom-1.5 right-1.5 text-[9px] px-1.5 py-0.5 rounded-md font-bold bg-black/80 backdrop-blur-sm"
+                      style={{ color: accentColor }}
+                    >
+                      {drawn.reversed ? 'Ngược' : 'Xuôi'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-[#9E96B0] font-semibold tracking-wider uppercase mb-0.5">
+                    {drawn.position_label}
+                  </div>
+                  <div className="text-xs font-bold text-[#F8F5F0] mb-1.5">
+                    {drawn.card.name_vi}
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-[#D4CFE2] leading-relaxed line-clamp-4">
+                  {cleanInterpretation || cardAnalysis?.interpretation || drawn.card.keywords_up?.[0] || 'Thông điệp vũ trụ'}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* KHỐI 3: 🎯 CHỐT HẠ & HÀNH ĐỘNG TRONG 48H */}
       <motion.div
         initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -554,8 +702,8 @@ function VerdictView({
       >
         <div>
           <div className="flex items-center justify-between gap-2 mb-2.5">
-            <span className="text-xs font-bold tracking-wider text-[#E5C687] uppercase text-gold-luxury font-serif">
-              CHỐT HẠ TRỰC DIỆN TỔNG QUAN
+            <span className="text-xs font-bold tracking-wider text-[#E5C687] uppercase text-gold-luxury font-serif flex items-center gap-1.5">
+              <span>🎯</span> KHỐI 3: CHỐT HẠ DỨT KHOÁT
             </span>
             <div className="flex items-center gap-1.5">
               <button
@@ -577,7 +725,7 @@ function VerdictView({
                 )}
               </button>
               <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                Giải Tỏa Nghi Vấn
+                Phán Quyết
               </span>
             </div>
           </div>
@@ -586,152 +734,198 @@ function VerdictView({
           </p>
         </div>
 
+        {/* 2 KỊCH BẢN NGÃ RẼ: SỰ THẬT THẤU CẢM & LỐI THOÁT */}
+        {pivotScenarios && (
+          <div className="mt-4 pt-4 border-t border-[#E5C687]/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold tracking-wider text-[#E5C687] uppercase font-serif">
+                🔀 2 KỊCH BẢN NGÃ RẼ (LỐI THOÁT HÀNH ĐỘNG)
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Kịch bản Buông */}
+              <div className="p-3.5 rounded-2xl bg-[#0F0D18] border border-sky-500/30 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🕊️</span>
+                  <span className="text-[11px] font-bold text-sky-300 uppercase tracking-wide">
+                    Nếu Chọn Buông / Dừng Lại
+                  </span>
+                </div>
+                <p className="text-xs text-[#D8E2EC] leading-[1.6]">
+                  {pivotScenarios.scenario_release}
+                </p>
+              </div>
+
+              {/* Kịch bản Giữ */}
+              <div className="p-3.5 rounded-2xl bg-[#0F0D18] border border-amber-500/30 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🔥</span>
+                  <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wide">
+                    Nếu Chọn Giữ / Tiếp Tục
+                  </span>
+                </div>
+                <p className="text-xs text-[#ECDCC8] leading-[1.6]">
+                  {pivotScenarios.scenario_persist}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-[#E5C687]/20 pt-4">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase font-serif">
-              HÀNH ĐỘNG NÊN LÀM NGAY
+            <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase font-serif flex items-center gap-1.5">
+              <span>⚡</span> VIỆC CẦN LÀM NGAY TRONG 48H
             </span>
-            {onRedrawCards && (
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={onRedrawCards}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C9A24A] hover:text-[#F3E5AB] transition-colors cursor-pointer"
+                onClick={handlePinAction}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#1D1829] hover:bg-[#2A233B] text-[#E5C687] border border-[#C9A24A]/40 transition-all cursor-pointer"
+                title="Ghim làm Kim Chỉ Nam 48h"
               >
-                <RotateCcw className="w-3 h-3" />
-                <span>Chọn lại 3 lá khác</span>
+                {isActionPinned ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400">Đã ghim</span>
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-3 h-3 text-[#E5C687]" />
+                    <span>Ghim 48h</span>
+                  </>
+                )}
               </button>
-            )}
-          </div>
-          <p className="text-sm sm:text-base text-[#D4CFE2] leading-[1.65]">{result.actionable_next_step}</p>
-        </div>
-      </motion.div>
-
-      {/* THẺ THẮC MẮC SÂU HƠN */}
-      <motion.div
-        initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.38 }}
-        onClick={onOpenFollowup}
-        className="group p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-[#3A334F] hover:border-[#C9A24A]/80 transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
-      >
-        <div className="flex items-center gap-3.5 relative z-10">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border"
-            style={{
-              borderColor: accentColor + '60',
-              backgroundColor: accentColor + '18',
-              color: accentColor,
-            }}
-          >
-            <MessageSquare className="w-6 h-6" />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                2 câu đầu miễn phí ✨
-              </span>
-              <span className="text-[10px] text-[#9E96B0]">
-                Sau đó: 2 Sao / câu
-              </span>
+              {onRedrawCards && (
+                <button
+                  type="button"
+                  onClick={onRedrawCards}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#C9A24A] hover:text-[#F3E5AB] transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Đổi 3 lá</span>
+                </button>
+              )}
             </div>
-            <h3 className="font-display text-sm sm:text-base font-bold text-[#F8F5F0] mb-0.5 group-hover:text-[#E8C872] transition-colors">
-              Thắc Mắc Sâu Hơn Với Reader
-            </h3>
-            <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
-              Bạn có điều gì chưa thông suốt về 3 lá? Nhắn trực tiếp để {readerDisplayName} giải đáp sâu hơn nhé.
+          </div>
+          <p className="text-sm sm:text-base text-[#D4CFE2] leading-[1.65]">
+            {result.actionable_next_step}
+          </p>
+
+          {/* BỘ ĐÁNH GIÁ CẢM XÚC NHANH (1-CHẠM) */}
+          <div className="mt-4 pt-3.5 border-t border-white/5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-[#9E96B0] uppercase tracking-wider">
+                Lời luận giải này có chạm đến bạn?
+              </span>
+              {userReaction && (
+                <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Đã ghi nhận
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectReaction('accurate')}
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold border transition-all cursor-pointer ${
+                  userReaction === 'accurate'
+                    ? 'bg-[#C9A24A]/20 border-[#C9A24A] text-[#F3E5AB] shadow-[0_0_12px_rgba(201,162,74,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:border-white/20 hover:text-[#F8F5F0]'
+                }`}
+              >
+                🎯 Trúng tim đen
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectReaction('empowered')}
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold border transition-all cursor-pointer ${
+                  userReaction === 'empowered'
+                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:border-white/20 hover:text-[#F8F5F0]'
+                }`}
+              >
+                ⚡ Nhẹ lòng & Động lực
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectReaction('reflecting')}
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold border transition-all cursor-pointer ${
+                  userReaction === 'reflecting'
+                    ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:border-white/20 hover:text-[#F8F5F0]'
+                }`}
+              >
+                🧘 Cần suy ngẫm
+              </button>
+            </div>
+          </div>
+
+          {/* HUY HIỆU BẢO TOÀN NĂNG LƯỢNG (ENERGY COOLDOWN NOTE) */}
+          <div className="mt-3.5 p-3 rounded-2xl bg-[#0A0910] border border-white/5 flex items-start gap-2.5">
+            <span className="text-base shrink-0">💡</span>
+            <p className="text-[11px] text-[#8E879E] leading-[1.6]">
+              <strong className="text-[#E5C687]">Lưu ý năng lượng từ Reader:</strong> Hãy dành 24–48h tập trung hoàn thành hành động trên trước khi rút quẻ mới cho cùng câu chuyện để tâm trí không bị nhiễu loạn.
             </p>
           </div>
-
-          <div className="shrink-0 text-[#C9A24A] group-hover:translate-x-1 transition-transform">
-            <ArrowRight className="w-5 h-5" />
-          </div>
         </div>
       </motion.div>
 
-      {/* THẺ GỢI Ý LÁ THỨ 4 */}
-      <motion.div
-        initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.45 }}
-        onClick={onContinue}
-        className="group p-5 rounded-3xl bg-[#14121F]/90 border border-[#C9A24A]/40 hover:border-[#C9A24A] transition-all cursor-pointer mb-5 shadow-xl relative overflow-hidden"
-        style={{
-          boxShadow: `0 0 25px ${accentColor}18`,
-        }}
-      >
-        {/* Ambient background glow */}
-        <div
-          className="absolute -right-8 -top-8 w-32 h-32 rounded-full blur-2xl opacity-20 pointer-events-none"
-          style={{ backgroundColor: accentColor }}
-        />
+      {/* THẺ THẮC MẮC SÂU HƠN VỚI READER */}
+      <InteractiveFollowupCard
+        readerDisplayName={readerDisplayName}
+        readerId={readerId}
+        accentColor={accentColor}
+        topic={topic}
+        suggestedQuestions={result.cliffhanger_upsell?.suggested_followup_questions}
+        onOpenFollowup={onOpenFollowup}
+        className="mb-5"
+      />
 
-        <div className="flex items-center gap-4 relative z-10">
-          {/* Lá úp phát sáng nhịp thở nhẹ */}
-          <motion.div
-            animate={
-              shouldReduceMotion
-                ? {}
-                : {
-                    boxShadow: [
-                      `0 0 10px ${accentColor}30`,
-                      `0 0 24px ${accentColor}70`,
-                      `0 0 10px ${accentColor}30`,
-                    ],
-                  }
-            }
-            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-16 h-24 sm:w-18 sm:h-28 rounded-xl bg-gradient-to-br from-[#262135] to-[#120F1D] border-2 border-[#C9A24A]/70 flex flex-col items-center justify-center shrink-0 text-center relative overflow-hidden"
-          >
-            <div className="text-[#C9A24A] text-lg font-serif">✦</div>
-            <div className="text-[9px] font-bold text-[#E8C872] tracking-wider uppercase mt-1">Lá 4</div>
-            <div className="absolute inset-1 rounded-lg border border-[#C9A24A]/20 pointer-events-none" />
-          </motion.div>
+      {/* THẺ HERO GỢI MỞ LÁ THỨ 4 */}
+      <HeroClarifierCard
+        clarifierCard={clarifierCard}
+        cliffhangerTease={result.cliffhanger_upsell?.tease_text}
+        readerDisplayName={readerDisplayName}
+        accentColor={accentColor}
+        onContinue={onContinue}
+        className="mb-5"
+      />
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold text-[#C9A24A] tracking-wider uppercase bg-[#C9A24A]/10 px-2.5 py-0.5 rounded-full border border-[#C9A24A]/30">
-                Gợi mở bí mật · 5 Sao ⭐
-              </span>
-            </div>
-            <h3 className="font-display text-base font-bold text-[#F8F5F0] mb-1 group-hover:text-[#E8C872] transition-colors">
-              Mở Khóa Lá Bài Làm Rõ Thứ 4
-            </h3>
-            <p className="text-xs text-[#9E96B0] leading-relaxed line-clamp-2">
-              {result.cliffhanger_upsell?.tease_text ||
-                `Vũ trụ đang giấu một nút thắt quan trọng. Hãy để ${readerDisplayName} lật mở lá bài thứ 4 để soi sâu hơn.`}
-            </p>
-          </div>
-
-          <div className="shrink-0 text-[#C9A24A] group-hover:translate-x-1 transition-transform">
-            <ArrowRight className="w-5 h-5" />
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Fixed bottom actions: Nút Lá Thứ 4 */}
+      {/* Fixed bottom actions: Nút Lá Thứ 4 + Hỏi Thêm + Story */}
       <div className="fixed bottom-0 left-0 right-0 p-3.5 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)] z-30">
-        <div className="max-w-xl mx-auto flex items-center gap-3">
+        <div className="max-w-xl mx-auto flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={onContinue}
-            className="flex-1 py-3.5 sm:py-4 rounded-2xl text-[#0B0A12] font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg active:scale-98"
+            className="flex-1 py-3.5 sm:py-4 rounded-2xl text-[#0B0A12] font-bold text-xs sm:text-base flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-all shadow-lg active:scale-98"
             style={{
-              background: `linear-gradient(135deg, #C9A24A, #A68032)`,
+              background: 'linear-gradient(135deg, #C9A24A, #E5C687)',
               boxShadow: '0 4px 25px rgba(201,162,74,0.35)',
             }}
           >
-            <Star className="w-4 h-4 fill-[#0B0A12]" />
-            <span>Mở Lá Thứ 4 · 5 Sao</span>
-            <ArrowRight className="w-4 h-4" />
+            <Star className="w-4 h-4 fill-[#0B0A12] shrink-0" />
+            <span className="truncate">{clarifierCard ? 'Xem Lá Thứ 4' : 'Mở Lá Thứ 4 · 5 Sao'}</span>
+            <ArrowRight className="w-4 h-4 shrink-0" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenFollowup()}
+            className="py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border border-[#8B5CF6]/50 hover:border-[#C9A24A] text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title="Hỏi thêm với Reader"
+          >
+            <MessageSquare className="w-4 h-4 text-[#C9A24A]" />
+            <span className="hidden sm:inline">Hỏi thêm</span>
           </button>
 
           <Link
             href="/reading/story"
-            className="py-3.5 sm:py-4 px-4 sm:px-5 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border-2 border-[#C9A24A]/70 text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            className="py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border border-white/10 hover:border-[#C9A24A] text-[#9E96B0] hover:text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title="Xuất Story 9:16"
           >
             <Share2 className="w-4 h-4 text-[#C9A24A]" />
-            <span className="whitespace-nowrap">Xuất Story 9:16</span>
+            <span className="hidden sm:inline">Story</span>
           </Link>
         </div>
       </div>
@@ -1026,9 +1220,641 @@ function ClarifierView({
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-export default function KetQuaPage() {
+// ─── DashboardView ───────────────────────────────────────────────────────────
+// Màn Toàn Cảnh (All-in-One Dashboard): Xem nhanh trọn bộ 3 lá, audio, chốt hạ, lời khuyên và lá làm rõ
+function DashboardView({
+  drawnCards,
+  result,
+  readerDisplayName,
+  accentColor,
+  activeQuoteIdx,
+  setActiveQuoteIdx,
+  questionText,
+  nickname,
+  usedFallback,
+  readerId,
+  topicLabel,
+  topic,
+  clarifierCard,
+  onContinueClarifier,
+  onOpenFollowup,
+  onRedrawCards,
+  readingId,
+}: {
+  drawnCards: [DrawnCardClientPayload, DrawnCardClientPayload, DrawnCardClientPayload];
+  result: ReadingOutput;
+  readerDisplayName: string;
+  accentColor: string;
+  activeQuoteIdx: 0 | 1 | 2;
+  setActiveQuoteIdx: (i: 0 | 1 | 2) => void;
+  questionText?: string;
+  nickname?: string;
+  usedFallback?: boolean;
+  readerId?: ReaderId;
+  topicLabel?: string;
+  topic?: string;
+  clarifierCard?: ClarifierCardPayload | null;
+  onContinueClarifier: () => void;
+  onOpenFollowup: (initialQuestion?: string) => void;
+  onRedrawCards: () => void;
+  readingId?: string;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const [copiedVerdict, setCopiedVerdict] = useState(false);
+  const [isActionPinned, setIsActionPinned] = useState(false);
+  const [userReaction, setUserReaction] = useState<'accurate' | 'empowered' | 'reflecting' | null>(null);
+
+  const pivotScenarios = result.pivot_scenarios || buildContextualPivotScenarios(
+    (topic as any) || 'love',
+    drawnCards[0].card,
+    drawnCards[1].card,
+    drawnCards[2].card,
+    readerId as any
+  );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const pinned = localStorage.getItem('tc_guidance_48h_v1');
+        if (pinned) {
+          const parsed = JSON.parse(pinned);
+          if (parsed?.action === result.actionable_next_step) {
+            setIsActionPinned(true);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [result.actionable_next_step]);
+
+  const handlePinAction = () => {
+    soundManager.playCrispClick();
+    if (typeof window !== 'undefined') {
+      try {
+        const payload = {
+          savedAt: new Date().toISOString(),
+          readerDisplayName,
+          topic,
+          action: result.actionable_next_step,
+          verdict: finalVerdictText,
+        };
+        localStorage.setItem('tc_guidance_48h_v1', JSON.stringify(payload));
+        setIsActionPinned(true);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleSelectReaction = (type: 'accurate' | 'empowered' | 'reflecting') => {
+    soundManager.playCrispClick();
+    setUserReaction(type);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`tc_reaction_${result.greeting_hook.slice(0, 20)}`, type);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const [reflectionStatus, setReflectionStatus] = useState<ReflectionStatus | null>(() => {
+    if (readingId) {
+      const entry = getJournalEntryById(readingId);
+      return entry?.reflection?.status || null;
+    }
+    return null;
+  });
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const quotes = result.shareable_card.savage_quotes;
+  const selectedQuote = quotes[activeQuoteIdx] || quotes[0]!;
+
+  const finalVerdictText = usedFallback
+    ? result.overall_verdict.endsWith('( DTS)')
+      ? result.overall_verdict
+      : `${result.overall_verdict.trim()} ( DTS)`
+    : result.overall_verdict.replace(/\s*\( DTS\)$/, '');
+
+  const handleCopyVerdict = async () => {
+    soundManager.playCrispClick();
+    const cardsSummary = drawnCards
+      .map((d, i) => `Lá ${i + 1} (${d.position_label}): ${d.card.name_vi} (${d.reversed ? 'Ngược' : 'Xuôi'})`)
+      .join('\n');
+    const textToCopy = `🔮 Trải Bài Tarot với ${readerDisplayName}\n${cardsSummary}\n\n✨ Chốt hạ: ${finalVerdictText}\n🎯 Hành động: ${result.actionable_next_step}`;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedVerdict(true);
+      setTimeout(() => setCopiedVerdict(false), 2200);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRateReflection = (status: ReflectionStatus) => {
+    if (!readingId) return;
+    updateJournalReflection(readingId, status);
+    setReflectionStatus(status);
+    soundManager.playMysticChime();
+    setToastMsg(
+      status === 'very_accurate'
+        ? '✦ Tuyệt vời! Đã ghi nhận: Rất đúng'
+        : status === 'partially_accurate'
+        ? '✦ Đã ghi nhận: Một phần ứng nghiệm'
+        : '✦ Đã ghi nhận: Chưa thấy ứng nghiệm'
+    );
+    setTimeout(() => setToastMsg(null), 2500);
+  };
+
+  return (
+    <motion.div
+      key="dashboard"
+      initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -15 }}
+      transition={{ duration: 0.35 }}
+      className="max-w-2xl mx-auto px-4 pt-4 pb-36 space-y-6"
+    >
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#C9A24A] text-[#0B0A12] text-xs font-bold shadow-lg animate-fade-in">
+          {toastMsg}
+        </div>
+      )}
+
+      {/* Header Banner */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-[#14121F]/90 border border-white/10 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-[#E5C687]">
+              🔮 {readerDisplayName}
+            </span>
+            <span className="text-[10px] text-[#9E96B0] bg-[#0B0A12] px-2.5 py-0.5 rounded-full border border-white/10 font-medium">
+              {topicLabel || 'Trải bài'}
+            </span>
+          </div>
+          <span className="text-[10px] text-[#716A85]">
+            Bảng Tổng Quan Toàn Cảnh
+          </span>
+        </div>
+
+        {questionText && questionText.trim().length > 0 && (
+          <div className="p-3 rounded-2xl bg-[#09080D] border border-white/5">
+            <p className="text-[10px] text-[#C9A24A] font-bold uppercase tracking-wider mb-0.5">
+              Nỗi niềm của {nickname || 'bạn'}:
+            </p>
+            <p className="text-xs text-[#D4CEE0] italic font-serif">
+              &ldquo;{questionText.trim()}&rdquo;
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* AI Voice Reader Bar */}
+      <AIVoiceReaderBar
+        readerId={readerId || 'ba_ngoai'}
+        nickname={nickname || 'Bạn'}
+        topicLabel={topicLabel || 'Tình Duyên'}
+        overallVerdict={finalVerdictText}
+        savageQuote={selectedQuote}
+        cards={drawnCards.map((d) => ({
+          name_vi: d.card.name_vi,
+          reversed: d.reversed,
+          position_label: d.position_label,
+        }))}
+      />
+
+      {/* KHỐI 1: ⚡ BẮT BỆNH CỐT LÕI */}
+      <div
+        className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#171424] via-[#120F1D] to-[#0E0D17] border border-[#C9A24A]/40 shadow-xl"
+        style={{ borderLeft: `4px solid ${accentColor}` }}
+      >
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <span className="text-[11px] font-bold tracking-wider text-[#E5C687] uppercase flex items-center gap-1.5 font-serif">
+            <span className="text-amber-400">⚡</span> KHỐI 1: BẮT BỆNH CỐT LÕI
+          </span>
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold tracking-wider uppercase">
+            Đi thẳng vào tim đen
+          </span>
+        </div>
+        <p className="font-serif text-sm sm:text-base text-[#F8F5F0] leading-[1.7] italic">
+          &ldquo;{result.greeting_hook}&rdquo;
+        </p>
+      </div>
+
+      {/* KHỐI 2: 🃏 3 LÁ BÀI GIẢI MÃ */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-[#E5C687] uppercase tracking-wider font-serif flex items-center gap-1.5">
+            <span>🃏</span> KHỐI 2: GIẢI MÃ 3 LÁ GÃY GỌN
+          </span>
+          <span className="text-[11px] text-[#9E96B0]">
+            3 Vị Trí Soi Chiếu
+          </span>
+        </div>
+
+        <div className="space-y-4">
+          {drawnCards.map((drawn, idx) => {
+            const cardAnalysis = result.cards_analysis[idx];
+            const specializedData = getCardTopicInterpretation(
+              drawn.card.id,
+              drawn.reversed,
+              (topic as any) || 'love'
+            );
+            const cardWithProse = withCardProse(drawn.card);
+            const rawCoreMeaning =
+              (drawn.reversed ? cardWithProse.core_meaning_rev : cardWithProse.core_meaning_up) || '';
+            const coreMeaning =
+              specializedData?.meaning || formatTopicCoreMeaning(rawCoreMeaning, topic);
+            const keywords = drawn.reversed ? drawn.card.keywords_rev : drawn.card.keywords_up;
+
+            return (
+              <div
+                key={idx}
+                className="p-4 sm:p-5 rounded-3xl bg-[#120F1D]/90 border border-white/10 space-y-3.5 shadow-lg"
+              >
+                {/* Card Header & Artwork */}
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className="w-16 h-24 sm:w-20 sm:h-28 rounded-xl overflow-hidden border shrink-0 bg-[#09080D]"
+                    style={{ borderColor: accentColor + '60' }}
+                  >
+                    <img
+                      src={drawn.card.rws_image_url}
+                      alt={drawn.card.name_vi}
+                      className={`w-full h-full object-cover ${drawn.reversed ? 'rotate-180' : ''}`}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="inline-block text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border mb-1"
+                      style={{
+                        borderColor: accentColor + '40',
+                        color: accentColor,
+                        backgroundColor: accentColor + '10',
+                      }}
+                    >
+                      Lá {idx + 1}: {drawn.position_label}
+                    </span>
+                    <h3 className="font-serif text-base font-bold text-[#F8F5F0] truncate">
+                      {drawn.card.roman}. {drawn.card.name_vi}
+                    </h3>
+                    <p className="text-[11px] text-[#9E96B0]">
+                      {drawn.card.name_en} •{' '}
+                      <span className={drawn.reversed ? 'text-amber-400' : 'text-emerald-400'}>
+                        {drawn.reversed ? 'Chiều Ngược' : 'Chiều Xuôi'}
+                      </span>
+                    </p>
+
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {keywords.slice(0, 3).map((kw, kIdx) => (
+                        <span
+                          key={kIdx}
+                          className="px-2 py-0.5 rounded text-[9px] font-medium bg-[#1D182A] text-[#E5C687] border border-white/5"
+                        >
+                          #{kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Core meaning */}
+                <div className="p-3.5 rounded-2xl bg-[#09080D]/80 border border-white/5 space-y-1">
+                  <p className="text-[10px] font-bold text-[#C9A24A] uppercase tracking-wider">
+                    Ý nghĩa năng lượng:
+                  </p>
+                  <p className="text-xs sm:text-sm text-[#F8F5F0] leading-relaxed">
+                    {coreMeaning}
+                  </p>
+                </div>
+
+                {/* Interpretation */}
+                {cardAnalysis && (
+                  <div className="p-3.5 rounded-2xl bg-[#14111E] border border-emerald-500/20 space-y-1">
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                      Luận giải cho bạn:
+                    </p>
+                    <p className="text-xs sm:text-sm text-[#D4CEE0] leading-relaxed">
+                      {cardAnalysis.interpretation}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* KHỐI 3: 🎯 CHỐT HẠ & HÀNH ĐỘNG TRONG 48H */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1C172E] via-[#120F1D] to-[#09080D] border border-[#C9A24A]/40 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-[#E5C687] uppercase tracking-wider font-serif flex items-center gap-1.5">
+            <span>🎯</span> KHỐI 3: CHỐT HẠ DỨT KHOÁT
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyVerdict}
+              className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#1D1829] hover:bg-[#2A233B] text-[#E5C687] border border-[#C9A24A]/40 transition-colors cursor-pointer"
+            >
+              {copiedVerdict ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span className="text-emerald-400">Đã chép</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3" />
+                  <span>Sao chép</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onRedrawCards}
+              className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#C9A24A] hover:text-[#F3E5AB] cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Chọn lại 3 lá khác</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="font-serif text-sm sm:text-base text-[#F8F5F0] leading-relaxed whitespace-pre-line">
+          {finalVerdictText}
+        </p>
+
+        {/* 2 KỊCH BẢN NGÃ RẼ: SỰ THẬT THẤU CẢM & LỐI THOÁT */}
+        {pivotScenarios && (
+          <div className="mt-4 pt-4 border-t border-[#E5C687]/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold tracking-wider text-[#E5C687] uppercase font-serif">
+                🔀 2 KỊCH BẢN NGÃ RẼ (LỐI THOÁT HÀNH ĐỘNG)
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Kịch bản Buông */}
+              <div className="p-3.5 rounded-2xl bg-[#0F0D18] border border-sky-500/30 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🕊️</span>
+                  <span className="text-[11px] font-bold text-sky-300 uppercase tracking-wide">
+                    Nếu Chọn Buông / Dừng Lại
+                  </span>
+                </div>
+                <p className="text-xs text-[#D8E2EC] leading-[1.6]">
+                  {pivotScenarios.scenario_release}
+                </p>
+              </div>
+
+              {/* Kịch bản Giữ */}
+              <div className="p-3.5 rounded-2xl bg-[#0F0D18] border border-amber-500/30 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">🔥</span>
+                  <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wide">
+                    Nếu Chọn Giữ / Tiếp Tục
+                  </span>
+                </div>
+                <p className="text-xs text-[#ECDCC8] leading-[1.6]">
+                  {pivotScenarios.scenario_persist}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-white/10 pt-3">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-xs font-bold text-emerald-400 uppercase block">
+              ⚡ VIỆC CẦN LÀM NGAY TRONG 48H:
+            </span>
+            <button
+              type="button"
+              onClick={handlePinAction}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#1D1829] hover:bg-[#2A233B] text-[#E5C687] border border-[#C9A24A]/40 transition-all cursor-pointer"
+              title="Ghim làm Kim Chỉ Nam 48h"
+            >
+              {isActionPinned ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span className="text-emerald-400">Đã ghim</span>
+                </>
+              ) : (
+                <>
+                  <Bookmark className="w-3 h-3 text-[#E5C687]" />
+                  <span>Ghim 48h</span>
+                </>
+              )}
+            </button>
+          </div>
+          <p className="text-xs sm:text-sm text-[#D4CFE2] leading-relaxed">
+            {result.actionable_next_step}
+          </p>
+
+          {/* BỘ ĐÁNH GIÁ CẢM XÚC NHANH (1-CHẠM) */}
+          <div className="mt-4 pt-3.5 border-t border-white/5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-[#9E96B0] uppercase tracking-wider">
+                Lời luận giải này có chạm đến bạn?
+              </span>
+              {userReaction && (
+                <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Đã ghi nhận
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSelectReaction('accurate')}
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold border transition-all cursor-pointer ${
+                  userReaction === 'accurate'
+                    ? 'bg-[#C9A24A]/20 border-[#C9A24A] text-[#F3E5AB] shadow-[0_0_12px_rgba(201,162,74,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:border-white/20 hover:text-[#F8F5F0]'
+                }`}
+              >
+                🎯 Trúng tim đen
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectReaction('empowered')}
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold border transition-all cursor-pointer ${
+                  userReaction === 'empowered'
+                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:border-white/20 hover:text-[#F8F5F0]'
+                }`}
+              >
+                ⚡ Nhẹ lòng & Động lực
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectReaction('reflecting')}
+                className={`py-2 px-1.5 rounded-xl text-center text-xs font-semibold border transition-all cursor-pointer ${
+                  userReaction === 'reflecting'
+                    ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:border-white/20 hover:text-[#F8F5F0]'
+                }`}
+              >
+                🧘 Cần suy ngẫm
+              </button>
+            </div>
+          </div>
+
+          {/* HUY HIỆU BẢO TOÀN NĂNG LƯỢNG (ENERGY COOLDOWN NOTE) */}
+          <div className="mt-3.5 p-3 rounded-2xl bg-[#0A0910] border border-white/5 flex items-start gap-2.5">
+            <span className="text-base shrink-0">💡</span>
+            <p className="text-[11px] text-[#8E879E] leading-[1.6]">
+              <strong className="text-[#E5C687]">Lưu ý năng lượng từ Reader:</strong> Hãy dành 24–48h tập trung hoàn thành hành động trên trước khi rút quẻ mới cho cùng câu chuyện để tâm trí không bị nhiễu loạn.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Savage Quote Swiper */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-[#120F1D] border border-white/10 space-y-2.5 text-center">
+        <span className="text-[10px] font-bold text-[#C9A24A] uppercase tracking-widest block">
+          CÂU NÓI TRÚC TRẮC ĐỂ ĐỜI CỦA {readerDisplayName}
+        </span>
+        <p className="font-serif text-sm sm:text-base text-[#E5C687] italic px-4 leading-relaxed">
+          &ldquo;{selectedQuote}&rdquo;
+        </p>
+        <div className="flex items-center justify-center gap-2 pt-1">
+          {quotes.map((_, qIdx) => (
+            <button
+              key={qIdx}
+              type="button"
+              onClick={() => {
+                soundManager.playCrispClick();
+                setActiveQuoteIdx(qIdx as 0 | 1 | 2);
+              }}
+              className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
+                activeQuoteIdx === qIdx ? 'bg-[#C9A24A] w-5' : 'bg-white/20 hover:bg-white/40'
+              }`}
+              aria-label={`Chọn câu nói ${qIdx + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Thắc Mắc Sâu Hơn Với Reader */}
+      <InteractiveFollowupCard
+        readerDisplayName={readerDisplayName}
+        readerId={readerId}
+        accentColor={accentColor}
+        topic={topic}
+        suggestedQuestions={result.cliffhanger_upsell?.suggested_followup_questions}
+        onOpenFollowup={onOpenFollowup}
+      />
+
+      {/* Hero Lá Bài Làm Rõ Thứ 4 */}
+      <HeroClarifierCard
+        clarifierCard={clarifierCard}
+        cliffhangerTease={result.cliffhanger_upsell?.tease_text}
+        readerDisplayName={readerDisplayName}
+        accentColor={accentColor}
+        onContinue={onContinueClarifier}
+      />
+
+      {/* Prediction Reflection Tracker Widget */}
+      <div className="p-5 rounded-3xl bg-[#0F0D1A] border border-[#C9A24A]/30 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-[#C9A24A] uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-[#C9A24A]" />
+            <span>Độ Ứng Nghiệm Thực Tế (Reflection Tracker)</span>
+          </span>
+          {reflectionStatus && (
+            <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+              Đã ghi nhận
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[#9E96B0]">
+          Sau khi đối chiếu với cuộc sống, quẻ bài này ứng nghiệm với bạn như thế nào?
+        </p>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { id: 'very_accurate' as const, label: '✨ Rất đúng' },
+            { id: 'partially_accurate' as const, label: '⚖️ Một phần' },
+            { id: 'not_yet' as const, label: '⏳ Chưa thấy' },
+          ].map((opt) => {
+            const isSelected = reflectionStatus === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleRateReflection(opt.id)}
+                className={`py-2.5 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#C9A24A]/25 border-[#C9A24A] text-[#F3E5AB] shadow-[0_0_15px_rgba(201,162,74,0.3)]'
+                    : 'bg-[#14121F] border-white/10 text-[#9E96B0] hover:text-[#F8F5F0] hover:bg-[#1D182A]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Fixed bottom actions */}
+      <div className="fixed bottom-0 left-0 right-0 p-3.5 sm:p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-[#0E0D17]/95 backdrop-blur-md border-t border-[#262235] shadow-[0_-8px_30px_rgba(0,0,0,0.8)] z-30">
+        <div className="max-w-xl mx-auto flex items-center gap-2.5 sm:gap-3">
+          <button
+            type="button"
+            onClick={onContinueClarifier}
+            className="flex-1 py-3.5 sm:py-4 rounded-2xl text-[#0B0A12] font-bold text-xs sm:text-base flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer transition-all shadow-lg active:scale-98"
+            style={{
+              background: 'linear-gradient(135deg, #C9A24A, #E5C687)',
+              boxShadow: '0 4px 25px rgba(201,162,74,0.35)',
+            }}
+          >
+            <Star className="w-4 h-4 fill-[#0B0A12] shrink-0" />
+            <span className="truncate">{clarifierCard ? 'Xem Lá Thứ 4' : 'Mở Lá Thứ 4 · 5 Sao'}</span>
+            <ArrowRight className="w-4 h-4 shrink-0" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenFollowup()}
+            className="py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border border-[#8B5CF6]/50 hover:border-[#C9A24A] text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title="Hỏi thêm với Reader"
+          >
+            <MessageSquare className="w-4 h-4 text-[#C9A24A]" />
+            <span className="hidden sm:inline">Hỏi thêm</span>
+          </button>
+
+          <Link
+            href="/reading/story"
+            className="py-3.5 sm:py-4 px-3 sm:px-4 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border border-white/10 hover:border-[#C9A24A] text-[#9E96B0] hover:text-[#F8F5F0] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title="Xuất Story 9:16"
+          >
+            <Share2 className="w-4 h-4 text-[#C9A24A]" />
+            <span className="hidden sm:inline">Story</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={onRedrawCards}
+            className="py-3.5 sm:py-4 px-3 rounded-2xl bg-[#14121F] hover:bg-[#1D1829] border border-white/10 hover:border-[#C9A24A] text-[#9E96B0] hover:text-[#F8F5F0] font-semibold text-xs transition flex items-center justify-center cursor-pointer shrink-0"
+            title="Chọn lại 3 lá khác"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Main Page Content ────────────────────────────────────────────────────────
+function KetQuaPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialView = searchParams.get('view') === 'dashboard' ? 'dashboard' : 'step_by_step';
+  const [viewMode, setViewMode] = useState<'step_by_step' | 'dashboard'>(initialView);
   const shouldReduceMotion = useReducedMotion();
 
   const {
@@ -1043,6 +1869,20 @@ export default function KetQuaPage() {
     setReadingSuccess,
     resetReadingFlow,
   } = useReadingStore();
+
+  // Auto-restore reading from query param or latest journal entry if state is empty
+  useEffect(() => {
+    if (!readingSuccess) {
+      const urlId = searchParams.get('id') || searchParams.get('readingId');
+      const entry = urlId ? getJournalEntryById(urlId) : getLatestJournalEntry();
+      if (entry) {
+        setReadingSuccess(entry.fullResponse);
+        if (entry.clarifierCard) {
+          setClarifierCard(entry.clarifierCard);
+        }
+      }
+    }
+  }, [readingSuccess, searchParams, setReadingSuccess, setClarifierCard]);
 
   const handleRedrawCards = () => {
     soundManager.playCardSlide();
@@ -1167,9 +2007,9 @@ export default function KetQuaPage() {
           card: chosen,
           reversed: false,
           questionAsked: followupQuestion,
-          interpretation: chosen.core_meaning_up,
-          advice: chosen.healing_hook_up,
-          savageQuote: chosen.savage_hook_up,
+          interpretation: withCardProse(chosen).core_meaning_up || '',
+          advice: withCardProse(chosen).healing_hook_up || '',
+          savageQuote: withCardProse(chosen).savage_hook_up || '',
           starsSpent: 5,
         };
         soundManager.playMysticChime();
@@ -1187,9 +2027,9 @@ export default function KetQuaPage() {
         card: chosen,
         reversed: false,
         questionAsked: followupQuestion,
-        interpretation: chosen.core_meaning_up,
-        advice: chosen.healing_hook_up,
-        savageQuote: chosen.savage_hook_up,
+        interpretation: withCardProse(chosen).core_meaning_up || '',
+        advice: withCardProse(chosen).healing_hook_up || '',
+        savageQuote: withCardProse(chosen).savage_hook_up || '',
         starsSpent: 5,
       });
     } finally {
@@ -1234,11 +2074,11 @@ export default function KetQuaPage() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Progress dots at top */}
+      {/* Sticky Header: Mode switcher + Stage/Title + Actions */}
       <div className="sticky top-0 z-30 bg-[#0E0D17]/90 backdrop-blur-md border-b border-[#262235] px-4 py-2.5">
-        <div className="max-w-xl mx-auto flex items-center justify-between">
-          {/* Back button for detail phases */}
-          {spotlightPhase === 'detail' && currentCardIdx >= 0 && (
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
+          {/* Back button for detail phases (only in step_by_step mode) */}
+          {viewMode === 'step_by_step' && spotlightPhase === 'detail' && currentCardIdx >= 0 ? (
             <button
               type="button"
               onClick={() => setSpotlightPhase('intro')}
@@ -1246,32 +2086,111 @@ export default function KetQuaPage() {
             >
               ← Quay lại
             </button>
+          ) : (
+            <div className="flex items-center gap-1 bg-[#14121F] p-0.5 rounded-xl border border-white/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playCrispClick();
+                  setViewMode('step_by_step');
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition cursor-pointer ${
+                  viewMode === 'step_by_step'
+                    ? 'bg-[#C9A24A] text-[#0B0A12]'
+                    : 'text-[#9E96B0] hover:text-[#F8F5F0]'
+                }`}
+                title="Xem từng bước kịch tính"
+              >
+                <ListOrdered className="w-3 h-3" />
+                <span className="hidden sm:inline">Từng Bước</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playCrispClick();
+                  setViewMode('dashboard');
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition cursor-pointer ${
+                  viewMode === 'dashboard'
+                    ? 'bg-[#C9A24A] text-[#0B0A12]'
+                    : 'text-[#9E96B0] hover:text-[#F8F5F0]'
+                }`}
+                title="Xem toàn cảnh tổng thể"
+              >
+                <LayoutGrid className="w-3 h-3" />
+                <span className="hidden sm:inline">Toàn Cảnh</span>
+              </button>
+            </div>
           )}
 
-          {/* Stage label */}
-          <span className="text-[11px] font-bold text-[#C9A24A] uppercase tracking-widest mx-auto">
-            {stageLabels[stage]}{spotlightPhase === 'detail' ? ' — Chi Tiết' : ''}
+          {/* Stage label or View Mode title */}
+          <span className="text-[11px] font-bold text-[#C9A24A] uppercase tracking-widest text-center truncate">
+            {viewMode === 'dashboard'
+              ? 'Bảng Toàn Cảnh Trải Bài'
+              : `${stageLabels[stage]}${spotlightPhase === 'detail' ? ' — Chi Tiết' : ''}`}
           </span>
 
-          {/* 5-dot progress */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {STAGES.map((s, i) => (
-              <div
-                key={s}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: i === stageIndex ? 16 : 6,
-                  height: 6,
-                  backgroundColor: i <= stageIndex ? accentColor : '#262235',
-                }}
-              />
-            ))}
-          </div>
+          {/* 5-dot progress or quick redraw */}
+          {viewMode === 'step_by_step' ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {STAGES.map((s, i) => (
+                <div
+                  key={s}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === stageIndex ? 16 : 6,
+                    height: 6,
+                    backgroundColor: i <= stageIndex ? accentColor : '#262235',
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleRedrawCards}
+              className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#9E96B0] hover:text-[#C9A24A] shrink-0 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span className="hidden sm:inline">Rút lại</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main content — stage-gated */}
-      <AnimatePresence mode="wait">
+      {viewMode === 'dashboard' ? (
+        <DashboardView
+          drawnCards={drawnCards}
+          result={result}
+          readerDisplayName={readerDisplayName}
+          accentColor={accentColor}
+          activeQuoteIdx={activeQuoteIdx}
+          setActiveQuoteIdx={setActiveQuoteIdx}
+          questionText={readingSuccess.questionText}
+          nickname={readingSuccess.nickname}
+          usedFallback={readingSuccess.aiMeta?.usedFallback}
+          readerId={readingSuccess.readerId}
+          topicLabel={readingSuccess.topicLabel}
+          topic={readingSuccess.topic}
+          clarifierCard={clarifierCard}
+          onContinueClarifier={() => {
+            if (clarifierCard) return;
+            if ((quota?.starsBalance ?? 0) < 5) {
+              setShowOutOfStarsSheet(true);
+              return;
+            }
+            void handleDrawClarifier();
+          }}
+          onOpenFollowup={(q?: string) => {
+            if (q) setFollowupQuestion(q);
+            setIsFollowupOpen(true);
+          }}
+          onRedrawCards={handleRedrawCards}
+          readingId={readingSuccess.readingId}
+        />
+      ) : (
+        /* Main content — stage-gated */
+        <AnimatePresence mode="wait">
         {/* ── STAGE: reveal_1 / reveal_2 / reveal_3 ── */}
         {currentDrawn && currentAnalysis && (
           <div key={`${stage}-${spotlightPhase}`}>
@@ -1345,6 +2264,10 @@ export default function KetQuaPage() {
             questionText={readingSuccess.questionText}
             nickname={readingSuccess.nickname}
             usedFallback={readingSuccess.aiMeta?.usedFallback}
+            readerId={readingSuccess.readerId}
+            topicLabel={readingSuccess.topicLabel}
+            topic={readingSuccess.topic}
+            clarifierCard={clarifierCard}
             onContinue={() => {
               if (clarifierCard) {
                 setStage('clarifier');
@@ -1357,7 +2280,10 @@ export default function KetQuaPage() {
               setStage('clarifier');
               void handleDrawClarifier();
             }}
-            onOpenFollowup={() => setIsFollowupOpen(true)}
+            onOpenFollowup={(q?: string) => {
+              if (q) setFollowupQuestion(q);
+              setIsFollowupOpen(true);
+            }}
             onRedrawCards={handleRedrawCards}
           />
         )}
@@ -1383,6 +2309,7 @@ export default function KetQuaPage() {
           />
         )}
       </AnimatePresence>
+      )}
 
       {/* Deep-dive follow-up modal */}
       {readingSuccess && (
@@ -1391,6 +2318,7 @@ export default function KetQuaPage() {
           onClose={() => setIsFollowupOpen(false)}
           reading={readingSuccess}
           accentColor={accentColor}
+          initialQuestion={followupQuestion}
         />
       )}
 
@@ -1406,5 +2334,22 @@ export default function KetQuaPage() {
       {/* CustomCursorFollower */}
       <CustomCursorFollower />
     </div>
+  );
+}
+
+export default function KetQuaPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="flex flex-col items-center gap-3">
+            <Sparkles className="w-8 h-8 text-[#C9A24A] animate-spin" />
+            <p className="text-xs text-[#9E96B0]">Đang tải kết quả trải bài...</p>
+          </div>
+        </div>
+      }
+    >
+      <KetQuaPageContent />
+    </Suspense>
   );
 }

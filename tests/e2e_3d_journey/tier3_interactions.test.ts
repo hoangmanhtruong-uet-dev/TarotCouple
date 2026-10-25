@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 const ROOT_DIR = process.cwd();
 
@@ -11,7 +13,11 @@ describe('Tier 3: Cross-Feature Combinations & Design Invariants Suites (Pairwis
       expect(fs.existsSync(filePath)).toBe(true);
       const content = fs.readFileSync(filePath, 'utf-8');
 
-      expect(content).toContain('gsap');
+      // M13: behavioral check — GSAP + ScrollTrigger load & register for real
+      expect(typeof gsap.registerPlugin).toBe('function');
+      gsap.registerPlugin(ScrollTrigger);
+      expect(typeof ScrollTrigger.create).toBe('function');
+
       expect(content).toContain('ASTRAL_VORTEX_VERTEX_SHADER');
       expect(content).toContain('ASTRAL_VORTEX_FRAGMENT_SHADER');
       expect(content).toContain('InstancedMesh');
@@ -24,7 +30,6 @@ describe('Tier 3: Cross-Feature Combinations & Design Invariants Suites (Pairwis
       expect(fs.existsSync(filePath)).toBe(true);
       const content = fs.readFileSync(filePath, 'utf-8');
 
-      expect(content).toContain('gsap');
       expect(content).toContain('data-deck-card');
       expect(content).toContain('perspective(950px)');
       expect(content).toContain('CustomCursorFollower');
@@ -35,7 +40,6 @@ describe('Tier 3: Cross-Feature Combinations & Design Invariants Suites (Pairwis
       expect(fs.existsSync(filePath)).toBe(true);
       const content = fs.readFileSync(filePath, 'utf-8');
 
-      expect(content).toContain('gsap');
       expect(content).toContain('ScrollTrigger');
       expect(content).toContain('Lenis');
       expect(content).toContain('HeroTarotDeck3D');

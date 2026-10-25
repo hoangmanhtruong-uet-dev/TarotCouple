@@ -63,7 +63,8 @@ test.describe('TarotCouple Main Reading Flow', () => {
       // Just take a screenshot for visual inspection
       await page.screenshot({ path: 'tests/e2e/screenshots/payment-modal.png', fullPage: false });
     }
-    // Test passes regardless — this is a smoke test
-    expect(true).toBe(true);
+    // Test passes if the page renders and the app shell is present — a smoke test
+    const bodyText = await page.evaluate(() => document.body.innerText);
+    expect(bodyText.length).toBeGreaterThan(0);
   });
 });

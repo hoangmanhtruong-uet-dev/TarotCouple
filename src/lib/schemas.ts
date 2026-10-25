@@ -63,6 +63,8 @@ export const TopicIdSchema = z.enum([
   'love',          // Tình duyên (16+)
   'career',        // Học tập / Công việc (16+)
   'finance',       // Tài chính / Vận may (16+)
+  'self_healing',  // Chữa lành & Phát triển bản thân
+  'family',        // Gia đình & Người thân
   'crush_school',  // Tình bạn & Crush học đường (10-15)
   'study',         // Học tập / Thi cử (10-15)
   'daily_luck',    // Vận may ngày mới (10-15)
@@ -331,6 +333,16 @@ export const CliffhangerUpsellSchema = z.object({
 export type CliffhangerUpsell = z.infer<typeof CliffhangerUpsellSchema>;
 
 /**
+ * 2 Kịch Bản Nếu - Thì (Fork-in-the-road Scenarios)
+ * Cho user thấy rõ cái giá và cơ hội của từng lựa chọn thay vì phán bế tắc.
+ */
+export const PivotScenariosSchema = z.object({
+  scenario_release: z.string().trim().min(10).max(500),
+  scenario_persist: z.string().trim().min(10).max(500),
+});
+export type PivotScenarios = z.infer<typeof PivotScenariosSchema>;
+
+/**
  * Complete Validated Tarot Reading Output Schema
  */
 export const ReadingOutputSchema = z.object({
@@ -341,6 +353,7 @@ export const ReadingOutputSchema = z.object({
     CardAnalysisSchema,
   ]),
   overall_verdict: z.string().trim().min(20).max(1000),
+  pivot_scenarios: PivotScenariosSchema.optional(),
   actionable_next_step: z.string().trim().min(10).max(400),
   shareable_card: ShareableCardSchema,
   safety_flag: SafetyFlagSchema,

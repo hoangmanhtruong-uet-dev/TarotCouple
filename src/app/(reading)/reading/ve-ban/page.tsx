@@ -240,7 +240,7 @@ export default function VeBanProfilePage() {
         <button
           type="button"
           onClick={handleSaveAndContinue}
-          className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(217,179,106,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+          className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-[#C9A24A] to-[#C49A4D] hover:from-[#E5C687] hover:to-[#C9A24A] text-[#0B0A12] font-bold text-sm shadow-[0_4px_25px_rgba(201,162,74,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
         >
           <span>{fromMe ? 'Lưu thay đổi' : 'Tiếp tục'}</span>
           <ArrowRight className="w-4 h-4 shrink-0" />

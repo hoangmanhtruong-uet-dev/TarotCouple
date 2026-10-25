@@ -24,6 +24,7 @@ import {
   READERS_BY_ID,
   TAROT_CARDS_BY_ID,
   type TarotCard,
+  withCardProse,
 } from '@/data/tarot-cards';
 import {
   syncCoupleRoomHybrid,
@@ -1619,9 +1620,10 @@ export function buildSpiritualWrappedForClient(
       card: signatureCardObj,
       reversed: signatureReversed,
       appearances: 4 + (hashInt % 3),
-      meaningSummary: signatureReversed
-        ? signatureCardObj.core_meaning_rev
-        : signatureCardObj.core_meaning_up,
+      meaningSummary: (() => {
+        const fullCard = withCardProse(signatureCardObj);
+        return (signatureReversed ? fullCard.core_meaning_rev : fullCard.core_meaning_up) || '';
+      })(),
     },
     spiritualArchetypeTitle: archetypeMeta.title,
     spiritualAuraColor: archetypeMeta.auraColor,

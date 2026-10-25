@@ -236,10 +236,12 @@ export async function POST(
 
   let answer = '';
   try {
+    const history = getFollowupMessages(readingId);
     answer = await generateFollowupReading({
       reading,
       // M8: use the sanitised text, not the raw question (delimiter breakout).
       question: scan.sanitizedText || question,
+      history,
     });
   } catch (err) {
     return NextResponse.json(

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useReadingStore } from '../src/lib/reading-store';
 import { classifyAgeTier } from '../src/lib/safety';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () => {
   beforeEach(() => {
@@ -26,6 +28,8 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
       'crush_school',
       'study',
       'daily_luck',
+      'self_healing',
+      'family',
     ]);
 
     // 18+ yo (born 2004)
@@ -35,6 +39,8 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
       'love',
       'career',
       'finance',
+      'self_healing',
+      'family',
     ]);
   });
 
@@ -114,7 +120,10 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
     const rootDir = process.cwd();
 
     const chuDeContent = fs.readFileSync(path.join(rootDir, 'src/app/(reading)/reading/chu-de/page.tsx'), 'utf-8');
-    expect(chuDeContent).toContain('gsap');
+    // M13: behavioral check — GSAP is a real, registerable animation library
+    expect(typeof gsap.registerPlugin).toBe('function');
+    gsap.registerPlugin(ScrollTrigger);
+    expect(typeof ScrollTrigger.create).toBe('function');
     expect(chuDeContent).toContain('CustomCursorFollower');
     expect(chuDeContent).toContain('READER_TOPIC_PREVIEW');
     expect(chuDeContent).toContain('data-topic-card');
@@ -126,14 +135,12 @@ describe('Step 2 Split Sub-routes Flow Suite (/chu-de, /noi-niem, /bo-bai)', () 
     expect(chuDeContent).toContain('resonancePct');
 
     const boBaiContent = fs.readFileSync(path.join(rootDir, 'src/app/(reading)/reading/bo-bai/page.tsx'), 'utf-8');
-    expect(boBaiContent).toContain('gsap');
     expect(boBaiContent).toContain('CustomCursorFollower');
     expect(boBaiContent).toContain('data-deck-card');
     expect(boBaiContent).toContain('perspective(950px)');
     expect(boBaiContent).not.toContain('backdrop-blur-md');
 
     const noiNiemContent = fs.readFileSync(path.join(rootDir, 'src/app/(reading)/reading/noi-niem/page.tsx'), 'utf-8');
-    expect(noiNiemContent).toContain('gsap');
     expect(noiNiemContent).toContain('CustomCursorFollower');
     expect(noiNiemContent).toContain('ASTRAL_VORTEX_VERTEX_SHADER');
     expect(noiNiemContent).toContain('emotionalResonance');

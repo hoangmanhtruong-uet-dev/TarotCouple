@@ -1,7 +1,23 @@
 import type { NextConfig } from 'next';
 
 const securityHeaders = [
-  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  // M2: forbid clickjacking / embedding (CSP frame-ancestors + XFO fallback)
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "frame-ancestors 'none'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
+      "img-src 'self' data: blob: https:",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "connect-src 'self' https: wss:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; '),
+  },
+  { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },

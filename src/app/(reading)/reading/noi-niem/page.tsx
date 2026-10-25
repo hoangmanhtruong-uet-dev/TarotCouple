@@ -38,34 +38,44 @@ import {
 
 const SAMPLE_QUESTIONS_BY_TOPIC: Record<TopicId, string[]> = {
   love: [
-    'Người ấy im lặng 3 ngày nay là đang bận thật hay đang âm thầm ghost mình vậy?',
-    'Mối quan hệ mập mờ hiện tại có cơ hội tiến tới chính thức trong tháng tới không?',
-    'Mình nên chủ động nhắn tin trước hay lùi lại giữ giá để xem thái độ người ta?',
+    'Thực chất khoảng cách giữa hai đứa bắt nguồn từ đâu và mình nên buông hay tiếp tục mở lời?',
+    'Mối quan hệ mập mờ này: Đâu là ranh giới mình cần đặt ra để không tự đánh mất giá trị bản thân?',
+    'Người ấy đang nghĩ gì và mình cần làm gì trong 48h tới để kiểm chứng sự chân thành của họ?',
   ],
   career: [
-    'Mình đang phân vân giữa việc nhảy việc sang môi trường mới hay ở lại chờ cơ hội?',
-    'Dự án sắp tới của mình đang gặp điểm nghẽn gì cần tháo gỡ ngay?',
-    'Làm sao để thoát khỏi cảm giác trì hoãn và mất động lực mỗi sáng thức dậy?',
+    'Giữa nhảy việc hay ở lại: Đâu là bước ngoặt bứt phá và mình cần chuẩn bị kỹ năng gì ngay?',
+    'Điểm nghẽn lớn nhất trong dự án/công việc hiện tại là gì và giải pháp tháo gỡ cấp thiết nhất?',
+    'Làm thế nào để lấy lại kỷ luật làm việc và tối ưu hóa hiệu suất thay vì overthinking?',
   ],
   finance: [
-    'Tình hình tài chính tháng này của mình cần lưu ý lỗ hổng chi tiêu nào nhất?',
-    'Sắp tới mình có cơ hội tăng thu nhập hay công việc làm thêm nào khả quan không?',
-    'Thói quen nào đang âm thầm cản trở vận may tiền bạc của mình lúc này?',
+    'Lỗ hổng dòng tiền lớn nhất của mình lúc này nằm ở đâu và kế hoạch kiểm soát cụ thể?',
+    'Cơ hội tăng thu nhập trong 30 ngày tới: Đâu là hành động thực tế mình cần nắm bắt?',
+    'Làm sao để cắt bỏ thói quen chi tiêu bốc đồng và thu hút dòng tiền ổn định hơn?',
+  ],
+  self_healing: [
+    'Nút thắt tâm lý khiến mình kiệt sức là gì và làm sao để tha thứ, bao dung với chính mình?',
+    'Thói quen độc hại nào mình cần buông bỏ ngay trong 48h tới để tâm trí bình yên?',
+    'Hành động thực tế nào giúp mình tái tạo năng lượng và thiết lập ranh giới cảm xúc vững vàng?',
+  ],
+  family: [
+    'Làm sao để đối thoại hòa hợp với người thân khi có sự khác biệt thế hệ sâu sắc?',
+    'Áp lực kỳ vọng gia đình: Mình nên đặt ra ranh giới tôn trọng thế nào để vừa vẹn cả đôi đường?',
+    'Nút thắt hiểu lầm giữa mình và người thân: Cử chỉ chân thành nào sẽ giúp mở lại cánh cửa kết nối?',
   ],
   crush_school: [
-    'Bạn ngồi bàn bên dạo này hay nhìn mình cười, không biết bạn ấy nghĩ gì về mình nhỉ?',
-    'Làm sao để tụi mình trong nhóm bạn thân hiểu nhau hơn và không còn giận dỗi vu vơ?',
-    'Mình muốn bắt chuyện làm quen với crush cùng khối thì nên mở lời thế nào?',
+    'Năng lượng giữa mình và bạn ấy: Mình nên chủ động bắt chuyện tự nhiên hay quan sát thêm?',
+    'Làm sao để gắn kết tình bạn trường lớp chân thành và giải tỏa những hiểu lầm nho nhỏ?',
+    'Cách đối thoại tự tin và duyên dáng nhất để kết nối với người mình có cảm tình?',
   ],
   study: [
-    'Kỳ thi học kỳ sắp tới mình nên tập trung ôn luyện thế nào để đạt điểm cao nhất?',
-    'Mình hay bị mất tập trung khi ngồi vào bàn học, có bí kíp nào giúp mình bứt phá không?',
-    'Môn học mình đang lo lắng nhất sẽ có chuyển biến tích cực nếu mình đổi cách học chứ?',
+    'Kỳ thi tới: Phương pháp ôn luyện và thói quen cốt lõi nào giúp mình bứt phá điểm số?',
+    'Làm thế nào để đánh bại sự trì hoãn và giữ tập trung cao độ mỗi khi ngồi vào bàn học?',
+    'Điểm yếu học tập cần khắc phục ngay trong tuần này và kế hoạch hành động 1-2-3?',
   ],
   daily_luck: [
-    'Tuần mới của mình trên trường sẽ có niềm vui hay điều bất ngờ dễ thương nào?',
-    'Năng lượng may mắn hôm nay nhắn nhủ mình nên làm một việc tốt gì để cả ngày rực rỡ?',
-    'Hôm nay mình cần giữ tinh thần thế nào để thu hút toàn chuyện vui vẻ?',
+    'Năng lượng chủ đạo hôm nay của mình là gì và một hành động tích cực nên làm ngay?',
+    'Cơ hội hay niềm vui bất ngờ nào đang chờ đón mình và cách đón nhận trọn vẹn nhất?',
+    'Làm sao để giữ tinh thần sảng khoái, thu hút vận may và lan tỏa nụ cười cả ngày?',
   ],
 };
 
@@ -92,6 +102,8 @@ const TOPIC_LABELS: Record<TopicId, string> = {
   love: 'Tình duyên & Mập mờ',
   career: 'Học tập & Sự nghiệp',
   finance: 'Tài chính & Tiền tài',
+  self_healing: 'Chữa lành & Bản thân',
+  family: 'Gia đình & Người thân',
   crush_school: 'Tình bạn & Crush học đường',
   study: 'Học tập & Thi cử',
   daily_luck: 'Vận may ngày mới',

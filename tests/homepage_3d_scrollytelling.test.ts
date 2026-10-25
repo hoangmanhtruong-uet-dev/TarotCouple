@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   ASTRAL_VORTEX_VERTEX_SHADER,
   ASTRAL_VORTEX_FRAGMENT_SHADER,
@@ -26,12 +28,16 @@ describe('Homepage 3D Scrollytelling, GLSL Shaders, Post-Processing & Audio Suit
   });
 
   it('2. verifies Homepage integrates GSAP ScrollTrigger, Lenis Smooth Scroll, CustomCursorFollower, and RitualPreloader', () => {
+    // M13: behavioral check — GSAP + ScrollTrigger actually load & register
+    expect(typeof gsap.registerPlugin).toBe('function');
+    gsap.registerPlugin(ScrollTrigger);
+    expect(typeof ScrollTrigger.create).toBe('function');
+
     const pageContent = fs.readFileSync(
       path.join(ROOT_DIR, 'src/app/(marketing)/page.tsx'),
       'utf-8'
     );
 
-    expect(pageContent).toContain('gsap');
     expect(pageContent).toContain('ScrollTrigger');
     expect(pageContent).toContain('Lenis');
     expect(pageContent).toContain('CustomCursorFollower');

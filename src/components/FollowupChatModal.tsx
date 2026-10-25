@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   X,
@@ -25,6 +25,7 @@ interface FollowupChatModalProps {
   onClose: () => void;
   reading: ReadingSuccessResponse;
   accentColor: string;
+  initialQuestion?: string;
 }
 
 const QUICK_CHIPS = [
@@ -64,6 +65,7 @@ export default function FollowupChatModal({
   onClose,
   reading,
   accentColor,
+  initialQuestion,
 }: FollowupChatModalProps) {
   const shouldReduceMotion = useReducedMotion();
   const [messages, setMessages] = useState<FollowupMessagePayload[]>([]);
@@ -76,7 +78,25 @@ export default function FollowupChatModal({
   const [showOutOfStarsSheet, setShowOutOfStarsSheet] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const contextualChips = useMemo(() => {
+    const t = reading.topic;
+    if (t === 'self_healing') {
+      return ['Tổn thương nào cần chữa lành trước?', 'Thói quen nào nên buông bỏ ngay?', 'Hành động 48h tới để an yên?'];
+    }
+    if (t === 'family') {
+      return ['Khoảng cách lớn nhất nằm ở đâu?', 'Cách mở lời hòa hợp với gia đình?', 'Nên giữ ranh giới thế nào?'];
+    }
+    if (t === 'career') {
+      return ['Lỗ hổng lớn nhất trong công việc?', 'Tuần này nên ưu tiên việc gì?', 'Có nên kiên trì hay đổi hướng?'];
+    }
+    if (t === 'finance') {
+      return ['Dòng tiền đang rò rỉ ở đâu?', 'Có cơ hội tài chính nào sắp tới?', 'Kế hoạch tài chính tuần này?'];
+    }
+    return ['Lá nào ảnh hưởng mạnh nhất?', 'Tuần này mình nên làm gì?', 'Nếu mình dứt khoát thì sao?'];
+  }, [reading.topic]);
 
   // Fetch initial messages and quota status
   const loadMessages = async () => {
@@ -103,6 +123,9 @@ export default function FollowupChatModal({
     if (isOpen) {
       loadMessages();
       setErrorMessage(null);
+      if (initialQuestion) {
+        setInputText(initialQuestion);
+      }
       setTimeout(() => {
         inputRef.current?.focus();
       }, 300);
@@ -110,7 +133,12 @@ export default function FollowupChatModal({
   }, [isOpen, reading.readingId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   }, [messages, isSending]);
 
   const handleSendMessage = async (customQuestion?: string) => {
@@ -298,26 +326,28 @@ export default function FollowupChatModal({
         </div>
 
         {/* Message Thread */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center py-8 px-4 text-[#9E96B0]">
-              <div
-                className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center border"
-                style={{
-                  borderColor: accentColor + '40',
-                  backgroundColor: accentColor + '15',
-                  color: accentColor,
-                }}
-              >
-                <MessageSquare className="w-6 h-6" />
+            <motion.div
+              initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-start"
+            >
+              <div className="flex items-center gap-1.5 mb-1 px-1">
+                <span className="text-[10px] font-bold text-[#9E96B0]">
+                  {reading.readerDisplayName}
+                </span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded text-[#E5C687] border border-[#C9A24A]/30">
+                  Lời mở đầu
+                </span>
               </div>
-              <h4 className="font-display text-sm font-bold text-[#F8F5F0] mb-1">
-                Chưa có câu hỏi nào
-              </h4>
-              <p className="text-xs max-w-sm mx-auto leading-relaxed text-[#9E96B0]">
-                Hãy hỏi {reading.readerDisplayName} bất kỳ khúc mắc nào bạn đang băn khoăn về 3 lá bài. 2 câu đầu hoàn toàn miễn phí!
-              </p>
-            </div>
+              <div
+                className="max-w-[88%] sm:max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-[1.6] bg-[#151322] text-[#F8F5F0] rounded-tl-sm border border-[#262235]"
+                style={{ borderLeft: `3px solid ${accentColor}` }}
+              >
+                Chào {reading.nickname || 'bạn'}! {reading.readerDisplayName} đã xem xong trải bài 3 lá ({reading.drawnCards.map((c) => c.card.name_vi).join(' • ')}). Con/bạn còn khúc mắc hay muốn đào sâu hơn điều gì không? Hãy chọn các gợi ý bên dưới hoặc gõ câu hỏi nhé (2 câu đầu hoàn toàn miễn phí)!
+              </div>
+            </motion.div>
           )}
 
           {messages.map((m, idx) => {
@@ -398,7 +428,7 @@ export default function FollowupChatModal({
           <span className="text-[10px] text-[#5E5873] shrink-0 font-medium mr-1">
             Gợi ý:
           </span>
-          {QUICK_CHIPS.map((chip, idx) => (
+          {contextualChips.map((chip, idx) => (
             <button
               key={idx}
               type="button"

@@ -31,6 +31,7 @@ import {
 import { createReaderAltarTotemGroup } from '@/components/HeroTarotDeck3D';
 import { CustomCursorFollower } from '@/components/CustomCursorFollower';
 import { soundManager } from '@/lib/sound-effects';
+import { ReaderVoicePreview, ReaderReviewCarousel } from '@/components/reader';
 import {
   Sparkles,
   ArrowRight,
@@ -1205,6 +1206,19 @@ export default function ReaderProfileView({
                   ))}
                 </div>
               </div>
+
+              {/* TÍNH NĂNG MỚI: Thử chất giọng AI Voice Reader */}
+              <ReaderVoicePreview
+                readerId={reader.id}
+                readerName={displayName}
+                accentColor={reader.accent_color}
+              />
+
+              {/* TÍNH NĂNG MỚI: Đánh giá từ khách đã trải bài */}
+              <ReaderReviewCarousel
+                readerId={reader.id}
+                accentColor={reader.accent_color}
+              />
             </div>
           </div>
         </div>

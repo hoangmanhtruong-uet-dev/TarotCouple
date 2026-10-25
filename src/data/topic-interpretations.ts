@@ -928,16 +928,14 @@ export function getCardTopicInterpretation(
   topic: TopicId = 'love'
 ): { meaning: string; advice: string; keyword: string } | null {
   const normTopic: 'love' | 'career' | 'finance' =
-    topic === 'crush_school'
+    topic === 'crush_school' || topic === 'family'
       ? 'love'
-      : topic === 'study'
+      : topic === 'study' || topic === 'career'
       ? 'career'
-      : topic === 'daily_luck'
+      : topic === 'daily_luck' || topic === 'finance'
       ? 'finance'
-      : topic === 'career'
-      ? 'career'
-      : topic === 'finance'
-      ? 'finance'
+      : topic === 'self_healing'
+      ? 'love'
       : 'love';
 
   const cardData =

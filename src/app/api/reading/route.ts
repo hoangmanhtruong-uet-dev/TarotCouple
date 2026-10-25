@@ -24,6 +24,8 @@ import {
   recordFunnelEvent,
   resolveClientContext,
   unlockFullDeckWithStars,
+  unlockDrawWithStars,
+  DRAW_STAR_COST,
 } from '@/lib/quota-store';
 import { buildSessionCookieHeader } from '@/lib/session';
 import {
@@ -433,7 +435,7 @@ export async function PUT(request: Request) {
   const clientKey = clientContext.clientKey;
   const isAdmin = isAdminRequest(request);
   let body: {
-    action?: 'share_bonus' | 'reward_ad_bonus' | 'reset_demo_quota' | 'track_event' | 'unlock_full_deck';
+    action?: 'share_bonus' | 'reward_ad_bonus' | 'reset_demo_quota' | 'track_event' | 'unlock_full_deck' | 'unlock_draw';
     event?: FunnelEventName;
     meta?: Record<string, unknown>;
   } = {};
@@ -475,6 +477,32 @@ export async function PUT(request: Request) {
         status: 'ok',
         action: 'unlock_full_deck',
         message: 'Đã mở khóa thành công bộ 78 lá cho lượt bốc bài tiếp theo!',
+        quota: unlockRes.quota,
+        funnel: isAdmin ? getFunnelMetricsSummary() : undefined,
+      },
+      { status: 200 }
+    );
+  }
+
+  if (body.action === 'unlock_draw') {
+    const unlockRes = unlockDrawWithStars(clientKey);
+    if (!unlockRes.success) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          code: 'INSUFFICIENT_STARS',
+          message: 'Bạn không đủ Sao để mở thêm lượt bốc bài. Cần 3 Sao.',
+          quota: unlockRes.quota,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        status: 'ok',
+        action: 'unlock_draw',
+        message: 'Đã mở khóa thành công +1 lượt bốc bài mới bằng 3 Sao!',
         quota: unlockRes.quota,
         funnel: isAdmin ? getFunnelMetricsSummary() : undefined,
       },

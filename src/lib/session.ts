@@ -97,9 +97,22 @@ function deriveFallbackSessionId(request: Request): string {
   const userAgent = (request.headers.get('user-agent') || 'unknown-ua').slice(0, 160);
   const language = (request.headers.get('accept-language') || '').slice(0, 40);
 
+  // Anti-Spam V2: Extract persistent hardware device fingerprint from header or cookie
+  const cookieHeader = request.headers.get('cookie') || '';
+  const fpMatch = cookieHeader.match(/(?:^|;\s*)tc_device_fp=([^;]+)/);
+  const deviceId =
+    request.headers.get('x-device-id')?.trim() ||
+    request.headers.get('x-device-fp')?.trim() ||
+    fpMatch?.[1]?.trim() ||
+    '';
+
+  const seed = deviceId
+    ? `device|${deviceId}|${ip.slice(0, 16)}`
+    : `fallback|${ip}|${userAgent}|${language}`;
+
   return crypto
     .createHmac('sha256', getSessionSecret())
-    .update(`fallback|${ip}|${userAgent}|${language}`)
+    .update(seed)
     .digest('base64url')
     .slice(0, 24);
 }

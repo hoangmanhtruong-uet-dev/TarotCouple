@@ -26,11 +26,44 @@ import {
  * Phase 2/3 Star Packages per PLAN.md Section 7.1
  */
 const STAR_PACKAGES: StarPackage[] = [
+  // ─── NHÓM 1: GÓI LƯỢT RÚT BÀI NHANH (MICRO-DRAW PACKS) ───
+  {
+    id: 'draw_5k',
+    name: 'Gói 1 Lượt Rút Nhanh',
+    priceVnd: 5000,
+    stars: 5,
+    category: 'draws',
+    equivalentDraws: 1,
+    badge: 'Nạp nhanh 5k',
+    description: 'Đủ 1 lượt bốc bài mới ngay lập tức (3 Sao) kèm 2 Sao hỏi thêm.',
+    perks: [
+      '5 Sao ⭐ vào ví tức thì',
+      'Đủ bốc 1 lượt quẻ 3 lá mới',
+      'Tặng thêm 2 Sao hỏi sâu với Reader',
+    ],
+  },
+  {
+    id: 'draw_15k',
+    name: 'Gói 3 Lượt Bốc Bài',
+    priceVnd: 15000,
+    stars: 15,
+    category: 'draws',
+    equivalentDraws: 3,
+    badge: 'Combo 3 lượt 🔥',
+    description: 'Đủ 3 lượt bốc bài mới (9 Sao) hoặc 1 Lá thứ 4 & 5 câu hỏi sâu.',
+    perks: [
+      '15 Sao ⭐ vào ví tức thì',
+      'Đủ bốc 3 lượt quẻ mới',
+      'Hoặc mở 1 Lá thứ 4 & 5 câu hỏi sâu',
+    ],
+  },
+  // ─── NHÓM 2: GÓI SAO TIẾT KIỆM (VALUE PACKS) ───
   {
     id: 'clarifier_5k',
     name: 'Gói Lá Làm Rõ',
     priceVnd: 5000,
     stars: 5,
+    category: 'stars',
     badge: 'Mở nhanh 1 lá',
     description: 'Đủ mở ngay 1 Lá Làm Rõ (Clarifier) trong phiên trải bài đang mở.',
     perks: [
@@ -44,12 +77,13 @@ const STAR_PACKAGES: StarPackage[] = [
     name: 'Gói Đêm Suy',
     priceVnd: 19000,
     stars: 20,
+    category: 'stars',
     badge: 'Phổ biến nhất',
-    description: 'Dành cho những đêm overthinking: đủ 4 lần rút Lá Làm Rõ và mở rộng góc nhìn.',
+    description: 'Dành cho những đêm overthinking: đủ 6 lần rút bài hoặc 4 lần mở Lá Làm Rõ.',
     perks: [
       '20 Sao (+25% ưu đãi)',
-      'Đủ 4 lần rút Lá Làm Rõ chuyên sâu',
-      'Trải nghiệm trọn vẹn cả 4 Reader AI',
+      'Đủ 6 lượt bốc bài hoặc 4 Lá Làm Rõ',
+      'Trải nghiệm trọn vẹn cả 9 Reader AI',
     ],
   },
   {
@@ -57,11 +91,12 @@ const STAR_PACKAGES: StarPackage[] = [
     name: 'Gói Check Var Tình Yêu',
     priceVnd: 29000,
     stars: 35,
+    category: 'stars',
     badge: 'Bói Đôi Hot',
     description: 'Combo chuyên sâu cho Bói Đôi Hợp Cạ & Red Flag cùng người thương hoặc crush.',
     perks: [
       '35 Sao (+40% ưu đãi)',
-      'Đủ 7 lần rút Lá Làm Rõ & Bói Đôi',
+      'Đủ 11 lượt bốc bài hoặc 7 lần mở Lá Làm Rõ',
       'Mở khóa phân tích tương hợp 78 lá RWS',
     ],
   },
@@ -70,6 +105,7 @@ const STAR_PACKAGES: StarPackage[] = [
     name: 'Thẻ Tháng Tinh Hà',
     priceVnd: 69000,
     stars: 100,
+    category: 'stars',
     badge: 'Tiết kiệm nhất',
     description: '100 Sao sử dụng thoải mái cả tháng, mở toàn bộ 78 lá RWS và không quảng cáo.',
     perks: [

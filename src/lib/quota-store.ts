@@ -45,6 +45,7 @@ export const DEFAULT_INITIAL_STARS = 10;
 export const DAILY_PULL_STAR_REWARD = 2;
 export const DAILY_STREAK_DAY7_REWARD = 5;
 export const CLARIFIER_STAR_COST = 5;
+export const DRAW_STAR_COST = 3;
 export const DAILY_SPEND_CAP_VND = 50000;
 export const COUPLE_ROOM_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
@@ -464,6 +465,7 @@ function toQuotaPayload(record: ClientQuotaRecord): QuotaStatusPayload {
     fullDeckUnlockedDraws: record.fullDeckUnlockedDraws ?? 0,
     freeFollowupsRemaining: wallet.freeFollowupsRemaining ?? FREE_FOLLOWUPS_PER_ACCOUNT,
     followupStarCost: FOLLOWUP_STAR_COST,
+    drawStarCost: DRAW_STAR_COST,
   };
 }
 
@@ -989,6 +991,50 @@ export function unlockFullDeckWithStars(clientKey: string): {
     clientKey,
     action: 'unlock_full_deck',
     costStars: FULL_DECK_UNLOCK_STAR_COST,
+  });
+
+  return {
+    success: true,
+    starsBalance: wallet.starsBalance,
+    quota: getQuotaStatus(clientKey),
+  };
+}
+
+/**
+ * Unlock an additional reading draw with 3 Stars when daily free limit is exhausted
+ */
+export function unlockDrawWithStars(clientKey: string): {
+  success: boolean;
+  error?: string;
+  starsBalance: number;
+  quota: QuotaStatusPayload;
+} {
+  const record = getOrCreateClientRecord(clientKey);
+  const wallet = getOrCreateWalletRecord(clientKey);
+
+  if (wallet.starsBalance < DRAW_STAR_COST) {
+    return {
+      success: false,
+      error: 'INSUFFICIENT_STARS',
+      starsBalance: wallet.starsBalance,
+      quota: getQuotaStatus(clientKey),
+    };
+  }
+
+  wallet.starsBalance -= DRAW_STAR_COST;
+  record.bonusDraws = (record.bonusDraws || 0) + 1;
+
+  void syncStarTransactionHybrid({
+    userId: clientKey,
+    deltaStars: -DRAW_STAR_COST,
+    reason: 'unlock_draw_with_stars',
+    idempotencyKey: `draw_${clientKey}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  });
+
+  recordFunnelEvent('bonus_unlocked', {
+    clientKey,
+    action: 'unlock_draw_with_stars',
+    costStars: DRAW_STAR_COST,
   });
 
   return {

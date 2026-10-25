@@ -9,6 +9,9 @@ import { getSpreadPositionsForTopic } from '@/lib/safety';
 import { Sparkles, Wand2, RefreshCw, Eye, RotateCcw, X, CheckCircle2 } from 'lucide-react';
 import { TactileArcFan } from '@/components/TactileArcFan';
 import { CustomCursorFollower } from '@/components/CustomCursorFollower';
+import OutOfQuotaDrawSheet from '@/components/reading/OutOfQuotaDrawSheet';
+import { WalletPayOSModal } from '@/components/WalletPayOSModal';
+import { getDeviceFingerprintHeaders } from '@/lib/device-fingerprint';
 import { useQuotaSync } from '@/lib/use-quota';
 import { saveJournalEntry } from '@/lib/journal-store';
 import { soundManager } from '@/lib/sound-effects';
@@ -71,7 +74,9 @@ const DECODING_QUOTES_BY_READER: Record<string, string[]> = {
 export default function RutBaiPage() {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const { updateQuota } = useQuotaSync();
+  const { quota, updateQuota, starsBalance, refreshQuota } = useQuotaSync();
+  const [isOutOfQuotaOpen, setIsOutOfQuotaOpen] = useState(false);
+  const [isPayOSModalOpen, setIsPayOSModalOpen] = useState(false);
 
   const {
     selectedReaderId,
@@ -287,7 +292,10 @@ export default function RutBaiPage() {
 
       const res = await fetch('/api/reading', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getDeviceFingerprintHeaders(),
+        },
         signal: controller.signal,
         body: JSON.stringify({
           nickname: nickname.trim() || 'Bạn Ẩn Danh',
@@ -304,6 +312,13 @@ export default function RutBaiPage() {
       const data = (await res.json()) as ReadingApiResponse;
 
       if (data.status === 'error') {
+        if (data.code === 'QUOTA_EXCEEDED') {
+          setStage('fan');
+          // Giữ nguyên 3 lá để người dùng không phải chọn lại sau khi mở khóa
+          setSelectedFanIndices(indices);
+          setIsOutOfQuotaOpen(true);
+          return;
+        }
         setErrorMsg(data.message);
         setStage('fan');
         setSelectedFanIndices([]);
@@ -764,6 +779,36 @@ export default function RutBaiPage() {
 
       {/* CustomCursorFollower */}
       <CustomCursorFollower />
+
+      {/* Modal Quản lý Hết lượt bốc bài (Đổi 3 Sao / Nạp nhanh VietQR / Chia sẻ) */}
+      <OutOfQuotaDrawSheet
+        isOpen={isOutOfQuotaOpen}
+        onClose={() => setIsOutOfQuotaOpen(false)}
+        currentStars={starsBalance}
+        onDrawUnlocked={() => {
+          void refreshQuota();
+          if (selectedFanIndices.length === 3) {
+            startRevealSequence([
+              selectedFanIndices[0]!,
+              selectedFanIndices[1]!,
+              selectedFanIndices[2]!,
+            ]);
+          }
+        }}
+        onOpenPayOS={() => {
+          setIsOutOfQuotaOpen(false);
+          setIsPayOSModalOpen(true);
+        }}
+      />
+
+      {/* Modal Nạp Sao / Gói Lượt Rút Bài PayOS */}
+      <WalletPayOSModal
+        isOpen={isPayOSModalOpen}
+        onClose={() => setIsPayOSModalOpen(false)}
+        birthYear={birthYear}
+        quota={quota}
+        onQuotaUpdated={updateQuota}
+      />
     </div>
   );
 }

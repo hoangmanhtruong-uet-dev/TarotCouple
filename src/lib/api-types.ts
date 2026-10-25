@@ -51,6 +51,7 @@ export interface QuotaStatusPayload {
   fullDeckUnlockedDraws?: number;
   freeFollowupsRemaining?: number;
   followupStarCost?: number;
+  drawStarCost?: number;
 }
 
 export interface FollowupMessagePayload {
@@ -197,11 +198,21 @@ export interface DailyPullPayload {
 /**
  * Phase 2/3: PayOS VietQR Packages per PLAN.md Section 7.1
  */
+export type StarPackageId =
+  | 'clarifier_5k'
+  | 'draw_5k'
+  | 'draw_15k'
+  | 'dem_suy_19k'
+  | 'check_var_29k'
+  | 'vip_month_69k';
+
 export interface StarPackage {
-  id: 'clarifier_5k' | 'dem_suy_19k' | 'check_var_29k' | 'vip_month_69k';
+  id: StarPackageId;
   name: string;
   priceVnd: number;
   stars: number;
+  category?: 'draws' | 'stars';
+  equivalentDraws?: number;
   badge?: string;
   description: string;
   perks: string[];

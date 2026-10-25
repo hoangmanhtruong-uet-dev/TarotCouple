@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { QuotaStatusPayload } from './api-types';
+import { getDeviceFingerprintHeaders } from './device-fingerprint';
 
 const DEFAULT_QUOTA: QuotaStatusPayload = {
   usedToday: 0,
@@ -55,7 +56,12 @@ export function useQuotaSync(initialQuota?: QuotaStatusPayload) {
     if (isFetchingGlobal) return;
     isFetchingGlobal = true;
     try {
-      const res = await fetch('/api/reading', { cache: 'no-store' });
+      const res = await fetch('/api/reading', {
+        cache: 'no-store',
+        headers: {
+          ...getDeviceFingerprintHeaders(),
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         if (data?.quota) {

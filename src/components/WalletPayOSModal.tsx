@@ -39,11 +39,44 @@ export interface WalletPayOSModalProps {
 }
 
 export const STAR_PACKAGES: StarPackage[] = [
+  // ─── NHÓM 1: GÓI LƯỢT RÚT BÀI NHANH ───
+  {
+    id: 'draw_5k',
+    name: '1 Lượt Rút Nhanh',
+    priceVnd: 5000,
+    stars: 5,
+    category: 'draws',
+    equivalentDraws: 1,
+    badge: 'Nạp nhanh 5k ⚡',
+    description: 'Đủ 1 lượt bốc bài mới ngay lập tức (3 Sao) kèm 2 Sao hỏi thêm.',
+    perks: [
+      '5 Sao ⭐ vào ví tức thì',
+      'Đủ bốc 1 lượt quẻ 3 lá mới (3 Sao)',
+      'Tặng 2 Sao hỏi sâu với Reader',
+    ],
+  },
+  {
+    id: 'draw_15k',
+    name: '3 Lượt Bốc Bài',
+    priceVnd: 15000,
+    stars: 15,
+    category: 'draws',
+    equivalentDraws: 3,
+    badge: 'Combo 3 lượt 🔥',
+    description: 'Đủ 3 lượt bốc bài mới (9 Sao) hoặc 1 Lá thứ 4 & 5 câu hỏi sâu.',
+    perks: [
+      '15 Sao ⭐ vào ví tức thì',
+      'Đủ bốc 3 lượt quẻ mới',
+      'Hoặc mở 1 Lá thứ 4 & 5 câu hỏi sâu',
+    ],
+  },
+  // ─── NHÓM 2: GÓI SAO TIẾT KIỆM ───
   {
     id: 'clarifier_5k',
     name: 'Lá Làm Rõ',
     priceVnd: 5000,
     stars: 5,
+    category: 'stars',
     badge: 'Trải nghiệm nhanh',
     description: 'Mở khóa ngay 1 Lá Bài Làm Rõ (Clarifier) thứ 4 trong phiên đang mở.',
     perks: [
@@ -57,12 +90,13 @@ export const STAR_PACKAGES: StarPackage[] = [
     name: 'Gói Đêm Suy',
     priceVnd: 19000,
     stars: 20,
+    category: 'stars',
     badge: 'Best-seller 🔥',
-    description: 'Combo hỏi sâu đêm muộn, mở khóa 4 lần rút Lá Làm Rõ hoặc Bói Đôi.',
+    description: 'Combo hỏi sâu đêm muộn, đủ 6 lần rút bài hoặc 4 lần mở Lá Làm Rõ.',
     perks: [
       '20 Sao ⭐ (Tặng thêm +1 Sao ưu đãi)',
-      '4 lượt rút Lá Làm Rõ chuyên sâu',
-      'Mở khóa đầy đủ 4 Reader & Bộ 78 Lá RWS',
+      'Đủ 6 lượt bốc bài hoặc 4 Lá Làm Rõ',
+      'Mở khóa đầy đủ 9 Reader & Bộ 78 Lá RWS',
     ],
   },
   {
@@ -70,10 +104,11 @@ export const STAR_PACKAGES: StarPackage[] = [
     name: 'Check Var Tình Yêu',
     priceVnd: 29000,
     stars: 35,
+    category: 'stars',
     badge: 'Bói Đôi Chuyên Sâu',
-    description: 'Soi toàn diện mối quan hệ, độ Hợp Cạ (%) và Máy Đo Red Flag.',
+    description: 'Combo chuyên sâu cho Bói Đôi Hợp Cạ, đủ 11 lượt rút hoặc 7 Lá Làm Rõ.',
     perks: [
-      '35 Sao ⭐ (Tiết kiệm 20%)',
+      '35 Sao ⭐ (Tiết kiệm 40%)',
       'Phân tích sâu 3 vị trí Bói Đôi & Lá Làm Rõ',
       'Xuất ảnh Story 9:16 kèm thanh đo Hợp Cạ & Red Flag',
     ],
@@ -83,11 +118,12 @@ export const STAR_PACKAGES: StarPackage[] = [
     name: 'Thẻ Tháng VIP',
     priceVnd: 69000,
     stars: 100,
+    category: 'stars',
     badge: 'VIP 30 Ngày 👑',
     description: 'Trải nghiệm trọn vẹn cả tháng với 100 Sao, trọn bộ 78 lá & không quảng cáo.',
     perks: [
       '100 Sao ⭐ dùng thoải mái cả tháng',
-      'Ưu tiên tốc độ giải mã AI & 4 Reader',
+      'Ưu tiên tốc độ giải mã AI & 9 Reader',
       'Không hiển thị quảng cáo nhận thưởng',
     ],
   },
@@ -113,6 +149,7 @@ export function WalletPayOSModal({
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [countdownSeconds, setCountdownSeconds] = useState<number>(600);
   const [copiedField, setCopiedField] = useState<'account' | 'memo' | null>(null);
+  const [packageTab, setPackageTab] = useState<'all' | 'draws' | 'stars'>('all');
 
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -501,8 +538,46 @@ export function WalletPayOSModal({
 
               {/* VIEW 1: PACKAGE SELECTION GRID */}
               {!activeOrder ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {STAR_PACKAGES.map((pkg) => {
+                <div className="space-y-4">
+                  {/* Category switcher tabs */}
+                  <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#0B0912] border border-white/10 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPackageTab('all')}
+                      className={`flex-1 py-2 px-2.5 rounded-xl font-bold transition-all cursor-pointer text-center ${
+                        packageTab === 'all'
+                          ? 'bg-[#C9A24A]/25 text-[#F3E5AB] border border-[#C9A24A]/50 shadow-sm'
+                          : 'text-[#9E96B0] hover:text-[#F8F5F0]'
+                      }`}
+                    >
+                      Tất cả ({STAR_PACKAGES.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPackageTab('draws')}
+                      className={`flex-1 py-2 px-2.5 rounded-xl font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+                        packageTab === 'draws'
+                          ? 'bg-[#C9A24A]/25 text-[#F3E5AB] border border-[#C9A24A]/50 shadow-sm'
+                          : 'text-[#9E96B0] hover:text-[#F8F5F0]'
+                      }`}
+                    >
+                      <span>🎟️</span> Gói Lượt Bốc Bài
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPackageTab('stars')}
+                      className={`flex-1 py-2 px-2.5 rounded-xl font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+                        packageTab === 'stars'
+                          ? 'bg-[#C9A24A]/25 text-[#F3E5AB] border border-[#C9A24A]/50 shadow-sm'
+                          : 'text-[#9E96B0] hover:text-[#F8F5F0]'
+                      }`}
+                    >
+                      <span>⭐</span> Gói Sao Tiết Kiệm
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {STAR_PACKAGES.filter((p) => packageTab === 'all' || p.category === packageTab).map((pkg) => {
                     const isBestSeller = pkg.id === 'dem_suy_19k';
                     const isVipExceedsDailyCap =
                       dailySpendVnd + pkg.priceVnd > dailySpendCapVnd &&
@@ -584,7 +659,8 @@ export function WalletPayOSModal({
                     );
                   })}
                 </div>
-              ) : (
+              </div>
+            ) : (
                 /* VIEW 2: VIETQR PAYOS CHECKOUT VIEW VỚI POLLING TỰ ĐỘNG */
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -752,3 +828,5 @@ export function WalletPayOSModal({
     </AnimatePresence>
   );
 }
+
+export default WalletPayOSModal;

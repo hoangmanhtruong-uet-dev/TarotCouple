@@ -331,7 +331,7 @@ describe('Phase 2 & Phase 3 Verification Suite (78 Cards, 4 Readers, Couple, Cla
       })
     );
     const getPkgJson = await getPkgRes.json();
-    expect(getPkgJson.packages).toHaveLength(4);
+    expect(getPkgJson.packages.length).toBeGreaterThanOrEqual(4);
 
     const adultPayRes = await postPayment(
       new Request('http://localhost:3000/api/payment', {

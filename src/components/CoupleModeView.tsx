@@ -31,10 +31,26 @@ import {
   Calendar,
   Volume2,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { AIVoiceReaderBar } from '@/components/AIVoiceReaderBar';
-import { CoupleDatingReceiptModal } from '@/components/CoupleDatingReceiptModal';
-import OutOfQuotaDrawSheet from '@/components/reading/OutOfQuotaDrawSheet';
-import { WalletPayOSModal } from '@/components/WalletPayOSModal';
+
+const CoupleDatingReceiptModal = dynamic(
+  () => import('@/components/CoupleDatingReceiptModal').then((m) => m.CoupleDatingReceiptModal),
+  { ssr: false }
+);
+const OutOfQuotaDrawSheet = dynamic(
+  () => import('@/components/reading/OutOfQuotaDrawSheet'),
+  { ssr: false }
+);
+const WalletPayOSModal = dynamic(
+  () => import('@/components/WalletPayOSModal').then((m) => m.WalletPayOSModal),
+  { ssr: false }
+);
+const CoupleResonanceBridge3D = dynamic(
+  () => import('@/components/CoupleResonanceBridge3D').then((m) => m.CoupleResonanceBridge3D),
+  { ssr: false }
+);
+
 import {
   ALL_TAROT_CARDS,
   MAJOR_ARCANA,
@@ -65,7 +81,6 @@ import type {
 } from '@/lib/api-types';
 import { TarotCardVisual } from '@/components/TarotCardVisual';
 import { CrisisSupportView } from '@/components/CrisisSupportView';
-import { CoupleResonanceBridge3D } from '@/components/CoupleResonanceBridge3D';
 import {
   generateCoupleInterpretationBundle,
   type CoupleInterpretationBundle,

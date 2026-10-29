@@ -13,6 +13,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   motion,
@@ -45,8 +46,14 @@ import {
   LayoutGrid,
   ListOrdered,
 } from 'lucide-react';
-import FollowupChatModal from '@/components/FollowupChatModal';
-import OutOfStarsSheet from '@/components/OutOfStarsSheet';
+
+const FollowupChatModal = dynamic(() => import('@/components/FollowupChatModal'), {
+  ssr: false,
+});
+const OutOfStarsSheet = dynamic(() => import('@/components/OutOfStarsSheet'), {
+  ssr: false,
+});
+
 import { AIVoiceReaderBar } from '@/components/AIVoiceReaderBar';
 import InteractiveFollowupCard from '@/components/reading/InteractiveFollowupCard';
 import HeroClarifierCard from '@/components/reading/HeroClarifierCard';

@@ -27,7 +27,7 @@ import { STAGGER_TIMINGS, TRANSITION_EASINGS, SPRINGS } from '@/lib/motion';
 import { MAJOR_ARCANA } from '@/data/tarot-cards';
 import { soundManager } from '@/lib/sound-effects';
 
-// 5 Fan Cards with official RWS 1909 artwork and fallbacks
+// 5 Fan Cards with official RWS 1909 local WebP artwork
 const INITIAL_FAN_CARDS = [
   {
     roman: '0',
@@ -35,8 +35,7 @@ const INITIAL_FAN_CARDS = [
     baseAngle: -22,
     baseX: -95,
     baseY: 14,
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/9/90/RWS_Tarot_00_Fool.jpg',
+    image: '/cards/card_00.webp',
     meaningSnippet:
       'Khởi đầu mới, bước nhảy niềm tin và tinh thần tự do không sợ hãi.',
   },
@@ -46,8 +45,7 @@ const INITIAL_FAN_CARDS = [
     baseAngle: -11,
     baseX: -48,
     baseY: 5,
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg',
+    image: '/cards/card_01.webp',
     meaningSnippet:
       'Chủ động, đầy đủ nguồn lực và khả năng biến ý tưởng thành hiện thực.',
   },
@@ -57,8 +55,7 @@ const INITIAL_FAN_CARDS = [
     baseAngle: 0,
     baseX: 0,
     baseY: 0,
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/1/17/RWS_Tarot_19_Sun.jpg',
+    image: '/cards/card_19.webp',
     isFront: true,
     meaningSnippet:
       'Sáng rõ, ấm áp, niềm vui ngập tràn và sự minh bạch trong mọi lựa chọn.',
@@ -69,8 +66,7 @@ const INITIAL_FAN_CARDS = [
     baseAngle: 11,
     baseX: 48,
     baseY: 5,
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/d/d8/RWS_Tarot_06_Lovers.jpg',
+    image: '/cards/card_06.webp',
     meaningSnippet:
       'Sự đồng điệu sâu sắc và lựa chọn cam kết từ đáy con tim.',
   },
@@ -80,8 +76,7 @@ const INITIAL_FAN_CARDS = [
     baseAngle: 22,
     baseX: 95,
     baseY: 14,
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/f/ff/RWS_Tarot_21_World.jpg',
+    image: '/cards/card_21.webp',
     meaningSnippet:
       'Chu kỳ trọn vẹn, thành tựu xứng đáng và mở ra một chương mới rực rỡ.',
   },

@@ -40,6 +40,19 @@ export function TarotCardVisual({
   const [imgError, setImgError] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
+  // Local optimized WebP with seamless Wikimedia fallback
+  const paddedId = card ? String(card.id).padStart(2, '0') : '00';
+  const [imageSrc, setImageSrc] = useState<string>(`/cards/card_${paddedId}.webp`);
+  const [usedFallback, setUsedFallback] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    const pad = card ? String(card.id).padStart(2, '0') : '00';
+    setImageSrc(`/cards/card_${pad}.webp`);
+    setUsedFallback(false);
+    setImgLoaded(false);
+    setImgError(false);
+  }, [card?.id]);
+
   // Motion values for 3D Tilt & Holographic Foil Shimmer (0 React re-renders per design-taste-frontend)
   const pointerX = useMotionValue(0.5);
   const pointerY = useMotionValue(0.5);
@@ -272,14 +285,21 @@ export function TarotCardVisual({
                   </span>
                 </div>
 
-                {/* 1909 Rider-Waite-Smith Public Domain Image */}
+                {/* 1909 Rider-Waite-Smith Local WebP Image with Wikimedia Fallback */}
                 {!imgError && (
                   <img
-                    src={card.rws_image_url}
+                    src={imageSrc}
                     alt={`${card.name_vi} (${card.name_en})`}
                     loading="lazy"
                     onLoad={() => setImgLoaded(true)}
-                    onError={() => setImgError(true)}
+                    onError={() => {
+                      if (!usedFallback && card.rws_image_url && imageSrc !== card.rws_image_url) {
+                        setUsedFallback(true);
+                        setImageSrc(card.rws_image_url);
+                      } else {
+                        setImgError(true);
+                      }
+                    }}
                     className={`relative z-10 w-full h-full object-cover transition-all duration-500 ${
                       imgLoaded ? 'opacity-95' : 'opacity-0'
                     }`}

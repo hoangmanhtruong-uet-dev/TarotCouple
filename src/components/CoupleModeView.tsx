@@ -81,6 +81,7 @@ import type {
 } from '@/lib/api-types';
 import { TarotCardVisual } from '@/components/TarotCardVisual';
 import { CrisisSupportView } from '@/components/CrisisSupportView';
+import { triggerHaptic } from '@/lib/haptics';
 import {
   generateCoupleInterpretationBundle,
   type CoupleInterpretationBundle,
@@ -337,6 +338,7 @@ export function CoupleModeView({
 
   // Result States
   const [isLoadingSoloCouple, setIsLoadingSoloCouple] = useState<boolean>(false);
+  const [loadingPhaseIndex, setLoadingPhaseIndex] = useState<number>(0);
   const [coupleReading, setCoupleReading] = useState<ReadingSuccessResponse | null>(null);
   const [crisisResponse, setCrisisResponse] = useState<ReadingCrisisResponse | null>(null);
   const [flippedCards, setFlippedCards] = useState<[boolean, boolean, boolean]>([true, true, true]);
@@ -373,6 +375,26 @@ export function CoupleModeView({
       void fetchExistingRoom(initialRoomCode.toUpperCase());
     }
   }, [initialRoomCode]);
+
+  const SOLO_LOADING_MESSAGES = useMemo(
+    () => [
+      'Đang kết nối trường năng lượng của hai bạn...',
+      'Đối chiếu ma trận 4 nguyên tố Lửa, Nước, Khí, Đất...',
+      'Giải mã ngôn ngữ tình yêu & bí mật tương hợp...',
+    ],
+    []
+  );
+
+  useEffect(() => {
+    if (!isLoadingSoloCouple) {
+      setLoadingPhaseIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setLoadingPhaseIndex((prev) => (prev + 1) % 3);
+    }, 1800);
+    return () => clearInterval(timer);
+  }, [isLoadingSoloCouple]);
 
   // Polling tự động mỗi 3 giây khi Người A đang mở phòng chờ Người B rút bài
   useEffect(() => {
@@ -467,6 +489,7 @@ export function CoupleModeView({
     setIsLoadingSoloCouple(true);
 
     try {
+      triggerHaptic('heartbeat');
       soundManager.playCrispClick();
       const res = await fetch('/api/couple', {
         method: 'POST',
@@ -562,6 +585,7 @@ export function CoupleModeView({
     setIsRoomBusy(true);
 
     try {
+      triggerHaptic('heartbeat');
       soundManager.playCrispClick();
       const res = await fetch('/api/couple', {
         method: 'POST',
@@ -670,6 +694,7 @@ export function CoupleModeView({
     setIsRoomBusy(true);
 
     try {
+      triggerHaptic('heartbeat');
       soundManager.playCrispClick();
       const res = await fetch('/api/couple', {
         method: 'POST',
@@ -1185,7 +1210,7 @@ export function CoupleModeView({
                 {isLoadingSoloCouple ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Đang Rút 3 Lá Bài & Soi Tần Số Đôi...</span>
+                    <span>{SOLO_LOADING_MESSAGES[loadingPhaseIndex]}</span>
                   </>
                 ) : (
                   <>
@@ -1784,6 +1809,99 @@ export function CoupleModeView({
               </div>
             )}
           </div>
+
+          {/* ================= KHỐI CHIÊM TINH: MA TRẬN 4 NGUYÊN TỐ TAROT ================= */}
+          {interpretationBundle?.elementalResonance && (
+            <div className="rounded-3xl bg-[#12101B] border border-[#C9A24A]/40 p-6 sm:p-8 space-y-6 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="space-y-1">
+                  <span className="text-[11px] uppercase tracking-widest text-[#E5C687] font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#C9A24A]" />
+                    CHIÊM TINH HỌC TAROT • MA TRẬN 4 NGUYÊN TỐ
+                  </span>
+                  <h3 className="font-display text-xl sm:text-2xl font-bold text-[#F8F5F0]">
+                    Tương Tác Nguyên Tố (Elemental Synergy)
+                  </h3>
+                </div>
+
+                <div className="px-3 py-1.5 rounded-xl bg-[#C9A24A]/10 border border-[#C9A24A]/40 text-[#E5C687] font-bold text-xs flex items-center gap-1.5">
+                  <span>Hòa Hợp</span>
+                  <span className="font-mono text-sm">{interpretationBundle.elementalResonance.synergyScore}%</span>
+                </div>
+              </div>
+
+              {/* 2 Elemental Profiles */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Nguyên tố bạn */}
+                <div className="p-4 rounded-2xl bg-[#09080D] border border-white/10 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[#A9A1BC] uppercase font-bold">
+                      Nguyên tố của @{ownerName}
+                    </span>
+                    <span className="text-2xl">
+                      {interpretationBundle.elementalResonance.ownerElement.icon}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-display text-base font-bold text-[#E5C687] flex items-center gap-2">
+                      <span>{interpretationBundle.elementalResonance.ownerElement.nameVi}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1C172B] text-[#A39BB5] border border-white/10 font-normal">
+                        {interpretationBundle.elementalResonance.ownerElement.badge}
+                      </span>
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#D8D2E7] leading-relaxed">
+                    {interpretationBundle.elementalResonance.ownerElement.nature}
+                  </p>
+                  <div className="pt-1 text-[11px] text-[#A9A1BC] bg-[#14111C] p-2.5 rounded-xl border border-white/5 space-y-1">
+                    <div>✨ <strong>Điểm mạnh:</strong> {interpretationBundle.elementalResonance.ownerElement.strengths}</div>
+                    <div>⚠️ <strong>Lưu ý:</strong> {interpretationBundle.elementalResonance.ownerElement.tendency}</div>
+                  </div>
+                </div>
+
+                {/* Nguyên tố người ấy */}
+                <div className="p-4 rounded-2xl bg-[#09080D] border border-white/10 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[#A9A1BC] uppercase font-bold">
+                      Nguyên tố của @{partnerName}
+                    </span>
+                    <span className="text-2xl">
+                      {interpretationBundle.elementalResonance.partnerElement.icon}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-display text-base font-bold text-rose-300 flex items-center gap-2">
+                      <span>{interpretationBundle.elementalResonance.partnerElement.nameVi}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1C172B] text-[#A39BB5] border border-white/10 font-normal">
+                        {interpretationBundle.elementalResonance.partnerElement.badge}
+                      </span>
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#D8D2E7] leading-relaxed">
+                    {interpretationBundle.elementalResonance.partnerElement.nature}
+                  </p>
+                  <div className="pt-1 text-[11px] text-[#A9A1BC] bg-[#14111C] p-2.5 rounded-xl border border-white/5 space-y-1">
+                    <div>✨ <strong>Điểm mạnh:</strong> {interpretationBundle.elementalResonance.partnerElement.strengths}</div>
+                    <div>⚠️ <strong>Lưu ý:</strong> {interpretationBundle.elementalResonance.partnerElement.tendency}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nhận định kết hợp nguyên tố */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#1C162A] border border-[#C9A24A]/30 space-y-2">
+                <div className="text-xs sm:text-sm font-bold text-[#E5C687] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#C9A24A]" />
+                  <span>{interpretationBundle.elementalResonance.synergyTitle}</span>
+                </div>
+                <p className="text-xs sm:text-sm text-[#D8D2E7] leading-relaxed">
+                  {interpretationBundle.elementalResonance.description}
+                </p>
+                <div className="pt-2 border-t border-white/10 text-xs text-[#A9A1BC]">
+                  🌱 <strong>Bí quyết vun đắp:</strong> {interpretationBundle.elementalResonance.growthAdvice}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ================= KHỐI MỚI 1: LOVE LANGUAGE ANALYSIS ================= */}
           {interpretationBundle && (

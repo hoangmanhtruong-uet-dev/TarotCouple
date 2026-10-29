@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, Box } from 'lucide-react';
 import { soundManager } from '@/lib/sound-effects';
+import { triggerHaptic } from '@/lib/haptics';
 import {
   attachWebGLContextLostGuard,
   computeParabolicArcTransform,
@@ -181,11 +182,7 @@ export function TactileArcFan({
         if (typeof pickedIdx === 'number') {
           const alreadyPicked = selectedRef.current.includes(pickedIdx);
           if (alreadyPicked || selectedRef.current.length < 3) {
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try {
-                navigator.vibrate(25);
-              } catch {}
-            }
+            triggerHaptic('medium');
             soundManager.playCardFlip();
             onPickRef.current(pickedIdx);
           }
@@ -345,11 +342,7 @@ export function TactileArcFan({
               }
               onClick={() => {
                 if (!disabled && (isSelected || selectedIndices.length < 3)) {
-                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                    try {
-                      navigator.vibrate(25);
-                    } catch {}
-                  }
+                  triggerHaptic('medium');
                   soundManager.playCardFlip();
                   onPickCard(cardIndex);
                 }

@@ -8,6 +8,7 @@ import {
   useReducedMotion,
 } from 'framer-motion';
 import type { TarotCard } from '@/data/tarot-cards';
+import { triggerHaptic } from '@/lib/haptics';
 
 export interface TarotCardVisualProps {
   card?: TarotCard;
@@ -94,6 +95,7 @@ export function TarotCardVisual({
       onPointerLeave={handlePointerLeave}
       onClick={() => {
         if (!disabled && onFlip) {
+          triggerHaptic('light');
           onFlip();
         }
       }}

@@ -58,10 +58,33 @@ export interface CoupleQuestItem {
   purpose: string;
 }
 
+export type TarotElement = 'fire' | 'water' | 'air' | 'earth';
+
+export interface ElementalProfile {
+  element: TarotElement;
+  nameVi: string;
+  icon: string;
+  badge: string;
+  nature: string;
+  strengths: string;
+  tendency: string;
+}
+
+export interface CoupleElementalResonance {
+  ownerElement: ElementalProfile;
+  partnerElement: ElementalProfile;
+  synergyType: 'dong_khi' | 'tuong_sinh' | 'can_bang_am_duong' | 'thach_thuc';
+  synergyTitle: string;
+  synergyScore: number;
+  description: string;
+  growthAdvice: string;
+}
+
 export interface CoupleInterpretationBundle {
   loveLanguage: CoupleLoveLanguageResult;
   secretAdvice: CoupleSecretAdvice;
   coupleQuests: CoupleQuestItem[];
+  elementalResonance?: CoupleElementalResonance;
 }
 
 const LOVE_LANGUAGES: Record<LoveLanguageType, { nameVi: string; icon: string; desc: string; tip: string }> = {
@@ -340,9 +363,197 @@ export function generateCoupleInterpretationBundle(params: {
     params.relationshipStatus
   );
 
+  const elementalResonance = computeCoupleElementalResonance(
+    params.c1.id,
+    params.c1.name_vi,
+    params.c2.id,
+    params.c2.name_vi,
+    params.ownerName,
+    params.partnerName
+  );
+
   return {
     loveLanguage,
     secretAdvice,
     coupleQuests,
+    elementalResonance,
+  };
+}
+
+const ELEMENT_METAS: Record<
+  TarotElement,
+  { nameVi: string; icon: string; badge: string; nature: string; strengths: string; tendency: string }
+> = {
+  fire: {
+    nameVi: 'Lửa (Hỏa)',
+    icon: '🔥',
+    badge: 'Nhiệt Huyết & Tiên Phong',
+    nature: 'Nồng nhiệt, chủ động, thẳng thắn và luôn hướng về phía trước.',
+    strengths: 'Truyền cảm hứng, dũng cảm đối mặt khó khăn, yêu say đắm.',
+    tendency: 'Dễ bốc đồng hoặc mất kiên nhẫn khi đối phương cần thời gian chậm lại.',
+  },
+  water: {
+    nameVi: 'Nước (Thủy)',
+    icon: '💧',
+    badge: 'Thấu Cảm & Trực Giác',
+    nature: 'Sâu sắc, thấu hiểu, giàu cảm xúc và kết nối tâm hồn bền chặt.',
+    strengths: 'Chữa lành, lắng nghe không phán xét, chung thủy trọn vẹn.',
+    tendency: 'Dễ suy nghĩ nhiều (overthinking) hoặc khép lòng khi cảm thấy bất an.',
+  },
+  air: {
+    nameVi: 'Khí (Phong)',
+    icon: '💨',
+    badge: 'Trí Tuệ & Kết Nối',
+    nature: 'Thông minh, rõ ràng, đề cao đối thoại và sự minh bạch trong tình cảm.',
+    strengths: 'Giao tiếp cởi mở, công bằng, luôn có ý tưởng làm mới tình yêu.',
+    tendency: 'Đôi lúc quá lý trí hoặc phân tích vấn đề bằng logic thay vì cảm nhận bằng tim.',
+  },
+  earth: {
+    nameVi: 'Đất (Thổ)',
+    icon: '🌱',
+    badge: 'Bền Vững & Thực Tế',
+    nature: 'Đáng tin cậy, vững chãi, hướng tới cam kết dài lâu và tổ ấm yên bình.',
+    strengths: 'Chăm sóc chu đáo, là điểm tựa an toàn, trân trọng từng lời hứa.',
+    tendency: 'Hơi chậm thay đổi hoặc bảo thủ trước những tình huống bất ngờ.',
+  },
+};
+
+export function resolveElementFromCard(cardId: number, cardName: string): ElementalProfile {
+  let el: TarotElement;
+
+  if (cardId >= 22 && cardId <= 35) {
+    el = 'fire'; // Wands
+  } else if (cardId >= 36 && cardId <= 49) {
+    el = 'water'; // Cups
+  } else if (cardId >= 50 && cardId <= 63) {
+    el = 'air'; // Swords
+  } else if (cardId >= 64 && cardId <= 77) {
+    el = 'earth'; // Pentacles
+  } else {
+    // Major Arcana astrological mapping
+    const fireMajors = [4, 8, 14, 16, 19, 20];
+    const waterMajors = [2, 7, 12, 13, 18];
+    const airMajors = [0, 1, 6, 11, 17];
+    const earthMajors = [3, 5, 9, 10, 15, 21];
+
+    if (fireMajors.includes(cardId)) el = 'fire';
+    else if (waterMajors.includes(cardId)) el = 'water';
+    else if (airMajors.includes(cardId)) el = 'air';
+    else if (earthMajors.includes(cardId)) el = 'earth';
+    else {
+      const fallbackElements: TarotElement[] = ['fire', 'water', 'air', 'earth'];
+      el = fallbackElements[Math.abs(cardId) % 4];
+    }
+  }
+
+  const meta = ELEMENT_METAS[el];
+  return {
+    element: el,
+    nameVi: meta.nameVi,
+    icon: meta.icon,
+    badge: meta.badge,
+    nature: meta.nature,
+    strengths: meta.strengths,
+    tendency: meta.tendency,
+  };
+}
+
+export function computeCoupleElementalResonance(
+  c1Id: number,
+  c1Name: string,
+  c2Id: number,
+  c2Name: string,
+  ownerName: string,
+  partnerName: string
+): CoupleElementalResonance {
+  const ownerEl = resolveElementFromCard(c1Id, c1Name);
+  const partnerEl = resolveElementFromCard(c2Id, c2Name);
+
+  const pairKey = [ownerEl.element, partnerEl.element].sort().join('_');
+
+  if (ownerEl.element === partnerEl.element) {
+    return {
+      ownerElement: ownerEl,
+      partnerElement: partnerEl,
+      synergyType: 'dong_khi',
+      synergyTitle: `Song Hành Cùng Hệ ${ownerEl.nameVi}: Rung Động Tương Đồng`,
+      synergyScore: 92,
+      description: `Cả hai đều mang nguyên tố ${ownerEl.nameVi}. Hai bạn dễ dàng nắm bắt nhịp điệu của nhau, cùng tần số rung động và đồng điệu trong cách biểu đạt tình cảm.`,
+      growthAdvice: `Vì quá giống nhau, khi xảy ra bất đồng hai bạn dễ cùng phản ứng một kiểu. Hãy chủ động nhường một bước để tránh xung đột kéo dài.`,
+    };
+  }
+
+  // Tương sinh: Fire + Air hoặc Water + Earth
+  if (pairKey === 'air_fire') {
+    return {
+      ownerElement: ownerEl,
+      partnerElement: partnerEl,
+      synergyType: 'tuong_sinh',
+      synergyTitle: 'Lửa & Gió: Bùng Cháy Đam Mê & Cảm Hứng Vô Tận',
+      synergyScore: 96,
+      description: `Khí (Gió) tiếp thêm dưỡng khí cho ngọn Lửa bùng cháy rực rỡ! Trí tuệ và sự cởi mở giúp định hướng cho nhiệt huyết và hành động, tạo nên một cặp đôi đầy sức sống.`,
+      growthAdvice: `Gió hãy bao dung với tính nóng vội của Lửa; còn Lửa hãy biết trân trọng những ý tưởng sâu sắc mà Gió mang lại.`,
+    };
+  }
+
+  if (pairKey === 'earth_water') {
+    return {
+      ownerElement: ownerEl,
+      partnerElement: partnerEl,
+      synergyType: 'tuong_sinh',
+      synergyTitle: 'Đất & Nước: Nuôi Dưỡng Mầm Sống & Cam Kết Bền Lâu',
+      synergyScore: 98,
+      description: `Nước tưới mát cho Đất màu mỡ, Đất tạo lòng hồ bình yên giữ trọn dòng nước! Đây là sự kết hợp bền chặt nhất giữa cảm xúc chân thành và sự che chở vững vàng.`,
+      growthAdvice: `Nước hãy tin tưởng vào sự kiên định của Đất; Đất hãy thường xuyên bày tỏ sự dịu dàng để Nước luôn cảm thấy an toàn.`,
+    };
+  }
+
+  // Âm Dương cân bằng bổ trợ: Fire + Water hoặc Air + Earth
+  if (pairKey === 'fire_water') {
+    return {
+      ownerElement: ownerEl,
+      partnerElement: partnerEl,
+      synergyType: 'can_bang_am_duong',
+      synergyTitle: 'Lửa & Nước: Hấp Dẫn Nghịch Chiều & Thăng Hoa Cảm Xúc',
+      synergyScore: 86,
+      description: `Lửa ấm áp xua tan giá lạnh, Nước dịu dàng xoa dịu những cơn giận. Hai bạn có sức hút mãnh liệt từ sự khác biệt bản năng, bù đắp hoàn hảo cho khoảng trống của nhau.`,
+      growthAdvice: `Tránh để Nước dập tắt nhiệt huyết của Lửa, và Lửa không nên để sự bộc trực làm tổn thương tâm hồn nhạy cảm của Nước.`,
+    };
+  }
+
+  if (pairKey === 'air_earth') {
+    return {
+      ownerElement: ownerEl,
+      partnerElement: partnerEl,
+      synergyType: 'can_bang_am_duong',
+      synergyTitle: 'Khí & Đất: Lý Tưởng Gặp Hiện Thực & Vững Vàng Tương Lai',
+      synergyScore: 88,
+      description: `Khí mang lại tầm nhìn và những ước mơ bay bổng, trong khi Đất biến mọi kế hoạch thành hiện thực cụ thể. Sự kết hợp lý trí này giúp cả hai xây dựng tương lai rất vững chắc.`,
+      growthAdvice: `Đất đừng quá khắt khe với sự ngẫu hứng của Khí, còn Khí hãy ghi nhận công sức thầm lặng mà Đất đã vun vén mỗi ngày.`,
+    };
+  }
+
+  // Thử thách: Fire + Earth hoặc Air + Water
+  if (pairKey === 'earth_fire') {
+    return {
+      ownerElement: ownerEl,
+      partnerElement: partnerEl,
+      synergyType: 'thach_thuc',
+      synergyTitle: 'Lửa & Đất: Học Cách Kiên Nhẫn Để Bắt Kịp Nhịp Điệu',
+      synergyScore: 80,
+      description: `Lửa muốn lao nhanh về phía trước, còn Đất cần bước đi từng bước cẩn trọng. Khi dung hòa được, Đất sẽ là bệ phóng vững chắc nhất cho ngọn lửa của bạn.`,
+      growthAdvice: `Lửa hãy học cách chậm lại chờ Đất; Đất hãy dũng cảm thử nghiệm những điều mới cùng Lửa.`,
+    };
+  }
+
+  // air_water
+  return {
+    ownerElement: ownerEl,
+    partnerElement: partnerEl,
+    synergyType: 'thach_thuc',
+    synergyTitle: 'Khí & Nước: Trí Tuệ Gặp Con Tim & Lắng Nghe Bằng Trắc Ẩn',
+    synergyScore: 82,
+    description: `Khí phân tích bằng logic, còn Nước cảm nhận bằng trái tim. Nếu học được cách giao tiếp thấu cảm, hai bạn sẽ vừa là tri kỷ trí tuệ, vừa là người bạn tâm giao tuyệt vời.`,
+    growthAdvice: `Khi có xung đột, Khí hãy ôm lấy Nước thay vì tranh luận đúng sai; Nước hãy nói rõ mong muốn thay vì im lặng để Khí đoán.`,
   };
 }

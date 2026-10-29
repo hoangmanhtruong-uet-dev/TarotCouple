@@ -14,6 +14,23 @@ export function middleware(request: NextRequest) {
   const queryBypass = searchParams.get('bypass');
   const hasBypassCookie = request.cookies.get('maintenance_bypass')?.value === '1';
 
+  // 1b. Hỗ trợ kích hoạt quyền Admin qua URL param: ?admin=<token> hoặc ?secret=<token>
+  const adminSecret = process.env.ADMIN_SECRET?.trim();
+  const queryAdmin = searchParams.get('admin') || searchParams.get('secret');
+  if (adminSecret && queryAdmin && queryAdmin === adminSecret) {
+    const targetUrl = request.nextUrl.clone();
+    targetUrl.searchParams.delete('admin');
+    targetUrl.searchParams.delete('secret');
+    const response = NextResponse.redirect(targetUrl);
+    response.cookies.set('tc_admin_secret', adminSecret, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7, // 7 ngày
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+    return response;
+  }
+
   // Nếu Admin vào với ?bypass=<token> hợp lệ (và có cấu hình secret) -> lưu cookie và cho phép truy cập bình thường
   if (bypassSecret && queryBypass && queryBypass === bypassSecret) {
     const targetUrl = request.nextUrl.clone();
@@ -33,8 +50,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Các route đặc biệt không bao giờ bị chặn (Webhook thanh toán, v.v.)
+  // 2. Các route đặc biệt không bao giờ bị chặn (Webhook thanh toán PayOS, v.v.)
   const isExcludedPath =
+    pathname.startsWith('/api/pay/webhook') ||
     pathname.startsWith('/api/payment/webhook') ||
     pathname.startsWith('/api/webhooks');
 

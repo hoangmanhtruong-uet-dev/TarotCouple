@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { GEMINI_MODEL_CHAIN, getValidGeminiApiKeys } from '@/lib/ai-provider';
 import { checkSupabaseHealth } from '@/lib/supabase-hybrid';
 import { getPayOsConfig } from '@/lib/payos';
+import { isAdminRequest } from '@/lib/quota-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,10 +29,14 @@ export interface HealthResponse {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request): Promise<NextResponse<HealthResponse>>;
+export async function GET(): Promise<NextResponse<HealthResponse>>;
+export async function GET(request?: Request): Promise<NextResponse<HealthResponse>> {
+  const req = request ?? new Request('http://localhost:3000/api/health');
   const keys = getValidGeminiApiKeys();
   const supabaseHealth = await checkSupabaseHealth();
   const payosConfig = getPayOsConfig();
+  const isAdmin = isAdminRequest(req);
 
   const responseBody: HealthResponse = {
     status: 'ok',
@@ -50,7 +55,7 @@ export async function GET() {
     payos: {
       configured: payosConfig.isConfigured,
       hasClientId: Boolean(payosConfig.clientId),
-      clientIdPrefix: payosConfig.clientId ? `${payosConfig.clientId.slice(0, 4)}...` : '',
+      clientIdPrefix: isAdmin && payosConfig.clientId ? `${payosConfig.clientId.slice(0, 4)}...` : '',
       hasApiKey: Boolean(payosConfig.apiKey),
       hasChecksumKey: Boolean(payosConfig.checksumKey),
     },

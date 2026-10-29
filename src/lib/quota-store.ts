@@ -393,10 +393,16 @@ export function isAdminRequest(req?: Request): boolean {
   const authHeader = req.headers.get('authorization');
   const bearerToken = authHeader?.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : null;
 
+  // Hỗ trợ xác thực qua signed/stored admin cookie (tc_admin_secret)
+  const cookieHeader = req.headers.get('cookie') || '';
+  const cookieMatch = cookieHeader.match(/(?:^|;\s*)tc_admin_secret=([^;]+)/);
+  const adminCookie = cookieMatch ? decodeURIComponent(cookieMatch[1].trim()) : null;
+
   return (
     adminHeader === configuredSecret ||
     adminQuery === configuredSecret ||
-    bearerToken === configuredSecret
+    bearerToken === configuredSecret ||
+    adminCookie === configuredSecret
   );
 }
 
